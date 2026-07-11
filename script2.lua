@@ -133,6 +133,31 @@ MiningTab:CreateButton({
 })
 
 MiningTab:CreateButton({
+    Name = "💣 Detonar Sitio (Explosive Trigger)",
+    Callback = function()
+        local found = false
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            -- Busca palabras clave de explosión en nombres de objetos o remotos
+            if string.match(obj.Name:lower(), "bomb") or string.match(obj.Name:lower(), "explode") or string.match(obj.Name:lower(), "nuke") or string.match(obj.Name:lower(), "dynamite") then
+                if obj:IsA("RemoteEvent") then
+                    obj:FireServer()
+                    found = true
+                elseif obj:IsA("Tool") or obj:IsA("Model") then
+                    -- Intenta activar si es un objeto funcional
+                    pcall(function() obj.Parent = LocalPlayer.Character end)
+                    found = true
+                end
+            end
+        end
+        if found then
+            Rayfield:Notify({Title = "Explosión", Content = "Trigger de explosión activado.", Duration = 3})
+        else
+            Rayfield:Notify({Title = "Error", Content = "No se encontró detonador funcional.", Duration = 3})
+        end
+    end,
+})
+
+MiningTab:CreateButton({
     Name = "💥 Super Punch / Nuke Rocks (Local)",
     Callback = function()
         local root = getRoot()
@@ -308,6 +333,30 @@ VisualsTab:CreateToggle({
                 if esp.Name == "OreESPGui" then esp:Destroy() end
             end
         end
+    end,
+})
+
+VisualsTab:CreateButton({
+    Name = "🔓 Unlock Total (Ropas/Secretos)",
+    Callback = function()
+        -- 1. Búsqueda exhaustiva de eventos de unlock
+        for _, obj in ipairs(game:GetDescendants()) do
+            if obj:IsA("RemoteEvent") then
+                local name = obj.Name:lower()
+                if string.match(name, "unlock") or string.match(name, "get") or string.match(name, "buy") or string.match(name, "grant") then
+                    pcall(function() obj:FireServer("all") end)
+                    pcall(function() obj:FireServer(true) end)
+                end
+            end
+        end
+        
+        -- 2. Bypass de UI de bloqueo
+        for _, gui in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do
+            if gui:IsA("GuiObject") and (gui.Name:lower():find("lock") or gui.Name:lower():find("padlock")) then
+                gui.Visible = false
+            end
+        end
+        Rayfield:Notify({Title = "Unlock Completo", Content = "Desbloqueos forzados y UI limpiada.", Duration = 4})
     end,
 })
 
