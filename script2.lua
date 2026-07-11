@@ -138,7 +138,7 @@ MiningTab:CreateButton({
         local found = false
         for _, obj in ipairs(workspace:GetDescendants()) do
             -- Busca palabras clave de explosión en nombres de objetos o remotos
-            if string.match(obj.Name:lower(), "bomb") or string.match(obj.Name:lower(), "explode") or string.match(obj.Name:lower(), "nuke") or string.match(obj.Name:lower(), "dynamite") then
+            if string.match(obj.Name:lower(), "kill") or string.match(obj.Name:lower(), "explode") or string.match(obj.Name:lower(), "nuke") or string.match(obj.Name:lower(), "dynamite") then
                 if obj:IsA("RemoteEvent") then
                     obj:FireServer()
                     found = true
