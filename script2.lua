@@ -218,9 +218,11 @@ VisualsTab:CreateToggle({
     Callback = function(Value) oreEspEnabled = Value end,
 })
 
--- 📍 FIX: Selector robusto con Teletransporte y Filtro Ampliado
+-- =====================================================================
+-- 📍 FIX: Selector robusto con Teletransporte (Lógica de Imán Integrada)
+-- =====================================================================
 local OreDropdown = VisualsTab:CreateDropdown({
-    Name = "🚀 Teletransportarse a Mineral",
+    Name = "🚀 Teletransportarse a Mineral / Item",
     Options = {"Ninguno"},
     CurrentOption = {""},
     MultipleOptions = false,
@@ -228,43 +230,42 @@ local OreDropdown = VisualsTab:CreateDropdown({
     Callback = function(Options)
         local targetName = Options[1]
         local root = getRoot()
+        
         if root and targetName and targetName ~= "Ninguno" then
-            -- Buscamos el objeto por su nombre exacto en todo el Workspace
+            -- Buscamos el objeto en el mapa
             for _, item in ipairs(workspace:GetDescendants()) do
                 if (item:IsA("Part") or item:IsA("MeshPart")) and item.Name == targetName then
-                    -- Teletransporte automático al mineral
-                    root.CFrame = item.CFrame + Vector3.new(0, 3, 0)
-                    Rayfield:Notify({Title = "Teletransporte", Content = "Viajando a: " .. targetName, Duration = 2})
-                    break
+                    
+                    -- Aplicamos la misma validación del imán para no teletransportarnos a una "Part" falsa (como el suelo)
+                    local isCollectible = item:FindFirstChild("TouchInterest") or string.match(item.Name:lower(), "gem") or string.match(item.Name:lower(), "diamond") or string.match(item.Name:lower(), "coin")
+                    
+                    if isCollectible then
+                        -- Teletransporte automático al mineral
+                        root.CFrame = item.CFrame + Vector3.new(0, 3, 0)
+                        Rayfield:Notify({Title = "Teletransporte", Content = "Viajando a: " .. targetName, Duration = 2})
+                        break
+                    end
                 end
             end
         end
     end,
 })
 
--- Bucle de mapeo mejorado con filtros masivos
+-- Bucle de mapeo aplicando la lógica invencible del imán
 task.spawn(function()
     while task.wait(1.5) do
         local availableOres = {}
         local foundNames = {}
         
-        -- Palabras clave para capturar TODAS las rarezas y tipos
-        local rarities = {"best", "colossal", "galaxy", "titan", "diamond", "ore", "gem", "legendary", "mythic", "common", "rare", "epic", "crystal", "gold"}
-        
         for _, item in ipairs(workspace:GetDescendants()) do
-            if (item:IsA("Part") or item:IsA("MeshPart")) then
-                local nameLower = item.Name:lower()
-                local isMatch = false
+            if item:IsA("Part") or item:IsA("MeshPart") then
                 
-                for _, kw in ipairs(rarities) do
-                    if nameLower:find(kw) then
-                        isMatch = true
-                        break
-                    end
-                end
+                -- 🔥 AQUÍ ESTÁ LA MAGIA: Exactamente la misma lógica de tu botón de atraer
+                local nameLower = item.Name:lower()
+                local isMatch = item:FindFirstChild("TouchInterest") or string.match(nameLower, "gem") or string.match(nameLower, "diamond") or string.match(nameLower, "coin")
                 
                 if isMatch then
-                    -- Evitar duplicados en la lista del Dropdown
+                    -- Evitar duplicados en la lista del Dropdown para que no se llene de basura
                     if not foundNames[item.Name] then
                         table.insert(availableOres, item.Name)
                         foundNames[item.Name] = true
@@ -286,7 +287,8 @@ task.spawn(function()
             end
         end
         
-        -- Refrescar opciones
+        -- Ordenar los nombres alfabéticamente y refrescar el Dropdown
+        table.sort(availableOres)
         OreDropdown:Refresh(#availableOres > 0 and availableOres or {"Ninguno"})
     end
 end)
