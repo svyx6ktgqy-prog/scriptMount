@@ -166,6 +166,47 @@ MiningTab:CreateButton({
 })
 
 -- =====================================================================
+-- PESTAÑA 2: 👁️ VISUALES
+-- =====================================================================
+local VisualsTab = Window:CreateTab("Visuales 2 fix", 4483362458)
+local oreEspEnabled = false
+
+VisualsTab:CreateToggle({
+    Name = "💎 ESP Diamantes y Rarezas",
+    CurrentValue = false,
+    Callback = function(Value) oreEspEnabled = Value end,
+})
+
+local OreDropdown = VisualsTab:CreateDropdown({
+    Name = "💎 Spinner de Diamantes Disponibles",
+    Options = {"Buscando..."},
+    Callback = function(Option)
+        for _, item in ipairs(workspace:GetDescendants()) do
+            if item.Name == Option then
+                item.CFrame = getRoot().CFrame * CFrame.new(0, 4, -2)
+                pcall(function() item.Anchored = false end)
+                break
+            end
+        end
+    end,
+})
+
+-- Bucle robusto de actualización
+task.spawn(function()
+    while task.wait(3) do
+        local found = {}
+        for _, item in ipairs(workspace:GetDescendants()) do
+            local n = item.Name:lower()
+            -- Detección robusta de rarezas y tipos
+            if (string.match(n, "diamond") or string.match(n, "legendary") or string.match(n, "mythic") or string.match(n, "common") or string.match(n, "rare") or string.match(n, "epic")) then
+                if not table.find(found, item.Name) then table.insert(found, item.Name) end
+            end
+        end
+        OreDropdown:Refresh(#found > 0 and found or {"No encontrado"})
+    end
+end)
+
+-- =====================================================================
 -- PESTAÑA 2: 👁️ VISUALES Y ESP (Jugadores Animados, Tracers & Ores)
 -- =====================================================================
 local VisualsTab = Window:CreateTab("Visuales & ESP", 4483362458)
