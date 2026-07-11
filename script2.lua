@@ -218,10 +218,10 @@ VisualsTab:CreateToggle({
     Callback = function(Value) oreEspEnabled = Value end,
 })
 
--- 1. Slider para filtrar por valor (Precio/Peso)
+-- 1. Slider para filtrar (ahora es opcional, si está en 0 muestra todo)
 local MinValueFilter = 0
 VisualsTab:CreateSlider({
-    Name = "Filtro de Valor Mínimo (Precio)",
+    Name = "Filtro de Valor Mínimo ($)",
     Range = {0, 1000000},
     Increment = 1000,
     Suffix = "$",
@@ -230,21 +230,24 @@ VisualsTab:CreateSlider({
     Callback = function(Value) MinValueFilter = Value end,
 })
 
--- 2. Dropdown de selección con Teletransporte automático
+-- 2. Dropdown de selección (Más robusto)
 local OreDropdown = VisualsTab:CreateDropdown({
-    Name = "💎 Teletransporte a Mineral Seleccionado",
-    Options = {"Esperando lectura..."},
+    Name = "💎 Lista de Minerales Detectados",
+    Options = {"Buscando..."},
     Callback = function(Options)
         local selection = Options[1]
-        -- Extraemos el nombre original antes del símbolo "|"
+        if not selection or selection == "Buscando..." then return end
+        
+        -- Extraemos el nombre original ignorando la info visual
         local targetName = selection:split(" | ")[1]
         
         local root = getRoot()
-        if root and targetName then
+        if root then
+            -- Búsqueda exhaustiva por nombre
             for _, item in ipairs(workspace:GetDescendants()) do
                 if item:IsA("BasePart") and item.Name == targetName then
                     root.CFrame = item.CFrame + Vector3.new(0, 3, 0)
-                    Rayfield:Notify({Title = "Teletransporte", Content = "Viajando a: " .. targetName, Duration = 2})
+                    Rayfield:Notify({Title = "Teletransporte", Content = "Llegando a: " .. targetName, Duration = 2})
                     break
                 end
             end
@@ -252,46 +255,49 @@ local OreDropdown = VisualsTab:CreateDropdown({
     end,
 })
 
--- 3. Bucle de escaneo profundo y clasificación
+-- 3. Bucle de escaneo "Fuerza Bruta" (Detecta todo)
 task.spawn(function()
-    while task.wait(2) do
+    while task.wait(1.5) do
         local availableOres = {}
         
         for _, item in ipairs(workspace:GetDescendants()) do
-            if (item:IsA("Part") or item:IsA("MeshPart")) then
-                -- Detección de valor/peso (busca Value, Price, Weight, etc.)
-                local valObj = item:FindFirstChildOfClass("IntValue") or item:FindFirstChildOfClass("NumberValue")
-                local weight = valObj and valObj.Value or 0
+            -- Filtro ultra abierto: cualquier parte con nombre que contenga palabras clave
+            local n = item.Name:lower()
+            if item:IsA("BasePart") and (n:find("crystal") or n:find("diamond") or n:find("ore") or n:find("gem") or n:find("stone")) then
                 
-                -- Solo procesar si supera el filtro del Slider
-                if weight >= MinValueFilter then
-                    -- Clasificación inteligente basada en peso/valor
-                    local rarity = weight > 50000 and "🔥 Mítico" or weight > 10000 and "⚡ Legendario" or "📦 Común"
-                    local size = weight > 100000 and "Titan" or weight > 50000 and "Colossal" or "Normal"
+                -- Intentar obtener valor, si no hay, poner 0
+                local val = 0
+                for _, child in ipairs(item:GetChildren()) do
+                    if child:IsA("ValueBase") then val = child.Value end
+                end
+                
+                if val >= MinValueFilter then
+                    -- Clasificación visual basada en el valor detectado
+                    local rarity = val > 50000 and "Mítico" or val > 10000 and "Legendario" or "Común"
+                    local size = val > 100000 and "Titan" or val > 50000 and "Colossal" or "Normal"
                     
-                    -- Formato: Nombre | Rareza | Valor | Tamaño
-                    local displayInfo = string.format("%s | %s | $%s | %s", item.Name, rarity, weight, size)
-                    table.insert(availableOres, displayInfo)
+                    local entry = string.format("%s | %s | $%s | %s", item.Name, rarity, val, size)
+                    table.insert(availableOres, entry)
                     
-                    -- Actualización del ESP
-                    local bill = item:FindFirstChild("OreESPGui") or Instance.new("BillboardGui", item)
-                    bill.Name = "OreESPGui"
-                    bill.AlwaysOnTop = true
-                    bill.Size = UDim2.new(0, 160, 0, 80)
-                    
-                    local txt = bill:FindFirstChild("TextLabel") or Instance.new("TextLabel", bill)
-                    txt.Size = UDim2.new(1, 0, 1, 0)
-                    txt.BackgroundTransparency = 1
-                    txt.Text = string.format("%s\n%s | %s\nValor: $%s", item.Name, rarity, size, weight)
+                    -- ESP siempre activo si hay minerales
+                    if oreEspEnabled and not item:FindFirstChild("OreESPGui") then
+                        local bill = Instance.new("BillboardGui", item)
+                        bill.Name = "OreESPGui"
+                        bill.AlwaysOnTop = true
+                        bill.Size = UDim2.new(0, 150, 0, 50)
+                        local txt = Instance.new("TextLabel", bill)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.Text = item.Name .. "\n$" .. val
+                        txt.Parent = bill
+                    end
                 end
             end
         end
         
-        -- Refrescar el spinner con la lista filtrada
         if #availableOres > 0 then
             OreDropdown:Refresh(availableOres)
         else
-            OreDropdown:Refresh({"No se encontraron minerales con ese valor"})
+            OreDropdown:Refresh({"Ningún mineral encontrado"})
         end
     end
 end)
