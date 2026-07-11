@@ -410,6 +410,73 @@ VisualsTab:CreateButton({
 })
 
 -- =====================================================================
+-- PESTAÑA 3: 🌌 MAPAS, PORTALES Y BARRERAS
+-- =====================================================================
+local MapTab = Window:CreateTab("Mapas & Zonas 2 fix", 4483362458)
+
+MapTab:CreateSection("Progresión Rápida")
+
+MapTab:CreateButton({
+    Name = "🚪 Forze TP ZONE SECRET",
+    Callback = function()
+        local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        local found = false
+        local keywords = {"portal", "teleport", "nextmap", "nextzone", "gate", "door", "area", "zone", "world"}
+        
+        for _, part in ipairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") then
+                local n = part.Name:lower()
+                for _, word in ipairs(keywords) do
+                    -- Evitar teletransportarse a la zona de inicio si podemos evitarlo
+                    if string.match(n, word) and not string.match(n, "spawn") and not string.match(n, "lobby") then
+                        -- Lo movemos ligeramente arriba del portal para evitar bugs físicos
+                        root.CFrame = part.CFrame * CFrame.new(0, 3, 0)
+                        found = true
+                        
+                        -- Forzamos el evento touch por si el portal lo requiere
+                        local touch = part:FindFirstChild("TouchInterest")
+                        if touch and firetouchinterest then
+                            firetouchinterest(root, part, 0)
+                            task.wait(0.1)
+                            firetouchinterest(root, part, 1)
+                        end
+                        
+                        Rayfield:Notify({Title = "Salto de Mapa", Content = "Teletransportado a: " .. part.Name, Duration = 3})
+                        return -- Nos salimos al encontrar el primer portal válido
+                    end
+                end
+            end
+        end
+        
+        if not found then
+            Rayfield:Notify({Title = "Sin Portales", Content = "No se detectaron zonas nuevas en este momento.", Duration = 3})
+        end
+    end,
+})
+
+MapTab:CreateButton({
+    Name = "🧱 Eliminar Muros Invisibles / Barreras VIP",
+    Callback = function()
+        local wallsRemoved = 0
+        for _, part in ipairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") then
+                local n = part.Name:lower()
+                -- Identifica muros de bloqueo de nivel, VIP o límites de zona
+                if string.match(n, "barrier") or string.match(n, "wall") or string.match(n, "border") or string.match(n, "vip") or string.match(n, "requirement") or part.Transparency == 1 then
+                    if part.CanCollide == true and part.Name ~= "HumanoidRootPart" and part.Name ~= "Baseplate" then
+                        part.CanCollide = false
+                        wallsRemoved = wallsRemoved + 1
+                    end
+                end
+            end
+        end
+        Rayfield:Notify({Title = "Noclip de Mapa", Content = "Se eliminaron " .. wallsRemoved .. " muros/barreras.", Duration = 3})
+    end,
+})
+
+-- =====================================================================
 -- PESTAÑA 3: 🚀 MOVIMIENTO Y MAPA
 -- =====================================================================
 local MoveTab = Window:CreateTab("Movimiento", 4483362458)
