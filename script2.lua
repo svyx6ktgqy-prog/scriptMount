@@ -134,6 +134,42 @@ MiningTab:CreateButton({
 })
 
 -- =====================================================================
+-- PESTAÑA 1: VISUALES
+-- =====================================================================
+local VisualsTab = Window:CreateTab("EspVIP", 4483362458)
+local espEnabled = false
+
+VisualsTab:CreateToggle({
+    Name = "Activar Player ESP",
+    CurrentValue = false,
+    Flag = "PlayerESP",
+    Callback = function(Value)
+        espEnabled = Value
+    end,
+})
+
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local highlight = player.Character:FindFirstChild("UniversalESP")
+            if espEnabled then
+                if not highlight then
+                    highlight = Instance.new("Highlight")
+                    highlight.Name = "UniversalESP"
+                    highlight.FillColor = Color3.fromRGB(0, 255, 255)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    highlight.FillTransparency = 0.5
+                    highlight.Parent = player.Character
+                end
+                highlight.Enabled = true
+            else
+                if highlight then highlight.Enabled = false end
+            end
+        end
+    end
+end)
+
+-- =====================================================================
 -- PESTAÑA 2: 👁️ VISUALES Y ESP (Ores & Jugadores)
 -- =====================================================================
 local VisualsTab = Window:CreateTab("Visuales", 4483362458)
