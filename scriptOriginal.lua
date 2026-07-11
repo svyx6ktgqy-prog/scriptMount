@@ -67,26 +67,42 @@ end
 -- =====================================================================
 local MiningTab = Window:CreateTab("Minería", 4483362458)
 
-local magnetEnabled = false
-MiningTab:CreateToggle({
-    Name = "🧲 Imán de Diamantes/Items",
-    CurrentValue = false,
-    Flag = "Magnet",
-    Callback = function(Value)
-        magnetEnabled = Value
-        while magnetEnabled do
-            local root = getRoot()
-            if root then
-                for _, item in ipairs(workspace:GetDescendants()) do
-                    if item:IsA("Part") or item:IsA("MeshPart") then
-                        if item:FindFirstChild("TouchInterest") or string.match(item.Name:lower(), "gem") or string.match(item.Name:lower(), "diamond") or string.match(item.Name:lower(), "coin") then
-                            item.CFrame = root.CFrame
-                        end
+-- 📍 NUEVA ADICIÓN: Imán convertido a Botón con caída suave y esparcida
+MiningTab:CreateButton({
+    Name = "🧲 Atraer Diamantes/Items (Esparcidos)",
+    Callback = function()
+        local root = getRoot()
+        if not root then return end
+        
+        local count = 0
+        for _, item in ipairs(workspace:GetDescendants()) do
+            if item:IsA("Part") or item:IsA("MeshPart") then
+                if item:FindFirstChild("TouchInterest") or string.match(item.Name:lower(), "gem") or string.match(item.Name:lower(), "diamond") or string.match(item.Name:lower(), "coin") then
+                    
+                    -- Calcula un área de esparcimiento alrededor del jugador (radio de -15 a 15 studs)
+                    local randomX = math.random(-15, 15)
+                    local randomY = math.random(3, 8) -- Altura ligera para que caigan por gravedad
+                    local randomZ = math.random(-15, 15)
+                    
+                    -- Prevenir explosiones de físicas reseteando su velocidad
+                    pcall(function()
+                        item.Anchored = false
+                        item.Velocity = Vector3.new(0, -2, 0) -- Empuje ligero hacia abajo
+                        item.RotVelocity = Vector3.zero
+                    end)
+                    
+                    item.CFrame = CFrame.new(root.Position + Vector3.new(randomX, randomY, randomZ))
+                    
+                    count = count + 1
+                    
+                    -- Prevenir el Lag: Si procesa más de 20 a la vez, cede un milisegundo al servidor
+                    if count % 20 == 0 then 
+                        task.wait() 
                     end
                 end
             end
-            task.wait(1)
         end
+        Rayfield:Notify({Title = "Imán Seguro Activado", Content = "Atraídos " .. count .. " objetos. Esparcidos sin lag.", Duration = 4})
     end,
 })
 
