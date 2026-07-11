@@ -215,7 +215,19 @@ local oreEspEnabled = false
 VisualsTab:CreateToggle({
     Name = "💎 ESP Diamantes y Rarezas",
     CurrentValue = false,
-    Callback = function(Value) oreEspEnabled = Value end,
+    Callback = function(Value) 
+        oreEspEnabled = Value
+        
+        -- 🔥 FIX: Si el switch se desactiva, eliminamos todos los ESP amarillos del mapa inmediatamente
+        if not Value then
+            for _, item in ipairs(workspace:GetDescendants()) do
+                if item.Name == "OreESPGui" then
+                    item:Destroy()
+                end
+            end
+            Rayfield:Notify({Title = "Visuales", Content = "ESP de Minerales desactivado y limpiado.", Duration = 2})
+        end
+    end,
 })
 
 -- =====================================================================
