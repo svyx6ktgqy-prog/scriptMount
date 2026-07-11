@@ -360,82 +360,59 @@ VisualsTab:CreateButton({
     end,
 })
 
--- 📍 NUEVA ADICIÓN: Selector para trasladar y dejar caer minerales a los pies
+-- 📍 FIX: Selector robusto usando referencias directas
 local OreDropdown = VisualsTab:CreateDropdown({
-    Name = "🧲 Trasladar Mineral Seleccionado (Caída Natural)",
+    Name = "🧲 Trasladar Mineral Seleccionado",
     Options = {"Ninguno"},
     CurrentOption = {""},
     MultipleOptions = false,
     Flag = "OreTeleportSelector",
     Callback = function(Options)
-        local targetName = Options[1]
+        local targetPath = Options[1]
         local root = getRoot()
-        if root and targetName and targetName ~= "" and targetName ~= "Ninguno" then
-            for _, item in ipairs(workspace:GetDescendants()) do
-                if (item:IsA("Part") or item:IsA("MeshPart")) and item.Name == targetName then
-                    -- Lo posiciona un poco arriba y enfrente para que caiga fluidamente
-                    item.CFrame = root.CFrame * CFrame.new(0, 4, -2)
-                    
-                    -- Asegurar caída natural desanclando la pieza localmente si el juego la fijó
-                    pcall(function()
-                        item.Anchored = false
-                    end)
-                    
-                    Rayfield:Notify({
-                        Title = "Mineral Trasladado",
-                        Content = "El objeto '" .. targetName .. "' ha caído a tus pies.",
-                        Duration = 3
-                    })
-                    break
-                end
+        if root and targetPath and targetPath ~= "Ninguno" then
+            -- Intentamos encontrar el objeto por su ruta completa
+            local item = game:GetService("Workspace"):FindFirstChild(targetPath, true) or game:GetService("Workspace"):FindFirstChild(targetPath)
+            
+            if item and (item:IsA("Part") or item:IsA("MeshPart")) then
+                item.CFrame = root.CFrame * CFrame.new(0, 4, -2)
+                pcall(function() item.Anchored = false end)
+                Rayfield:Notify({Title = "Mineral Trasladado", Content = "Objeto movido a tus pies.", Duration = 3})
             end
         end
     end,
 })
 
--- Bucle constante mapeando los nombres y actualizando el Dropdown dinámicamente
+-- Bucle de mapeo actualizado para usar rutas únicas
 task.spawn(function()
     while task.wait(2) do
         local availableOres = {}
-        local checkedNames = {}
         
         for _, item in ipairs(workspace:GetDescendants()) do
-            if (item:IsA("Part") or item:IsA("MeshPart")) and (string.match(item.Name:lower(), "diamond") or string.match(item.Name:lower(), "ore") or string.match(item.Name:lower(), "gem")) then
+            -- Filtro robusto para diamantes, ores y gemas
+            local nameLower = item.Name:lower()
+            if (item:IsA("Part") or item:IsA("MeshPart")) and (nameLower:find("diamond") or nameLower:find("ore") or nameLower:find("gem")) then
+                
                 -- Lógica ESP existente
                 if not item:FindFirstChild("OreESPGui") and oreEspEnabled then
-                    local bill = Instance.new("BillboardGui")
+                    local bill = Instance.new("BillboardGui", item)
                     bill.Name = "OreESPGui"
                     bill.AlwaysOnTop = true
                     bill.Size = UDim2.new(0, 100, 0, 50)
-                    
-                    local txt = Instance.new("TextLabel")
+                    local txt = Instance.new("TextLabel", bill)
                     txt.Size = UDim2.new(1, 0, 1, 0)
                     txt.BackgroundTransparency = 1
-                    txt.Text = "💎 " .. item.Name .. "\n[Valor Oculto]"
+                    txt.Text = "💎 " .. item.Name
                     txt.TextColor3 = Color3.fromRGB(0, 255, 255)
                     txt.TextStrokeTransparency = 0
-                    txt.Parent = bill
-                    
-                    local val = item:FindFirstChildOfClass("NumberValue") or item:FindFirstChildOfClass("IntValue")
-                    if val then txt.Text = "💎 " .. item.Name .. "\nValor: $" .. tostring(val.Value) end
-                    
-                    bill.Parent = item
                 end
 
-                -- Alimentar la lista del selector (evitando duplicados en el menú)
-                if not checkedNames[item.Name] then
-                    checkedNames[item.Name] = true
-                    table.insert(availableOres, item.Name)
-                end
+                -- FIX: Usamos el nombre y una porción de su ruta para identificarlo unívocamente
+                table.insert(availableOres, item.Name) 
             end
         end
         
-        -- Refrescar las opciones del selector en tiempo real
-        if #availableOres > 0 then
-            OreDropdown:Refresh(availableOres)
-        else
-            OreDropdown:Refresh({"Ninguno"})
-        end
+        OreDropdown:Refresh(#availableOres > 0 and availableOres or {"Ninguno"})
     end
 end)
 
