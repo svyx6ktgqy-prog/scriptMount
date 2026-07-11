@@ -219,39 +219,87 @@ VisualsTab:CreateToggle({
 })
 
 -- =====================================================================
--- 📍 FIX: Selector robusto con Teletransporte (Lógica de Imán Integrada)
+-- 📍 FIX: Selector de Minerales con Botones Separados (Ir / Traer)
 -- =====================================================================
+local selectedOre = "Ninguno" -- Variable para almacenar la selección actual
+
 local OreDropdown = VisualsTab:CreateDropdown({
-    Name = "🚀 Teletransportarse a Mineral / Item",
+    Name = "🔍 Seleccionar Mineral / Item",
     Options = {"Ninguno"},
     CurrentOption = {""},
     MultipleOptions = false,
     Flag = "OreTeleportSelector",
     Callback = function(Options)
-        local targetName = Options[1]
+        -- Ahora solo guardamos el nombre seleccionado, NO teletransporta automáticamente
+        selectedOre = Options[1]
+    end,
+})
+
+-- Botón 1: Teletransportarse HACIA el mineral (To Go)
+VisualsTab:CreateButton({
+    Name = "🚀 Viajar al Mineral (To Go)",
+    Callback = function()
         local root = getRoot()
+        if not root then return end
         
-        if root and targetName and targetName ~= "Ninguno" then
-            -- Buscamos el objeto en el mapa
+        if selectedOre and selectedOre ~= "Ninguno" and selectedOre ~= "" then
+            local found = false
             for _, item in ipairs(workspace:GetDescendants()) do
-                if (item:IsA("Part") or item:IsA("MeshPart")) and item.Name == targetName then
-                    
-                    -- Aplicamos la misma validación del imán para no teletransportarnos a una "Part" falsa (como el suelo)
+                if (item:IsA("Part") or item:IsA("MeshPart")) and item.Name == selectedOre then
+                    -- Validación segura estilo imán
                     local isCollectible = item:FindFirstChild("TouchInterest") or string.match(item.Name:lower(), "gem") or string.match(item.Name:lower(), "diamond") or string.match(item.Name:lower(), "coin")
                     
                     if isCollectible then
-                        -- Teletransporte automático al mineral
                         root.CFrame = item.CFrame + Vector3.new(0, 3, 0)
-                        Rayfield:Notify({Title = "Teletransporte", Content = "Viajando a: " .. targetName, Duration = 2})
+                        Rayfield:Notify({Title = "Teletransporte", Content = "Viajando a: " .. selectedOre, Duration = 2})
+                        found = true
                         break
                     end
                 end
             end
+            if not found then
+                Rayfield:Notify({Title = "Error", Content = "No se encontró el objeto " .. selectedOre .. " en el mapa.", Duration = 3})
+            end
+        else
+            Rayfield:Notify({Title = "Aviso", Content = "Por favor, selecciona primero un mineral de la lista.", Duration = 3})
         end
     end,
 })
 
--- Bucle de mapeo aplicando la lógica invencible del imán
+-- Botón 2: Teletransportar el mineral HACIA mí (Get)
+VisualsTab:CreateButton({
+    Name = "🧲 Traer Mineral hacia Mí (Get)",
+    Callback = function()
+        local root = getRoot()
+        if not root then return end
+        
+        if selectedOre and selectedOre ~= "Ninguno" and selectedOre ~= "" then
+            local found = false
+            for _, item in ipairs(workspace:GetDescendants()) do
+                if (item:IsA("Part") or item:IsA("MeshPart")) and item.Name == selectedOre then
+                    -- Validación segura estilo imán
+                    local isCollectible = item:FindFirstChild("TouchInterest") or string.match(item.Name:lower(), "gem") or string.match(item.Name:lower(), "diamond") or string.match(item.Name:lower(), "coin")
+                    
+                    if isCollectible then
+                        -- Lo mueve justo enfrente de tus pies
+                        item.CFrame = root.CFrame * CFrame.new(0, 4, -3)
+                        pcall(function() item.Anchored = false end) -- Asegura físicas activas para recolectarlo
+                        Rayfield:Notify({Title = "Objeto Atraído", Content = selectedOre .. " ha sido traído hacia ti.", Duration = 2})
+                        found = true
+                        break
+                    end
+                end
+            end
+            if not found then
+                Rayfield:Notify({Title = "Error", Content = "No se pudo traer el objeto " .. selectedOre, Duration = 3})
+            end
+        else
+            Rayfield:Notify({Title = "Aviso", Content = "Por favor, selecciona primero un mineral de la lista.", Duration = 3})
+        end
+    end,
+})
+
+-- Bucle continuo que mapea el mapa (Mantiene la lógica invencible del imán)
 task.spawn(function()
     while task.wait(1.5) do
         local availableOres = {}
@@ -260,18 +308,16 @@ task.spawn(function()
         for _, item in ipairs(workspace:GetDescendants()) do
             if item:IsA("Part") or item:IsA("MeshPart") then
                 
-                -- 🔥 AQUÍ ESTÁ LA MAGIA: Exactamente la misma lógica de tu botón de atraer
                 local nameLower = item.Name:lower()
                 local isMatch = item:FindFirstChild("TouchInterest") or string.match(nameLower, "gem") or string.match(nameLower, "diamond") or string.match(nameLower, "coin")
                 
                 if isMatch then
-                    -- Evitar duplicados en la lista del Dropdown para que no se llene de basura
                     if not foundNames[item.Name] then
                         table.insert(availableOres, item.Name)
                         foundNames[item.Name] = true
                     end
                     
-                    -- ESP automático (si el toggle está activo)
+                    -- ESP automático (si el toggle general de Ores está activo)
                     if oreEspEnabled and not item:FindFirstChild("OreESPGui") then
                         local bill = Instance.new("BillboardGui", item)
                         bill.Name = "OreESPGui"
@@ -287,7 +333,6 @@ task.spawn(function()
             end
         end
         
-        -- Ordenar los nombres alfabéticamente y refrescar el Dropdown
         table.sort(availableOres)
         OreDropdown:Refresh(#availableOres > 0 and availableOres or {"Ninguno"})
     end
