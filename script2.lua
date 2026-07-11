@@ -218,36 +218,23 @@ VisualsTab:CreateToggle({
     Callback = function(Value) oreEspEnabled = Value end,
 })
 
--- 1. Slider para filtrar (ahora es opcional, si está en 0 muestra todo)
-local MinValueFilter = 0
-VisualsTab:CreateSlider({
-    Name = "Filtro de Valor Mínimo ($)",
-    Range = {0, 1000000},
-    Increment = 1000,
-    Suffix = "$",
-    CurrentValue = 0,
-    Flag = "ValueFilter",
-    Callback = function(Value) MinValueFilter = Value end,
-})
-
--- 2. Dropdown de selección (Más robusto)
+-- 📍 FIX: Selector robusto con Teletransporte y Filtro Ampliado
 local OreDropdown = VisualsTab:CreateDropdown({
-    Name = "💎 Lista de Minerales Detectados",
-    Options = {"Buscando..."},
+    Name = "🚀 Teletransportarse a Mineral",
+    Options = {"Ninguno"},
+    CurrentOption = {""},
+    MultipleOptions = false,
+    Flag = "OreTeleportSelector",
     Callback = function(Options)
-        local selection = Options[1]
-        if not selection or selection == "Buscando..." then return end
-        
-        -- Extraemos el nombre original ignorando la info visual
-        local targetName = selection:split(" | ")[1]
-        
+        local targetName = Options[1]
         local root = getRoot()
-        if root then
-            -- Búsqueda exhaustiva por nombre
+        if root and targetName and targetName ~= "Ninguno" then
+            -- Buscamos el objeto por su nombre exacto en todo el Workspace
             for _, item in ipairs(workspace:GetDescendants()) do
-                if item:IsA("BasePart") and item.Name == targetName then
+                if (item:IsA("Part") or item:IsA("MeshPart")) and item.Name == targetName then
+                    -- Teletransporte automático al mineral
                     root.CFrame = item.CFrame + Vector3.new(0, 3, 0)
-                    Rayfield:Notify({Title = "Teletransporte", Content = "Llegando a: " .. targetName, Duration = 2})
+                    Rayfield:Notify({Title = "Teletransporte", Content = "Viajando a: " .. targetName, Duration = 2})
                     break
                 end
             end
@@ -255,50 +242,52 @@ local OreDropdown = VisualsTab:CreateDropdown({
     end,
 })
 
--- 3. Bucle de escaneo "Fuerza Bruta" (Detecta todo)
+-- Bucle de mapeo mejorado con filtros masivos
 task.spawn(function()
     while task.wait(1.5) do
         local availableOres = {}
+        local foundNames = {}
+        
+        -- Palabras clave para capturar TODAS las rarezas y tipos
+        local rarities = {"best", "colossal", "galaxy", "titan", "diamond", "ore", "gem", "legendary", "mythic", "common", "rare", "epic", "crystal", "gold"}
         
         for _, item in ipairs(workspace:GetDescendants()) do
-            -- Filtro ultra abierto: cualquier parte con nombre que contenga palabras clave
-            local n = item.Name:lower()
-            if item:IsA("BasePart") and (n:find("crystal") or n:find("diamond") or n:find("ore") or n:find("gem") or n:find("stone")) then
+            if (item:IsA("Part") or item:IsA("MeshPart")) then
+                local nameLower = item.Name:lower()
+                local isMatch = false
                 
-                -- Intentar obtener valor, si no hay, poner 0
-                local val = 0
-                for _, child in ipairs(item:GetChildren()) do
-                    if child:IsA("ValueBase") then val = child.Value end
+                for _, kw in ipairs(rarities) do
+                    if nameLower:find(kw) then
+                        isMatch = true
+                        break
+                    end
                 end
                 
-                if val >= MinValueFilter then
-                    -- Clasificación visual basada en el valor detectado
-                    local rarity = val > 50000 and "Mítico" or val > 10000 and "Legendario" or "Común"
-                    local size = val > 100000 and "Titan" or val > 50000 and "Colossal" or "Normal"
+                if isMatch then
+                    -- Evitar duplicados en la lista del Dropdown
+                    if not foundNames[item.Name] then
+                        table.insert(availableOres, item.Name)
+                        foundNames[item.Name] = true
+                    end
                     
-                    local entry = string.format("%s | %s | $%s | %s", item.Name, rarity, val, size)
-                    table.insert(availableOres, entry)
-                    
-                    -- ESP siempre activo si hay minerales
+                    -- ESP automático (si el toggle está activo)
                     if oreEspEnabled and not item:FindFirstChild("OreESPGui") then
                         local bill = Instance.new("BillboardGui", item)
                         bill.Name = "OreESPGui"
                         bill.AlwaysOnTop = true
-                        bill.Size = UDim2.new(0, 150, 0, 50)
+                        bill.Size = UDim2.new(0, 100, 0, 50)
                         local txt = Instance.new("TextLabel", bill)
                         txt.Size = UDim2.new(1, 0, 1, 0)
-                        txt.Text = item.Name .. "\n$" .. val
-                        txt.Parent = bill
+                        txt.Text = "✨ " .. item.Name
+                        txt.TextColor3 = Color3.fromRGB(255, 255, 0)
+                        txt.BackgroundTransparency = 1
                     end
                 end
             end
         end
         
-        if #availableOres > 0 then
-            OreDropdown:Refresh(availableOres)
-        else
-            OreDropdown:Refresh({"Ningún mineral encontrado"})
-        end
+        -- Refrescar opciones
+        OreDropdown:Refresh(#availableOres > 0 and availableOres or {"Ninguno"})
     end
 end)
 
