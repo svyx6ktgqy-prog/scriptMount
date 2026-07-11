@@ -218,32 +218,76 @@ VisualsTab:CreateToggle({
     Callback = function(Value) oreEspEnabled = Value end,
 })
 
+-- 📍 FIX: Selector robusto con Teletransporte y Filtro Ampliado
 local OreDropdown = VisualsTab:CreateDropdown({
-    Name = "💎 Spinner de Diamantes Disponibles",
-    Options = {"Buscando..."},
-    Callback = function(Option)
-        for _, item in ipairs(workspace:GetDescendants()) do
-            if item.Name == Option then
-                item.CFrame = getRoot().CFrame * CFrame.new(0, 4, -2)
-                pcall(function() item.Anchored = false end)
-                break
+    Name = "🚀 Teletransportarse a Mineral",
+    Options = {"Ninguno"},
+    CurrentOption = {""},
+    MultipleOptions = false,
+    Flag = "OreTeleportSelector",
+    Callback = function(Options)
+        local targetName = Options[1]
+        local root = getRoot()
+        if root and targetName and targetName ~= "Ninguno" then
+            -- Buscamos el objeto por su nombre exacto en todo el Workspace
+            for _, item in ipairs(workspace:GetDescendants()) do
+                if (item:IsA("Part") or item:IsA("MeshPart")) and item.Name == targetName then
+                    -- Teletransporte automático al mineral
+                    root.CFrame = item.CFrame + Vector3.new(0, 3, 0)
+                    Rayfield:Notify({Title = "Teletransporte", Content = "Viajando a: " .. targetName, Duration = 2})
+                    break
+                end
             end
         end
     end,
 })
 
--- Bucle robusto de actualización
+-- Bucle de mapeo mejorado con filtros masivos
 task.spawn(function()
-    while task.wait(3) do
-        local found = {}
+    while task.wait(1.5) do
+        local availableOres = {}
+        local foundNames = {}
+        
+        -- Palabras clave para capturar TODAS las rarezas y tipos
+        local rarities = {"diamond", "ore", "gem", "legendary", "mythic", "common", "rare", "epic", "crystal", "gold"}
+        
         for _, item in ipairs(workspace:GetDescendants()) do
-            local n = item.Name:lower()
-            -- Detección robusta de rarezas y tipos
-            if (string.match(n, "diamond") or string.match(n, "legendary") or string.match(n, "mythic") or string.match(n, "common") or string.match(n, "rare") or string.match(n, "epic")) then
-                if not table.find(found, item.Name) then table.insert(found, item.Name) end
+            if (item:IsA("Part") or item:IsA("MeshPart")) then
+                local nameLower = item.Name:lower()
+                local isMatch = false
+                
+                for _, kw in ipairs(rarities) do
+                    if nameLower:find(kw) then
+                        isMatch = true
+                        break
+                    end
+                end
+                
+                if isMatch then
+                    -- Evitar duplicados en la lista del Dropdown
+                    if not foundNames[item.Name] then
+                        table.insert(availableOres, item.Name)
+                        foundNames[item.Name] = true
+                    end
+                    
+                    -- ESP automático (si el toggle está activo)
+                    if oreEspEnabled and not item:FindFirstChild("OreESPGui") then
+                        local bill = Instance.new("BillboardGui", item)
+                        bill.Name = "OreESPGui"
+                        bill.AlwaysOnTop = true
+                        bill.Size = UDim2.new(0, 100, 0, 50)
+                        local txt = Instance.new("TextLabel", bill)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.Text = "✨ " .. item.Name
+                        txt.TextColor3 = Color3.fromRGB(255, 255, 0)
+                        txt.BackgroundTransparency = 1
+                    end
+                end
             end
         end
-        OreDropdown:Refresh(#found > 0 and found or {"No encontrado"})
+        
+        -- Refrescar opciones
+        OreDropdown:Refresh(#availableOres > 0 and availableOres or {"Ninguno"})
     end
 end)
 
