@@ -624,7 +624,211 @@ MapTab:CreateButton({
 -- =====================================================================
 -- PESTAÑA 3: 🚀 MOVIMIENTO Y MAPA
 -- =====================================================================
-local MoveTab = Window:CreateTab("Movimiento", 4483362458)
+local MoveTab = Window:CreateTab("Movimiento & Troll", 4483362458)
+
+local playerNames = {}
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then table.insert(playerNames, p.Name) end
+end
+
+local TpDropdown = MoveTab:CreateDropdown({
+    Name = "🎯 Teletransportarse a Jugador",
+    Options = playerNames,
+    CurrentOption = {""},
+    MultipleOptions = false,
+    Flag = "TpPlayer",
+    Callback = function(Options)
+        local targetName = Options[1]
+        local targetPlayer = Players:FindFirstChild(targetName)
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local root = getRoot()
+            if root then root.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame end
+        end
+    end,
+})
+
+MoveTab:CreateSection("#Troll") 
+
+local selectedTrollPlayer = "Ninguno"
+local trollFollowEnabled = false
+
+local TrollDropdown = MoveTab:CreateDropdown({
+    Name = "👤 Seleccionar Víctima (Jugador)",
+    Options = {"Ninguno"},
+    CurrentOption = {""},
+    MultipleOptions = false,
+    Flag = "TrollPlayerSelector",
+    Callback = function(Options) selectedTrollPlayer = Options[1] end
+})
+
+MoveTab:CreateToggle({
+    Name = "👣 Activar Modo Sombra Completo",
+    CurrentValue = false,
+    Flag = "TrollFollowToggle",
+    Callback = function(Value)
+        trollFollowEnabled = Value
+        if Value then
+            if selectedTrollPlayer == "Ninguno" or selectedTrollPlayer == "" then
+                Rayfield:Notify({Title = "Aviso #Troll", Content = "Selecciona un jugador válido.", Duration = 3})
+                return
+            end
+            
+            -- Teletransporte inicial exacto detrás del objetivo
+            pcall(function()
+                local targetPlayer = Players:FindFirstChild(selectedTrollPlayer)
+                if targetPlayer and targetPlayer.Character and LocalPlayer.Character then
+                    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    local localRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if targetRoot and localRoot then
+                        local behindPos = (targetRoot.CFrame * CFrame.new(0, 0, 3)).Position
+                        localRoot.CFrame = CFrame.lookAt(behindPos, targetRoot.Position)
+                    end
+                end
+            end)
+            
+            Rayfield:Notify({Title = "Modo Sombra V3", Content = "Enlazado físico activo con: " .. selectedTrollPlayer, Duration = 3})
+            
+            task.spawn(function()
+                while trollFollowEnabled do
+                    task.wait(0.01) -- Ciclo de refresco de físicas ultra veloz
+                    if selectedTrollPlayer and selectedTrollPlayer ~= "Ninguno" then
+                        local targetPlayer = Players:FindFirstChild(selectedTrollPlayer)
+                        if targetPlayer and targetPlayer.Character and LocalPlayer.Character then
+                            local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            local targetHum = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                            local localRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            local localHum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                            
+                            if targetRoot and targetHum and localRoot and localHum then
+                                
+                                -- 🌟 1. ROTACIÓN INTEGRAL (BodyGyro)
+                                local bg = localRoot:FindFirstChild("TrollGyro")
+                                if not bg then
+                                    bg = Instance.new("BodyGyro")
+                                    bg.Name = "TrollGyro"
+                                    bg.maxTorque = Vector3.new(0, 999999, 0) -- Forzado exclusivo en eje Y horizontal
+                                    bg.P = 60000 
+                                    bg.D = 400
+                                    bg.Parent = localRoot
+                                end
+                                bg.CFrame = CFrame.lookAt(Vector3.zero, targetRoot.CFrame.LookVector)
+
+                                -- 🌟 2. ARRASTRE FÍSICO MAGNÉTICO (BodyPosition) -> CORRIGE JOYSTICK Y PIES
+                                local behindPosition = (targetRoot.CFrame * CFrame.new(0, 0, 2.8)).Position
+                                
+                                local bp = localRoot:FindFirstChild("TrollPosition")
+                                if not bp then
+                                    bp = Instance.new("BodyPosition")
+                                    bp.Name = "TrollPosition"
+                                    -- ¡CLAVE! MaxForce en Y es 0. Permite caídas, gravedad y saltos nativos sin romper el control
+                                    bp.maxForce = Vector3.new(600000, 0, 600000) 
+                                    bp.P = 40000
+                                    bp.D = 1000
+                                    bp.Parent = localRoot
+                                end
+                                bp.Position = behindPosition
+                                
+                                -- Sincronización nativa de WalkSpeed
+                                localHum.WalkSpeed = targetHum.WalkSpeed
+
+                                -- Sincronización real de saltos por estados del motor
+                                local targetState = targetHum:GetState()
+                                if targetHum.Jump or targetState == Enum.HumanoidStateType.Jumping or targetState == Enum.HumanoidStateType.Freefall then
+                                    localHum.Jump = true
+                                end
+                                
+                                -- 🌟 3. DETECTOR DE MINERÍA POR PROXIMIDAD (CORRIGE GOLPE DE PICO)
+                                local targetHasTool = targetPlayer.Character:FindFirstChildOfClass("Tool") ~= nil
+                                local nearOre = false
+                                
+                                -- Escanea si el objetivo está a rango de minar un mineral
+                                pcall(function()
+                                    local nearbyParts = workspace:GetPartBoundsInRadius(targetRoot.Position, 7)
+                                    for _, part in ipairs(nearbyParts) do
+                                        local n = part.Name:lower()
+                                        if string.match(n, "gem") or string.match(n, "diamond") or string.match(n, "coin") or string.match(n, "ore") or string.match(n, "rock") or string.match(n, "stone") then
+                                            nearOre = true
+                                            break
+                                        end
+                                    end
+                                end)
+                                
+                                local isAttacking = false
+                                if targetHasTool and nearOre then
+                                    isAttacking = true
+                                else
+                                    -- Verificación de respaldo por si el juego usa IDs de animación alternas
+                                    pcall(function()
+                                        for _, anim in ipairs(targetHum:GetPlayingAnimationTracks()) do
+                                            if anim.IsPlaying then
+                                                local id = anim.Animation.AnimationId
+                                                -- Si no es animación core de caminar o estar quieto, está usando la herramienta
+                                                if not id:find("252654100") and not id:find("180426354") and not id:find("507766388") then
+                                                    isAttacking = true
+                                                    break
+                                                end
+                                            end
+                                        end
+                                    end)
+                                end
+                                
+                                -- Auto-Equipado y activación forzada del pico
+                                if isAttacking then
+                                    local localTool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                                    if not localTool then
+                                        local toolInBackpack = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                                        if toolInBackpack then
+                                            localHum:EquipTool(toolInBackpack)
+                                            localTool = toolInBackpack
+                                        end
+                                    end
+                                    if localTool then 
+                                        localTool:Activate() -- Golpea exactamente al mismo tiempo
+                                    end
+                                end
+                                
+                                -- 🌟 4. ABSORCIÓN INSTANTÁNEA DE RECOMPENSAS
+                                pcall(function()
+                                    if firetouchinterest then
+                                        local collectParts = workspace:GetPartBoundsInRadius(targetRoot.Position, 10)
+                                        for _, part in ipairs(collectParts) do
+                                            local nameLower = part.Name:lower()
+                                            if part:FindFirstChild("TouchInterest") or nameLower:find("gem") or nameLower:find("diamond") or nameLower:find("coin") then
+                                                firetouchinterest(localRoot, part, 0)
+                                                task.wait()
+                                                firetouchinterest(localRoot, part, 1)
+                                            end
+                                        end
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                end
+            end)
+        else
+            -- Limpieza absoluta de fuerzas para restaurar el control manual de pantalla al 100%
+            local root = getRoot()
+            if root then
+                if root:FindFirstChild("TrollGyro") then root.TrollGyro:Destroy() end
+                if root:FindFirstChild("TrollPosition") then root.TrollPosition:Destroy() end
+            end
+            Rayfield:Notify({Title = "Modo Sombra", Content = "Desactivado. Físicas restauradas.", Duration = 2})
+        end
+    end,
+})
+
+local function updateTrollDropdown()
+    local currentPlayers = {"Ninguno"}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then table.insert(currentPlayers, p.Name) end
+    end
+    TrollDropdown:Refresh(currentPlayers)
+    TpDropdown:Refresh(currentPlayers)
+end
+Players.PlayerAdded:Connect(updateTrollDropdown)
+Players.PlayerRemoving:Connect(updateTrollDropdown)
+updateTrollDropdown()
 
 local flying = false
 MoveTab:CreateToggle({
