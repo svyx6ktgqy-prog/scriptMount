@@ -4,7 +4,7 @@
 local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/rayfield/refs/heads/main/source.lua'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Crystal Miner Hub PRO",
+    Name = "$Miner$ #SCRIPT📝 🔁AUTOMATIC🔁 PRO",
     LoadingTitle = "Cargando Script...",
     LoadingSubtitle = "Delta iOS",
     ConfigurationSaving = {
