@@ -296,37 +296,37 @@ end
 -- =========================================================
 
 MorphTab:CreateButton({
-   Name = "Clonar Pro Climber 🧗‍♂️",
+   Name = "Unlock | Character Pro Climber 🧗‍♂️",
    Callback = function()
         StopCloning() 
         local Target = FindNPC("ProClimber")
         
         if Target then
             StartCloning(Target)
-            Rayfield:Notify({Title = "Sincronización Exitosa", Content = "Infiltrado como Pro Climber", Duration = 3})
+            Rayfield:Notify({Title = "Unlock 🎉", Content = "Use Character: Pro Climber", Duration = 3})
         else
-            Rayfield:Notify({Title = "Error", Content = "No se encontró a Pro Climber en el mapa.", Duration = 3})
+            Rayfield:Notify({Title = "Error", Content = "No Local a Pro Climber to Map.", Duration = 3})
         end
    end,
 })
 
 MorphTab:CreateButton({
-   Name = "Clonar Seller 💰",
+   Name = "Unlock | Character Seller 💰",
    Callback = function()
         StopCloning() 
         local Target = FindNPC("Seller")
         
         if Target then
             StartCloning(Target)
-            Rayfield:Notify({Title = "Sincronización Exitosa", Content = "Infiltrado como Seller", Duration = 3})
+            Rayfield:Notify({Title = "Sincronización Exitosa", Content = "Use Character: Seller", Duration = 3})
         else
-            Rayfield:Notify({Title = "Error", Content = "No se encontró a Seller/SellWorker en el mapa.", Duration = 3})
+            Rayfield:Notify({Title = "Error", Content = "No Local a Seller/SellWorker to Map.", Duration = 3})
         end
    end,
 })
 
 MorphTab:CreateButton({
-   Name = "Detener Clonación (Volver a Normal)",
+   Name = "Reset Character (Normal)",
    Callback = function()
         StopCloning()
         Rayfield:Notify({Title = "Desactivado", Content = "Has vuelto a tu forma original.", Duration = 3})
@@ -334,7 +334,7 @@ MorphTab:CreateButton({
 })
 
 MorphTab:CreateButton({
-   Name = "Limpiar Todo (Reset de Personaje)",
+   Name = "Kill|Clear (Reset all Objet)",
    Callback = function()
         StopCloning()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
