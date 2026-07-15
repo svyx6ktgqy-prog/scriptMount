@@ -1,0 +1,165 @@
+-- Cargar la librería Rayfield desde la URL proporcionada
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/rayfield/refs/heads/main/source.lua'))()
+
+-- Crear la ventana principal
+local Window = Rayfield:CreateWindow({
+   Name = "Spy Inspector 🔎 | Ninja 2.0",
+   LoadingTitle = "Cargando Inspector DevTools...",
+   LoadingSubtitle = "Desarrollado para Delta",
+   ConfigurationSaving = {
+      Enabled = false,
+   },
+   Discord = {
+      Enabled = false,
+   },
+   KeySystem = false
+})
+
+-- Servicios de Roblox
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- Variables de estado
+local InspectorEnabled = false
+local CurrentTarget = nil
+
+-- Crear el "Resaltador" (Highlight) para ver qué estamos tocando
+local Highlight = Instance.new("Highlight")
+Highlight.FillColor = Color3.fromRGB(0, 255, 150) -- Verde neón estilo hacker/ninja
+Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+Highlight.FillTransparency = 0.5
+Highlight.OutlineTransparency = 0.2
+Highlight.Parent = CoreGui -- Se oculta en CoreGui para evitar detección del juego
+
+-- Pestañas del Menú
+local MainTab = Window:CreateTab("Inspector DOM", 4483362458)
+local ActionTab = Window:CreateTab("Acciones", 4483362458)
+
+-- ==========================================
+-- SECCIÓN: INSPECTOR PRINCIPAL
+-- ==========================================
+
+local StatusLabel = MainTab:CreateLabel("Estado: En espera...")
+
+MainTab:CreateToggle({
+   Name = "Activar Puntero Inspector",
+   CurrentValue = false,
+   Flag = "InspectorToggle",
+   Callback = function(Value)
+        InspectorEnabled = Value
+        if not Value then
+            Highlight.Adornee = nil
+            StatusLabel:Set("Estado: Apagado")
+        else
+            StatusLabel:Set("Estado: Activo. Haz clic en un objeto del mundo.")
+        end
+   end,
+})
+
+local InfoParagraph = MainTab:CreateParagraph({
+    Title = "Datos del Elemento",
+    Content = "Activa el inspector y haz clic en un objeto para analizar su información profunda."
+})
+
+-- ==========================================
+-- SECCIÓN: ACCIONES DE DESARROLLADOR
+-- ==========================================
+
+ActionTab:CreateButton({
+   Name = "Copiar Ruta (Path) al Portapapeles",
+   Callback = function()
+        if CurrentTarget and setclipboard then
+            setclipboard(CurrentTarget:GetFullName())
+            Rayfield:Notify({
+                Title = "Copiado",
+                Content = "Ruta copiada: " .. CurrentTarget:GetFullName(),
+                Duration = 3,
+            })
+        elseif not setclipboard then
+            Rayfield:Notify({
+                Title = "Error",
+                Content = "Tu ejecutor no soporta setclipboard.",
+                Duration = 3,
+            })
+        end
+   end,
+})
+
+ActionTab:CreateButton({
+   Name = "Destruir Objeto Inspeccionado",
+   Callback = function()
+        if CurrentTarget then
+            local name = CurrentTarget.Name
+            CurrentTarget:Destroy()
+            CurrentTarget = nil
+            Highlight.Adornee = nil
+            InfoParagraph:Set({Title = "Objeto Eliminado", Content = "El objeto " .. name .. " ha sido borrado del cliente."})
+        end
+   end,
+})
+
+-- ==========================================
+-- LÓGICA DEL MOTOR DEL INSPECTOR
+-- ==========================================
+
+-- Bucle para actualizar el resaltado donde apunta el mouse
+RunService.RenderStepped:Connect(function()
+    if InspectorEnabled then
+        local target = Mouse.Target
+        if target then
+            Highlight.Adornee = target
+        else
+            Highlight.Adornee = nil
+        end
+    end
+end)
+
+-- Evento al hacer clic para capturar los datos (El "DOM Inspector")
+Mouse.Button1Down:Connect(function()
+    if InspectorEnabled and Mouse.Target then
+        CurrentTarget = Mouse.Target
+        
+        -- Extracción de datos base
+        local name = CurrentTarget.Name
+        local className = CurrentTarget.ClassName
+        local parentName = CurrentTarget.Parent and CurrentTarget.Parent.Name or "Ninguno"
+        local fullName = CurrentTarget:GetFullName()
+        
+        -- Extracción de datos específicos si es una pieza física (BasePart)
+        local deepData = ""
+        if CurrentTarget:IsA("BasePart") then
+            deepData = string.format(
+                "\n\n[Datos Físicos]\nPosición: %s\nTamaño: %s\nColor (RGB): %s\nMaterial: %s\nTransparencia: %s\nAnclado (Anchored): %s\nColisión (CanCollide): %s",
+                tostring(CurrentTarget.Position),
+                tostring(CurrentTarget.Size),
+                tostring(CurrentTarget.Color),
+                tostring(CurrentTarget.Material.Name),
+                tostring(CurrentTarget.Transparency),
+                tostring(CurrentTarget.Anchored),
+                tostring(CurrentTarget.CanCollide)
+            )
+        end
+        
+        -- Formatear la salida para el menú de Rayfield
+        local finalContent = string.format(
+            "Nombre: %s\nClase (Type): %s\nPadre Directo: %s\nRuta Completa: %s%s", 
+            name, className, parentName, fullName, deepData
+        )
+
+        -- Actualizar la UI
+        InfoParagraph:Set({
+            Title = "Analizando: " .. name,
+            Content = finalContent
+        })
+        
+        StatusLabel:Set("Estado: Analizando [" .. name .. "]")
+        
+        -- Opcional: Imprimir en consola interna (F9) para registro
+        print("--- SPY INSPECTOR: " .. name .. " ---")
+        print("Ruta: " .. fullName)
+        print("Clase: " .. className)
+    end
+end)
