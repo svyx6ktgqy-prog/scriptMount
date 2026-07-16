@@ -1,0 +1,717 @@
+-- Load the Rayfield library from the provided URL
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/rayfield/refs/heads/main/source.lua'))()
+
+-- Create the main window
+local Window = Rayfield:CreateWindow({
+   Name = "ALB8RAAQ",
+   LoadingTitle = "Loading DevTools Inspector & Exploit Suite...",
+   LoadingSubtitle = "Optimized for Delta Executor",
+   ConfigurationSaving = {
+      Enabled = false,
+   },
+   Discord = {
+      Enabled = false,
+   },
+   KeySystem = false
+})
+
+-- Roblox Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local ProximityPromptService = game:GetService("ProximityPromptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- State variables
+local InspectorEnabled = false
+local NPCInspectorEnabled = false
+local CurrentTarget = nil
+local CurrentNPCTarget = nil
+local SpyEnabled = false
+local ShopSpyEnabled = false
+local InvSpyEnabled = false 
+
+-- Forward Declarations
+local InfoParagraph = nil
+
+-- History logs
+local ActionLogs = {}
+local ShopLogs = {}
+local InvLogs = {} 
+local MaxLogs = 50
+
+-- Floating "CLEAR" Button Setup
+local ClearGui = nil
+local ClearButton = nil
+
+local function DestroyClearButton()
+    if ClearGui then
+        ClearGui:Destroy()
+        ClearGui = nil
+        ClearButton = nil
+    end
+end
+
+local function CreateClearButton()
+    DestroyClearButton() -- Clear any existing instance first
+    
+    ClearGui = Instance.new("ScreenGui")
+    ClearGui.Name = "NinjaClearGui"
+    ClearGui.ResetOnSpawn = false
+    ClearGui.Parent = CoreGui
+    
+    ClearButton = Instance.new("TextButton")
+    ClearButton.Name = "ClearButton"
+    ClearButton.Size = UDim2.new(0, 90, 0, 35)
+    ClearButton.Position = UDim2.new(0.5, -45, 0.82, 0) -- Centered horizontally near the bottom of screen
+    ClearButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    ClearButton.BorderSizePixel = 0
+    ClearButton.Text = "CLEAR"
+    ClearButton.TextColor3 = Color3.fromRGB(255, 60, 60)
+    ClearButton.Font = Enum.Font.SourceSansBold
+    ClearButton.TextSize = 16
+    ClearButton.Active = true
+    ClearButton.Draggable = true -- Allows players on mobile/PC to drag it out of the way
+    ClearButton.Parent = ClearGui
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = ClearButton
+    
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color3.fromRGB(255, 60, 60)
+    Stroke.Thickness = 1.5
+    Stroke.Parent = ClearButton
+
+    -- Click event logic to safely destroy the highlighted target
+    ClearButton.MouseButton1Click:Connect(function()
+        if CurrentTarget and CurrentTarget.Parent then
+            local name = CurrentTarget.Name
+            CurrentTarget:Destroy()
+            CurrentTarget = nil
+            Highlight.Adornee = nil
+            if InfoParagraph then
+                InfoParagraph:Set({Title = "Object Destroyed", Content = "The object " .. name .. " has been deleted from the client."})
+            end
+            Rayfield:Notify({Title = "Destroyed", Content = "Object " .. name .. " was cleared.", Duration = 2})
+        else
+            Rayfield:Notify({Title = "Error", Content = "No object selected to clear.", Duration = 2})
+        end
+    end)
+end
+
+-- Create the Highlight to see what we are touching
+local Highlight = Instance.new("Highlight")
+Highlight.FillColor = Color3.fromRGB(0, 255, 150)
+Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+Highlight.FillTransparency = 0.5
+Highlight.OutlineTransparency = 0.2
+Highlight.Parent = CoreGui 
+
+-- ==========================================
+-- MENU TABS
+-- ==========================================
+local MainTab = Window:CreateTab("DOM Inspector", 4483362458)
+local ActionTab = Window:CreateTab("Actions", 4483362458)
+local MonitorTab = Window:CreateTab("Network Monitor", 4483362458)
+local ShopTab = Window:CreateTab("Shops & NPCs 🏪", 4483362458)
+local InvTab = Window:CreateTab("Inventory & GUI 🎒", 4483362458) 
+local NPCTab = Window:CreateTab("NPC Cloner 👥", 4483362458)
+local K2Tab = Window:CreateTab("K2 Map Exploit 🏔️", 4483362458) -- NEW EXPLOIT SUITE
+
+-- ==========================================
+-- STRICT NPC FILTERING AND EXTRACTION
+-- ==========================================
+local function GetCharacterRoot(part)
+    if not part then return nil end
+    local current = part
+    while current and current ~= game and current ~= workspace do
+        if current:IsA("Model") then
+            if current:FindFirstChildOfClass("Humanoid") then
+                return current
+            end
+        end
+        current = current.Parent
+    end
+    return nil
+end
+
+local function AnalyzeNPCDetails(root)
+    if not root then return "No NPC selected.", "Empty" end
+    local humanoid = root:FindFirstChildOfClass("Humanoid")
+    local partsList, accessoriesList, interactiveList, clothesList = {}, {}, {}, {}
+    
+    for _, child in ipairs(root:GetChildren()) do
+        if child:IsA("BasePart") then
+            table.insert(partsList, string.format("  • %s [Material: %s]", child.Name, child.Material.Name))
+        elseif child:IsA("Accessory") then
+            table.insert(accessoriesList, string.format("  • %s (Accessory)", child.Name))
+        elseif child:IsA("Shirt") or child:IsA("Pants") or child:IsA("ShirtGraphic") then
+            table.insert(clothesList, string.format("  • %s (%s)", child.Name, child.ClassName))
+        elseif child:IsA("ProximityPrompt") or child:IsA("ClickDetector") or child:IsA("Dialog") then
+            table.insert(interactiveList, string.format("  • %s (%s)", child.Name, child.ClassName))
+        end
+    end
+    
+    return string.format(
+        "👤 NPC NAME: %s\n🆔 Root Path: %s\n\n⚙️ HUMANOID DATA:\n  - DisplayName: %s\n  - Current Health: %s / %s\n  - WalkSpeed: %s\n\n🧱 BODY PARTS:\n%s\n\n👕 CLOTHING & APPEARANCE:\n%s\n\n🎒 ACCESSORIES:\n%s\n\n⚡ INTERACTIVITY:\n%s",
+        root.Name, root:GetFullName(),
+        humanoid and humanoid.DisplayName or "None",
+        humanoid and tostring(humanoid.Health) or "0",
+        humanoid and tostring(humanoid.MaxHealth) or "0",
+        humanoid and tostring(humanoid.WalkSpeed) or "0",
+        #partsList > 0 and table.concat(partsList, "\n") or "  (No parts)",
+        #clothesList > 0 and table.concat(clothesList, "\n") or "  (No clothes)",
+        #accessoriesList > 0 and table.concat(accessoriesList, "\n") or "  (No accessories)",
+        #interactiveList > 0 and table.concat(interactiveList, "\n") or "  (No interactivity)"
+    )
+end
+
+local function GenerateFullNPCDump(root)
+    if not root then return "No data." end
+    local dump = {"==================================================", "      COMPLETE NPC EXTRACTION REPORT", "==================================================", string.format("Name: %s\nPath: %s", root.Name, root:GetFullName())}
+    local hum = root:FindFirstChildOfClass("Humanoid")
+    if hum then table.insert(dump, string.format("Humanoid:\n - DisplayName: %s\n - WalkSpeed: %s", hum.DisplayName, tostring(hum.WalkSpeed))) end
+    table.insert(dump, "\n[DETAILED TREE]")
+    local function recurse(parent, depth)
+        local indent = string.rep("  ", depth)
+        for _, child in ipairs(parent:GetChildren()) do
+            table.insert(dump, string.format("%s• %s (%s)", indent, child.Name, child.ClassName))
+            recurse(child, depth + 1)
+        end
+    end
+    recurse(root, 1)
+    return table.concat(dump, "\n")
+end
+
+-- ==========================================
+-- NPC CLONER INTERFACE
+-- ==========================================
+local StatusNPCLabel = NPCTab:CreateLabel("NPC Status: Waiting...")
+local NPCParagraph = NPCTab:CreateParagraph({Title = "Selected NPC Data", Content = "Select a character."})
+
+NPCTab:CreateToggle({
+   Name = "Enable Character Scanner (NPCs)",
+   CurrentValue = false,
+   Flag = "NPCInspectorToggle",
+   Callback = function(Value)
+        NPCInspectorEnabled = Value
+        if not Value then
+            Highlight.Adornee = nil
+            Highlight.FillColor = Color3.fromRGB(0, 255, 150)
+            StatusNPCLabel:Set("NPC Status: Off")
+        else
+            InspectorEnabled = false
+            DestroyClearButton() -- Destroys CLEAR button when shifting categories
+            Highlight.Adornee = nil
+            Highlight.FillColor = Color3.fromRGB(255, 50, 50)
+            StatusNPCLabel:Set("NPC Status: Active. Click on an NPC.")
+        end
+   end,
+})
+
+NPCTab:CreateButton({
+   Name = "📋 Copy Data Report to Clipboard",
+   Callback = function()
+        if CurrentNPCTarget and setclipboard then
+            setclipboard(GenerateFullNPCDump(CurrentNPCTarget))
+            Rayfield:Notify({Title = "Copied!", Content = "NPC structure copied.", Duration = 3})
+        end
+   end,
+})
+
+-- ==========================================
+-- SECTION 1: MAIN INSPECTOR (DOM)
+-- ==========================================
+local StatusLabel = MainTab:CreateLabel("Status: Waiting...")
+InfoParagraph = MainTab:CreateParagraph({Title = "Element Data", Content = "Click on an object to analyze it."})
+
+MainTab:CreateToggle({
+   Name = "Enable Inspector Pointer",
+   CurrentValue = false,
+   Flag = "InspectorToggle",
+   Callback = function(Value)
+        InspectorEnabled = Value
+        if not Value then
+            Highlight.Adornee = nil
+            StatusLabel:Set("Status: Off")
+            DestroyClearButton() -- Safely removes the button when disabled
+        else
+            NPCInspectorEnabled = false
+            Highlight.FillColor = Color3.fromRGB(0, 255, 150)
+            StatusLabel:Set("Status: Active.")
+            CreateClearButton() -- Instantiates and mounts the CLEAR button
+        end
+   end,
+})
+
+RunService.RenderStepped:Connect(function()
+    if InspectorEnabled then
+        Highlight.Adornee = Mouse.Target
+    elseif NPCInspectorEnabled then
+        local target = Mouse.Target
+        Highlight.Adornee = target and GetCharacterRoot(target) or nil
+    end
+end)
+
+Mouse.Button1Down:Connect(function()
+    if InspectorEnabled and Mouse.Target then
+        CurrentTarget = Mouse.Target
+        local deepData = CurrentTarget:IsA("BasePart") and string.format("\n\nPosition: %s\nSize: %s", tostring(CurrentTarget.Position), tostring(CurrentTarget.Size)) or ""
+        InfoParagraph:Set({Title = "Analyzing: " .. CurrentTarget.Name, Content = string.format("Name: %s\nClass: %s\nPath: %s%s", CurrentTarget.Name, CurrentTarget.ClassName, CurrentTarget:GetFullName(), deepData)})
+    elseif NPCInspectorEnabled and Mouse.Target then
+        local root = GetCharacterRoot(Mouse.Target)
+        if root then
+            CurrentNPCTarget = root
+            NPCParagraph:Set({Title = "DATA FOR: " .. root.Name, Content = AnalyzeNPCDetails(root)})
+        end
+    end
+end)
+
+-- ==========================================
+-- SECTION 2: DEVELOPER ACTIONS
+-- ==========================================
+ActionTab:CreateButton({
+   Name = "Copy Path to Clipboard",
+   Callback = function() if CurrentTarget and setclipboard then setclipboard(CurrentTarget:GetFullName()) end end,
+})
+ActionTab:CreateButton({
+   Name = "Destroy Inspected Object",
+   Callback = function() if CurrentTarget then CurrentTarget:Destroy(); Highlight.Adornee = nil end end,
+})
+
+-- ==========================================
+-- SECTION 3: NETWORK MONITOR (General)
+-- ==========================================
+local LastActionLabel = MonitorTab:CreateParagraph({Title = "Last Interaction", Content = "Waiting..."})
+MonitorTab:CreateToggle({Name = "Enable Network Spy", CurrentValue = false, Flag = "SpyToggle", Callback = function(V) SpyEnabled = V end})
+MonitorTab:CreateButton({
+   Name = "Copy General History",
+   Callback = function()
+        if setclipboard then
+            local text = "--- HISTORY ---\n"
+            for i, log in ipairs(ActionLogs) do text = text .. string.format("[%d] %s | %s | %s\n", i, log.Time, log.Path, log.Method) end
+            setclipboard(text)
+        end
+   end,
+})
+
+-- ==========================================
+-- SECTION 4: SHOPS AND NPCS
+-- ==========================================
+local LastShopLabel = ShopTab:CreateParagraph({Title = "Recent Trade", Content = "Waiting..."})
+ShopTab:CreateToggle({Name = "Enable Trade Tracker", CurrentValue = false, Flag = "ShopSpyToggle", Callback = function(V) ShopSpyEnabled = V end})
+ShopTab:CreateButton({
+   Name = "Copy Trade Log",
+   Callback = function()
+        if setclipboard then
+            local text = "=== TRADE REPORT ===\n"
+            for i, log in ipairs(ShopLogs) do text = text .. string.format("[%d] %s | %s\nDetails: %s\n\n", i, log.Path, log.Type, log.Details) end
+            setclipboard(text)
+        end
+   end,
+})
+
+local function LogShopInteraction(interType, path, detailsTable)
+    local timeStamp = os.date("%H:%M:%S")
+    local detailsStr = ""
+    for k, v in pairs(detailsTable) do detailsStr = detailsStr .. string.format("\n• %s: %s", tostring(k), tostring(v)) end
+    table.insert(ShopLogs, {Time = timeStamp, Type = interType, Path = path, Details = detailsStr})
+    task.spawn(function() LastShopLabel:Set({Title = "🛒 Trade Capture", Content = string.format("Time: %s\nPath: %s%s", timeStamp, path, detailsStr)}) end)
+end
+
+-- ==========================================
+-- SECTION 5: INVENTORY AND GUI
+-- ==========================================
+InvTab:CreateToggle({
+   Name = "Enable Inventory and GUI Monitor",
+   CurrentValue = false,
+   Flag = "InvSpyToggle",
+   Callback = function(Value)
+        InvSpyEnabled = Value
+        if Value then
+            Rayfield:Notify({Title = "Monitor Active", Content = "Listening to backpacks, tools, selectors, and UI clicks...", Duration = 4})
+        end
+   end,
+})
+
+local LastInvLabel = InvTab:CreateParagraph({
+    Title = "Recent GUI / Inventory Interaction",
+    Content = "Equip a pickaxe, press an inventory button, or pick up a diamond..."
+})
+
+InvTab:CreateButton({
+   Name = "Copy GUI and Inventory Log",
+   Callback = function()
+        if not setclipboard then return end
+        if #InvLogs == 0 then Rayfield:Notify({Title = "Empty", Content = "No logs available.", Duration = 3}) return end
+        
+        local clipboardText = "🎒 === PLAYER INVENTORY AND GUI LOG === 🎒\n\n"
+        for i, log in ipairs(InvLogs) do
+            clipboardText = clipboardText .. string.format(
+                "[%d] Time: %s\nType: %s\nElement Path: %s\nAttributes: %s\n======================================\n", 
+                i, log.Time, log.Type, log.Path, log.Details
+            )
+        end
+        setclipboard(clipboardText)
+        Rayfield:Notify({Title = "Copied!", Content = "Inventory log copied to clipboard.", Duration = 3})
+   end,
+})
+
+InvTab:CreateButton({
+   Name = "Clear Inventory Log",
+   Callback = function()
+        InvLogs = {}
+        LastInvLabel:Set({Title = "Recent Interaction", Content = "History cleared."})
+   end,
+})
+
+-- Logistics Function for Inventory
+local function LogInventoryInteraction(interType, path, detailsTable)
+    local timeStamp = os.date("%H:%M:%S")
+    local detailsStr = ""
+    for k, v in pairs(detailsTable) do
+        detailsStr = detailsStr .. string.format("\n• %s: %s", tostring(k), tostring(v))
+    end
+    
+    table.insert(InvLogs, { Time = timeStamp, Type = interType, Path = path, Details = detailsStr })
+    if #InvLogs > MaxLogs then table.remove(InvLogs, 1) end
+    
+    task.spawn(function()
+        LastInvLabel:Set({
+            Title = "🎒 Capture: " .. interType,
+            Content = string.format("Time: %s\nElement: %s%s", timeStamp, path, detailsStr)
+        })
+    end)
+    print(string.format("[GUI/INV SPY] [%s] %s -> %s", timeStamp, interType, path))
+end
+
+-- Physical Detection for Backpack and Equipment (Tools, Pickaxes, Diamonds)
+LocalPlayer.Backpack.ChildAdded:Connect(function(child)
+    if InvSpyEnabled and (child:IsA("Tool") or child:IsA("HopperBin")) then
+        LogInventoryInteraction("Item Received / Unequipped", child:GetFullName(), {
+            ["Name"] = child.Name,
+            ["Class"] = child.ClassName,
+            ["Event Type"] = "Entered Backpack"
+        })
+    end
+end)
+
+local function HookCharacterInventory(char)
+    char.ChildAdded:Connect(function(child)
+        if InvSpyEnabled and (child:IsA("Tool") or child:IsA("HopperBin")) then
+            LogInventoryInteraction("Item Equipped", child:GetFullName(), {
+                ["Name"] = child.Name,
+                ["Class"] = child.ClassName,
+                ["Event Type"] = "Tool activated in player's hands"
+            })
+        end
+    end)
+end
+
+if LocalPlayer.Character then HookCharacterInventory(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(HookCharacterInventory)
+
+-- Detection for GUI Clicks (PlayerGui)
+local function HookGUIElement(obj)
+    if obj:IsA("GuiButton") then
+        obj.MouseButton1Click:Connect(function()
+            if InvSpyEnabled then
+                LogInventoryInteraction("Interface Click (GUI)", obj:GetFullName(), {
+                    ["Button Name"] = obj.Name,
+                    ["Text"] = obj:IsA("TextButton") and obj.Text or "(Is ImageButton)",
+                    ["Parent Visibility"] = obj.Parent and tostring(obj.Parent.Visible) or "Unknown"
+                })
+            end
+        end)
+    end
+end
+
+-- Connect all existing UI buttons and future ones (Item menus, selectors)
+for _, desc in ipairs(LocalPlayer.PlayerGui:GetDescendants()) do pcall(HookGUIElement, desc) end
+LocalPlayer.PlayerGui.DescendantAdded:Connect(function(desc) pcall(HookGUIElement, desc) end)
+
+
+-- ==========================================
+-- SECTION 6: K2 MAP EXPLOIT SUITE (NEW TAB)
+-- ==========================================
+K2Tab:CreateLabel("Bypass, Spoof & Warp Controls")
+
+local K2StatusParagraph = K2Tab:CreateParagraph({
+    Title = "Active Status Panel",
+    Content = "Bypasses are loaded. Press scan to check game variables."
+})
+
+-- 1. Deep Scan and Dump Functionality
+K2Tab:CreateButton({
+    Name = "🔍 Deep Scan & Dump K2 Properties to Clipboard",
+    Callback = function()
+        local DumpData = {"🎒 === ALB8RAAQ RECURSIVE REPORT: MAP K2 === 🎒\n"}
+        
+        -- Scan PlayerGui
+        local gui = LocalPlayer:FindFirstChild("PlayerGui")
+        if gui then
+            for _, desc in ipairs(gui:GetDescendants()) do
+                if string.lower(desc.Name) == "k2" or string.find(string.lower(desc.Name), "k2") then
+                    table.insert(DumpData, string.format("Encontrado en GUI: %s (%s) | Ruta: %s", desc.Name, desc.ClassName, desc:GetFullName()))
+                    for attr, val in pairs(desc:GetAttributes()) do
+                        table.insert(DumpData, string.format("  [Attribute] %s = %s", tostring(attr), tostring(val)))
+                    end
+                    for _, child in ipairs(desc:GetChildren()) do
+                        if child:IsA("ValueBase") or string.find(child.ClassName, "Value") then
+                            table.insert(DumpData, string.format("  [Value] %s = %s", child.Name, tostring(child.Value)))
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Scan Physical Workspace
+        for _, desc in ipairs(Workspace:GetDescendants()) do
+            if string.lower(desc.Name) == "k2" then
+                table.insert(DumpData, string.format("En Workspace: %s (%s) | Ruta: %s", desc.Name, desc.ClassName, desc:GetFullName()))
+            end
+        end
+
+        -- Scan ReplicatedStorage Remotes
+        for _, desc in ipairs(ReplicatedStorage:GetDescendants()) do
+            if string.find(string.lower(desc.Name), "k2") then
+                table.insert(DumpData, string.format("En ReplicatedStorage: %s (%s) | Ruta: %s", desc.Name, desc.ClassName, desc:GetFullName()))
+            end
+        end
+
+        -- Paste to Clipboard
+        if setclipboard then
+            local parsedDump = table.concat(DumpData, "\n")
+            setclipboard(parsedDump)
+            Rayfield:Notify({Title = "Dump Copied", Content = "Full report copied to your clipboard!", Duration = 3})
+            K2StatusParagraph:Set({Title = "Scan Succeeded", Content = "Copied K2 layout variables."})
+        else
+            Rayfield:Notify({Title = "Clipboard Error", Content = "Your Executor doesn't support 'setclipboard'. Check console (F9).", Duration = 3})
+            print(table.concat(DumpData, "\n"))
+        end
+    end
+})
+
+-- 2. Spoof Ownership Button
+K2Tab:CreateButton({
+    Name = "🔓 Spoof K2 Ownership & Price (Bypass Buy Menu)",
+    Callback = function()
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not PlayerGui then return end
+        
+        local MountainsUI = PlayerGui:FindFirstChild("Mountains")
+        if not MountainsUI then
+            Rayfield:Notify({Title = "UI Not Loaded", Content = "The game's Mountains GUI is not initialized in PlayerGui.", Duration = 3})
+            return
+        end
+
+        local bypassed = 0
+        for _, desc in ipairs(MountainsUI:GetDescendants()) do
+            if desc:IsA("BoolValue") then
+                local lowerName = string.lower(desc.Name)
+                if string.find(lowerName, "own") or string.find(lowerName, "buy") or string.find(lowerName, "unlocked") then
+                    desc.Value = true -- Force Ownership State
+                    bypassed = bypassed + 1
+                elseif string.find(lowerName, "lock") then
+                    desc.Value = false -- Strip padlock
+                    bypassed = bypassed + 1
+                end
+            elseif desc:IsA("NumberValue") or desc:IsA("IntValue") then
+                local lowerName = string.lower(desc.Name)
+                if string.find(lowerName, "price") or string.find(lowerName, "cost") then
+                    desc.Value = 0 -- Reset payment requirement
+                    bypassed = bypassed + 1
+                end
+            end
+        end
+
+        K2StatusParagraph:Set({Title = "Spoof Injected", Content = string.format("Spoofed %d ownership values to bypassed/free.", bypassed)})
+        Rayfield:Notify({Title = "Spoofed!", Content = "Ownership variables locked to Owned.", Duration = 3})
+    end
+})
+
+-- 3. Glitch Map Timers Button
+K2Tab:CreateButton({
+    Name = "⏳ Glitch Map Timers (Force Map Active)",
+    Callback = function()
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not PlayerGui then return end
+        
+        local MountainsUI = PlayerGui:FindFirstChild("Mountains")
+        if not MountainsUI then
+            Rayfield:Notify({Title = "UI Not Loaded", Content = "Open the mountain menu once to run this script.", Duration = 3})
+            return
+        end
+
+        local timerCount = 0
+        for _, desc in ipairs(MountainsUI:GetDescendants()) do
+            if desc:IsA("NumberValue") or desc:IsA("IntValue") then
+                local lowerName = string.lower(desc.Name)
+                if string.find(lowerName, "time") or string.find(lowerName, "count") or string.find(lowerName, "wait") or string.find(lowerName, "cooldown") then
+                    desc.Value = 0 -- Zero out rotation delays
+                    timerCount = timerCount + 1
+                end
+            end
+        end
+
+        K2StatusParagraph:Set({Title = "Timers Glitched", Content = string.format("Overrode %d active timers to 0.", timerCount)})
+        Rayfield:Notify({Title = "Glitched!", Content = "Cooldoows and rotations zeroed.", Duration = 3})
+    end
+})
+
+-- 4. Force Instant Warp Execution
+K2Tab:CreateButton({
+    Name = "⚡ Force Instant Warp to K2",
+    Callback = function()
+        K2StatusParagraph:Set({Title = "Warp Initiated", Content = "Deploying concurrent warp vectors..."})
+        
+        -- Vector A: Physical Workspace Spawning Point Teleport
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for _, desc in ipairs(Workspace:GetDescendants()) do
+                if string.lower(desc.Name) == "k2" and (desc:IsA("Model") or desc:IsA("Folder")) then
+                    local targetPart = desc:FindFirstChild("SpawnLocation", true) or desc:FindFirstChildWhichIsA("BasePart", true)
+                    if targetPart then
+                        hrp.CFrame = targetPart.CFrame + Vector3.new(0, 5, 0)
+                        K2StatusParagraph:Set({Title = "Teleport Accomplished", Content = "Warped directly inside physical K2 Map coordinates."})
+                        Rayfield:Notify({Title = "Success!", Content = "Warped directly into K2 Model.", Duration = 3})
+                        return
+                    end
+                end
+            end
+        end
+
+        -- Vector B: Force UI Trigger Bypass Logic
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if PlayerGui then
+            local K2_Btn = PlayerGui:FindFirstChild("Mountains")
+                and PlayerGui.Mountains:FindFirstChild("Main")
+                and PlayerGui.Mountains.Main:FindFirstChild("MountainFrame")
+                and PlayerGui.Mountains.Main.MountainFrame:FindFirstChild("Holder")
+                and PlayerGui.Mountains.Main.MountainFrame.Holder:FindFirstChild("K2")
+
+            if K2_Btn then
+                local success = false
+                if getconnections then
+                    for _, conn in pairs(getconnections(K2_Btn.MouseButton1Click)) do
+                        conn:Fire()
+                        success = true
+                    end
+                elseif firesignal then
+                    firesignal(K2_Btn.MouseButton1Click)
+                    success = true
+                end
+                if success then
+                    K2StatusParagraph:Set({Title = "Warp Signal Dispatched", Content = "Emulated client click directly on K2."})
+                    Rayfield:Notify({Title = "Success!", Content = "Dispatched native button connections.", Duration = 3})
+                    return
+                end
+            end
+        end
+
+        -- Vector C: Network Remote Injections
+        local remotesInjected = 0
+        local keywords = {"teleport", "travel", "warp", "load", "map", "mountain", "k2"}
+        for _, item in ipairs(ReplicatedStorage:GetDescendants()) do
+            if item:IsA("RemoteEvent") then
+                local lowerName = string.lower(item.Name)
+                for _, word in ipairs(keywords) do
+                    if string.find(lowerName, word) then
+                        pcall(function() item:FireServer("K2") end)
+                        pcall(function() item:FireServer("Mountains", "K2") end)
+                        pcall(function() item:FireServer(item.Name, "K2") end)
+                        remotesInjected = remotesInjected + 1
+                        break
+                    end
+                end
+            end
+        end
+
+        if remotesInjected > 0 then
+            K2StatusParagraph:Set({Title = "Injected network traffic", Content = string.format("Sent payload to %d travelling Remotes.", remotesInjected)})
+            Rayfield:Notify({Title = "Remotes Spammed", Content = "Injected traveling server parameters.", Duration = 3})
+        else
+            K2StatusParagraph:Set({Title = "Failed", Content = "No warp destination identified. Run 'Deep Scan' for diagnostics."})
+            Rayfield:Notify({Title = "Failed to Teleport", Content = "No path was found. See status panel.", Duration = 3})
+        end
+    end
+})
+
+
+-- ==========================================
+-- GENERAL NETWORK HOOKING (__namecall)
+-- ==========================================
+local function FormatArguments(args)
+    local result = ""
+    for i, v in ipairs(args) do
+        local argType = typeof(v)
+        if argType == "string" then result = result .. '"' .. v .. '"'
+        elseif argType == "Instance" then result = result .. v:GetFullName()
+        elseif argType == "table" then
+            local ok, json = pcall(function() return game:GetService("HttpService"):JSONEncode(v) end)
+            result = result .. (ok and json or "{Table}")
+        else result = result .. tostring(v) end
+        if i < #args then result = result .. ", " end
+    end
+    return result == "" and "None" or result
+end
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+    local method = getnamecallmethod()
+    local args = {...}
+
+    if not checkcaller() and (method == "FireServer" or method == "InvokeServer") then
+        local path = self:GetFullName()
+        local formattedArgs = FormatArguments(args)
+        local timeStamp = os.date("%H:%M:%S")
+
+        -- 1. General Network
+        if SpyEnabled then
+            table.insert(ActionLogs, {Time = timeStamp, Path = path, Method = method, Args = formattedArgs})
+            task.spawn(function() LastActionLabel:Set({Title = "Interaction!", Content = path .. "\n" .. formattedArgs}) end)
+        end
+
+        -- 2. Shop Filter
+        if ShopSpyEnabled then
+            local strData = string.lower(path .. formattedArgs)
+            local keywords = {"buy", "shop", "store", "sell", "npc", "comprar"}
+            for _, w in ipairs(keywords) do
+                if string.find(strData, w) then
+                    LogShopInteraction("Transaction", path, {["Args"] = formattedArgs})
+                    break
+                end
+            end
+        end
+        
+        -- 3. Inventory/GUI Filter
+        if InvSpyEnabled then
+            local strData = string.lower(path .. formattedArgs)
+            local invKeywords = {"equip", "unequip", "inventory", "backpack", "tool", "select", "slot", "hotbar", "item", "drop", "pickup", "inv"}
+            for _, w in ipairs(invKeywords) do
+                if string.find(strData, w) then
+                    LogInventoryInteraction("Network Event (Inventory/GUI)", path, {
+                        ["Method"] = method,
+                        ["Arguments"] = formattedArgs,
+                        ["Trigger Keyword"] = w
+                    })
+                    break
+                end
+            end
+        end
+    end
+
+    return oldNamecall(self, ...)
+end)
+
+-- Physical Interaction Events
+ProximityPromptService.PromptTriggered:Connect(function(prompt, player)
+    if player == LocalPlayer and ShopSpyEnabled then
+        LogShopInteraction("ProximityPrompt", prompt:GetFullName(), {["Action"] = prompt.ActionText})
+    end
+end)
