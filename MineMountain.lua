@@ -1520,7 +1520,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local targetNumber = 2000000000
 local targetText = "2,000,000,000"
 local targetTimer = "99:99"
-local keywordsSoldOut = {"sold out", "lucky", "vip", "time", "out of stock", "max", "full", "bought", "unavailable", "depleted"}
+local keywordsSoldOut = {"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "unlock", "equiped", "use", "buy", "full", "bought", "unavailable", "depleted"}
 local keywordsPrice = {"price", "premium", "result", "level", "cost", "value", "free"}
 local keywordsStock = {"stock", "backpack", "min", "mine", "bomb", "life", "damage", "amount", "left", "remaining", "quantity", "capacity"}
 
