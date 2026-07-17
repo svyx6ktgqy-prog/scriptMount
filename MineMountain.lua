@@ -1510,50 +1510,76 @@ MorphTab:CreateButton({
 })
 
 -- =====================================================================
--- TAB 7: UI MANIPULATION (From Source 5)
+-- TAB 7: UI MANIPULATION (MINING & GLITCH EDITION)
 -- =====================================================================
 local UITab = Window:CreateTab("UI Manipulation", "box")
 
 local uiLoopActive = false
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
-local targetNumber = 2000000000
-local targetText = "2,000,000,000"
-local targetTimer = "99:99"
-local keywordsSoldOut = {"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "unlock", "equiped", "use", "buy", "full", "bought", "unavailable", "depleted"}
-local keywordsPrice = {"price", "premium", "result", "level", "cost", "value", "free"}
-local keywordsStock = {"stock", "backpack", "min", "mine", "bomb", "life", "damage", "amount", "left", "remaining", "quantity", "capacity"}
+local targetNumber = 9999999999
+local targetText = "2,000,000,000 💎"
+local targetTimer = "00:00 [GLITCHED]"
 
-local function ReinforceUI()
-    for _, v in pairs(PlayerGui:GetDescendants()) do
+-- Diccionarios expandidos para juegos de minería y simuladores
+local keywordsSoldOut = {"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "unlock", "equiped", "use", "buy", "full", "bought", "unavailable", "depleted", "locked", "cooldown", "claim", "redeem", "requires", "premium_only"}
+local keywordsPrice = {"price", "premium", "result", "level", "cost", "value", "free", "gem", "diamond", "crystal", "coin", "gold", "cash", "ore", "robux", "currency", "tokens"}
+local keywordsStock = {"stock", "backpack", "min", "mine", "bomb", "life", "damage", "amount", "left", "remaining", "quantity", "capacity", "depth", "power", "multiplier", "speed", "luck", "fortune", "yield", "durability", "drill", "pickaxe", "storage", "weight"}
+
+-- Almacenamiento de conexiones para evitar fugas de memoria
+local activeConnections = {}
+
+local function ClearConnections()
+    for _, conn in ipairs(activeConnections) do
+        if conn then conn:Disconnect() end
+    end
+    table.clear(activeConnections)
+end
+
+local function CorruptElement(v)
+    if not uiLoopActive then return end
+    
+    pcall(function()
+        -- 1. Manipulación de Textos y Botones
         if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
             local txt = string.lower(v.Text)
-            if string.match(txt, "^00?:00$") or string.match(txt, "^00?:00:00$") then
+            local name = string.lower(v.Name)
+            
+            -- Congelar temporizadores
+            if string.match(txt, "^%d%d?:%d%d$") or string.match(txt, "^%d%d?:%d%d:%d%d$") or string.find(name, "timer") then
                 if v.Text ~= targetTimer then
                     v.Text = targetTimer
-                    v.TextColor3 = Color3.fromRGB(0, 255, 0) 
+                    v.TextColor3 = Color3.fromRGB(0, 255, 255) -- Cyan Glitch
                 end
             else
-                local isSoldOut = false
+                -- Comprobar si es un precio, botón bloqueado o inventario lleno
+                local isTarget = false
                 for _, word in ipairs(keywordsSoldOut) do
-                    if string.find(txt, word) then isSoldOut = true break end
+                    if string.find(txt, word) or string.find(name, word) then isTarget = true break end
                 end
                 
-                if isSoldOut or string.find(txt, "%$") or tonumber(txt) then
+                if isTarget or string.find(txt, "%$") or tonumber(txt) then
                     if v.Text ~= targetText then
                         v.Text = targetText
-                        v.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        v.TextColor3 = Color3.fromRGB(85, 255, 127) -- Verde Neón
                     end
                 end
             end
         end
         
+        -- 2. Reactivación y Bypass de Botones
         if v:IsA("GuiButton") then
             if not v.Active or not v.Interactable or not v.Visible then
-                v.Active = true; v.Interactable = true; v.Visible = true; v.AutoButtonColor = true
+                v.Active = true 
+                v.Interactable = true 
+                v.Visible = true 
+                v.AutoButtonColor = true
+                -- Eliminar scripts de bloqueo locales si es posible
+                v.Selectable = true
             end
         end
 
+        -- 3. Manipulación de Imágenes e Iconos (Brillo al máximo)
         if v:IsA("ImageLabel") or v:IsA("ImageButton") then
             if v.ImageColor3.R < 0.6 and v.ImageColor3.G < 0.6 and v.ImageColor3.B < 0.6 then
                 v.ImageColor3 = Color3.fromRGB(255, 255, 255)
@@ -1561,39 +1587,79 @@ local function ReinforceUI()
             end
         end
 
-        if v:IsA("IntValue") or v:IsA("NumberValue") then
-            local valName = string.lower(v.Name)
-            for _, word in ipairs(keywordsPrice) do
-                if string.find(valName, word) and v.Value ~= targetNumber then v.Value = targetNumber end
-            end
-            for _, word in ipairs(keywordsStock) do
-                if string.find(valName, word) and v.Value ~= targetNumber then v.Value = targetNumber end
+        -- 4. Manipulación de Barras de Progreso (Mochila, Profundidad, Exp)
+        if v:IsA("Frame") then
+            local fName = string.lower(v.Name)
+            if string.find(fName, "bar") or string.find(fName, "progress") or string.find(fName, "fill") then
+                v.Size = UDim2.new(1, 0, 1, 0) -- Forzar visualmente al 100%
+                v.BackgroundColor3 = Color3.fromRGB(85, 255, 127)
             end
         end
         
+        -- 5. Desbloqueo de menús desplazables
+        if v:IsA("ScrollingFrame") then
+            v.ScrollingEnabled = true
+            v.Visible = true
+        end
+
+        -- 6. Valores Internos y Atributos (IntValues, NumberValues)
+        if v:IsA("IntValue") or v:IsA("NumberValue") then
+            local valName = string.lower(v.Name)
+            for _, word in ipairs(keywordsPrice) do
+                if string.find(valName, word) and v.Value ~= 0 then v.Value = 0 end -- Poner precios a 0
+            end
+            for _, word in ipairs(keywordsStock) do
+                if string.find(valName, word) and v.Value ~= targetNumber then v.Value = targetNumber end -- Maxear recursos
+            end
+        end
+        
+        -- 7. Manipulación de Atributos ocultos
         local attributes = v:GetAttributes()
         for attrName, _ in pairs(attributes) do
             local lName = string.lower(attrName)
-            if string.find(lName, "price") or string.find(lName, "cost") or string.find(lName, "stock") then
+            if string.find(lName, "price") or string.find(lName, "cost") then
+                v:SetAttribute(attrName, 0)
+            elseif string.find(lName, "stock") or string.find(lName, "capacity") or string.find(lName, "multiplier") then
                 v:SetAttribute(attrName, targetNumber)
             end
         end
+    end)
+end
+
+local function ReinforceUI()
+    for _, v in pairs(PlayerGui:GetDescendants()) do
+        CorruptElement(v)
     end
 end
 
 UITab:CreateToggle({
-   Name = "Loop: Force 2 Billion & 99:99 Timers",
+   Name = "Loop: UI Glitch Override (Mining Mod)",
    CurrentValue = false,
-   Flag = "UI_Loop", 
+   Flag = "UI_Loop_Mining", 
    Callback = function(Value)
        uiLoopActive = Value
+       
        if uiLoopActive then
-           Rayfield:Notify({Title = "Loop Enabled", Content = "Freezing values to 2 Billion and resetting timers...", Duration = 3})
+           Rayfield:Notify({Title = "Glitch Overridden", Content = "Inyectando multiplicadores, capacidad max y rompiendo UI...", Duration = 4})
+           
+           -- 1. Iniciar Bucle Constante (para elementos rebeldes)
            task.spawn(function()
-               while uiLoopActive do ReinforceUI() task.wait(0.5) end
+               while uiLoopActive do 
+                   ReinforceUI() 
+                   task.wait(0.3) -- Un poco más rápido
+               end
            end)
+
+           -- 2. Conectar Evento Reactivo (Atrapa nuevos menús/tiendas que se abran al instante)
+           local conn = PlayerGui.DescendantAdded:Connect(function(descendant)
+               task.wait(0.05) -- Pequeña pausa para que carguen las propiedades del objeto
+               CorruptElement(descendant)
+           end)
+           table.insert(activeConnections, conn)
+
        else
-           Rayfield:Notify({Title = "Loop Disabled", Content = "UI is no longer frozen.", Duration = 3})
+           Rayfield:Notify({Title = "UI Normalizada", Content = "El puente reactivo ha sido cerrado.", Duration = 3})
+           ClearConnections()
        end
    end,
 })
