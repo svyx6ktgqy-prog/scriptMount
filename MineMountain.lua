@@ -1510,120 +1510,93 @@ MorphTab:CreateButton({
 })
 
 -- =====================================================================
--- TAB 8: UI MANIPULATION & NPC SHOP BYPASS (ORCHESTRATOR VERSION)
+-- TAB 8: UI MANIPULATION (From Source 5)
 -- =====================================================================
 local UITab = Window:CreateTab("UI Manipulation", "box")
 
-local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-local RunService = game:GetService("RunService")
+local uiLoopActive = false
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Estado Global de los Filtros
-local ActiveFilters = {
-    Price = {},
-    Stock = {},
-    Equip = {},
-    SoldOut = {},
-    RevealMenus = false
-}
-
--- Configuración Base
-local targetNumber = 9999999999
-local freeCost = 0
+local targetNumber = 2000000000
+local targetText = "2,000,000,000"
 local targetTimer = "99:99"
-local targetEquippedText = "Equipped"
+local keywordsSoldOut = {"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "unlock", "equiped", "use", "buy", "full", "bought", "unavailable", "depleted"}
+local keywordsPrice = {"price", "premium", "result", "level", "cost", "value", "free"}
+local keywordsStock = {"stock", "backpack", "min", "mine", "bomb", "life", "damage", "amount", "left", "remaining", "quantity", "capacity"}
 
--- =====================================================================
--- MOTOR CENTRAL (ORQUESTADOR)
--- =====================================================================
-task.spawn(function()
-    while true do
-        task.wait(0.5) -- Velocidad constante optimizada
-        
-        -- 1. Revelado de Menús (Si está activo)
-        if ActiveFilters.RevealMenus then
-            for _, v in pairs(PlayerGui:GetDescendants()) do
-                if v:IsA("GuiObject") and not string.find(v.Name:lower(), "template") then
-                    if not v.Visible then v.Visible = true end
-                    if v:IsA("CanvasGroup") then v.GroupTransparency = 0 end
-                    if v:IsA("ScrollingFrame") then v.ScrollingEnabled = true end
+local function ReinforceUI()
+    for _, v in pairs(PlayerGui:GetDescendants()) do
+        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+            local txt = string.lower(v.Text)
+            if string.match(txt, "^00?:00$") or string.match(txt, "^00?:00:00$") then
+                if v.Text ~= targetTimer then
+                    v.Text = targetTimer
+                    v.TextColor3 = Color3.fromRGB(0, 255, 0) 
                 end
-            end
-        end
-
-        -- 2. Bypass de elementos (Busca solo lo que está activo)
-        for _, v in pairs(PlayerGui:GetDescendants()) do
-            pcall(function()
-                local name = v.Name:lower()
-                local txt = (v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox")) and v.Text:lower() or ""
-
-                -- Chequeo de Price
-                for kw, enabled in pairs(ActiveFilters.Price) do
-                    if enabled and (string.find(txt, kw) or string.find(name, kw)) then
-                        v.Text = "0"
-                        v.TextColor3 = Color3.fromRGB(85, 255, 127)
-                        if v:IsA("IntValue") or v:IsA("NumberValue") then v.Value = freeCost end
-                    end
+            else
+                local isSoldOut = false
+                for _, word in ipairs(keywordsSoldOut) do
+                    if string.find(txt, word) then isSoldOut = true break end
                 end
-
-                -- Chequeo de Equip
-                for kw, enabled in pairs(ActiveFilters.Equip) do
-                    if enabled and (string.find(txt, kw) or string.find(name, kw)) then
-                        v.Text = targetEquippedText
-                        v.TextColor3 = Color3.fromRGB(255, 215, 0)
-                        if v:IsA("BoolValue") then v.Value = true end
-                    end
-                end
-
-                -- Chequeo de Stock
-                for kw, enabled in pairs(ActiveFilters.Stock) do
-                    if enabled and string.find(name, kw) then
-                        if v:IsA("IntValue") or v:IsA("NumberValue") then v.Value = targetNumber end
-                    end
-                end
-
-                -- Chequeo de SoldOut
-                for kw, enabled in pairs(ActiveFilters.SoldOut) do
-                    if enabled and (string.find(txt, kw) or string.find(name, kw)) then
-                        v.Text = "Available"
+                
+                if isSoldOut or string.find(txt, "%$") or tonumber(txt) then
+                    if v.Text ~= targetText then
+                        v.Text = targetText
                         v.TextColor3 = Color3.fromRGB(0, 255, 0)
                     end
                 end
-            end)
+            end
+        end
+        
+        if v:IsA("GuiButton") then
+            if not v.Active or not v.Interactable or not v.Visible then
+                v.Active = true; v.Interactable = true; v.Visible = true; v.AutoButtonColor = true
+            end
+        end
+
+        if v:IsA("ImageLabel") or v:IsA("ImageButton") then
+            if v.ImageColor3.R < 0.6 and v.ImageColor3.G < 0.6 and v.ImageColor3.B < 0.6 then
+                v.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                v.ImageTransparency = 0 
+            end
+        end
+
+        if v:IsA("IntValue") or v:IsA("NumberValue") then
+            local valName = string.lower(v.Name)
+            for _, word in ipairs(keywordsPrice) do
+                if string.find(valName, word) and v.Value ~= targetNumber then v.Value = targetNumber end
+            end
+            for _, word in ipairs(keywordsStock) do
+                if string.find(valName, word) and v.Value ~= targetNumber then v.Value = targetNumber end
+            end
+        end
+        
+        local attributes = v:GetAttributes()
+        for attrName, _ in pairs(attributes) do
+            local lName = string.lower(attrName)
+            if string.find(lName, "price") or string.find(lName, "cost") or string.find(lName, "stock") then
+                v:SetAttribute(attrName, targetNumber)
+            end
         end
     end
-end)
-
--- =====================================================================
--- CREACIÓN DE INTERFAZ
--- =====================================================================
-UITab:CreateSection("--- SISTEMA MAESTRO ---")
-UITab:CreateToggle({
-    Name = "FORCE REVEAL ALL UI PANELS",
-    CurrentValue = false,
-    Callback = function(Value) ActiveFilters.RevealMenus = Value end
-})
-
-local function CreateToggle(sectionName, category, kw)
-    UITab:CreateToggle({
-        Name = "Toggle [" .. category .. "]: " .. kw,
-        CurrentValue = false,
-        Callback = function(Value)
-            ActiveFilters[category][kw] = Value
-        end
-    })
 end
 
-UITab:CreateSection("--- PRECIOS (0 Cost) ---")
-for _, kw in ipairs({"price", "premium", "cost", "value", "gem", "diamond", "robux", "currency", "tokens", "required", "pay"}) do CreateToggle("Precios", "Price", kw) end
-
-UITab:CreateSection("--- EQUIPAMIENTO ---")
-for _, kw in ipairs({"equip", "own", "unlock", "buy", "purchas", "claim", "tier", "has", "inventory"}) do CreateToggle("Equip", "Equip", kw) end
-
-UITab:CreateSection("--- STATS (Max) ---")
-for _, kw in ipairs({"stock", "backpack", "capacity", "depth", "power", "multiplier", "speed", "luck", "yield", "durability", "storage", "weight", "level"}) do CreateToggle("Stock", "Stock", kw) end
-
-UITab:CreateSection("--- BLOQUEOS (Sold Out) ---")
-for _, kw in ipairs({"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "locked", "cooldown", "unavailable", "depleted", "requires", "premium_only"}) do CreateToggle("SoldOut", "SoldOut", kw) end
+UITab:CreateToggle({
+   Name = "Loop: Force 2 Billion & 99:99 Timers",
+   CurrentValue = false,
+   Flag = "UI_Loop", 
+   Callback = function(Value)
+       uiLoopActive = Value
+       if uiLoopActive then
+           Rayfield:Notify({Title = "Loop Enabled", Content = "Freezing values to 2 Billion and resetting timers...", Duration = 3})
+           task.spawn(function()
+               while uiLoopActive do ReinforceUI() task.wait(0.5) end
+           end)
+       else
+           Rayfield:Notify({Title = "Loop Disabled", Content = "UI is no longer frozen.", Duration = 3})
+       end
+   end,
+})
 
 -- =====================================================================
 -- TAB 8: PHYSICAL ZONES (From Source 6)
