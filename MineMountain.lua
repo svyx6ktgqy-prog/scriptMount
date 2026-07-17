@@ -1529,6 +1529,8 @@ local keywordsStock = {"stock", "backpack", "capacity", "depth", "power", "multi
 local keywordsEquip = {"equip", "own", "unlock", "buy", "purchas", "claim", "tier", "has", "inventory"}
 
 local activeConnections = {}
+-- Tabla para almacenar qué palabras clave individuales están activas en segundo plano
+local activeSingleKeywords = {}
 
 local function ClearConnections()
     for _, conn in ipairs(activeConnections) do
@@ -1537,14 +1539,14 @@ local function ClearConnections()
     table.clear(activeConnections)
 end
 
--- ==========================================
--- 1. LOOP GLOBAL Y FUERZA BRUTA (Original)
--- ==========================================
+-- =====================================================================
+-- FUNCIÓN CENTRAL DE MODIFICACIÓN (IGUAL A LA ORIGINAL)
+-- =====================================================================
 local function ForceUnlockElement(v)
     pcall(function()
         local name = string.lower(v.Name)
         
-        -- Manipulación de Textos
+        -- 1. MANIPULACIÓN DE TEXTOS Y BOTONES DE TIENDAS NPC
         if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
             local txt = string.lower(v.Text)
             
@@ -1574,7 +1576,7 @@ local function ForceUnlockElement(v)
             end
         end
         
-        -- Desbloqueo de botones
+        -- 2. DESBLOQUEO ABSOLUTO DE INTERFAZ (BOTONES)
         if v:IsA("GuiButton") then
             v.Active = true 
             v.Interactable = true 
@@ -1583,15 +1585,17 @@ local function ForceUnlockElement(v)
             v.Selectable = true
         end
 
-        -- BoolValues (Equipado/Propiedad)
+        -- 3. FORZAR ESTADOS DE "PROPIEDAD" (BOOLVALUES)
         if v:IsA("BoolValue") then
             local valName = string.lower(v.Name)
             for _, word in ipairs(keywordsEquip) do
-                if string.find(valName, word) then v.Value = true end
+                if string.find(valName, word) then
+                    v.Value = true
+                end
             end
         end
 
-        -- Int/Number Values (Stats y Precios)
+        -- 4. DESTRUCCIÓN DE PRECIOS Y MAXIMIZACIÓN DE STATS GLOBALES
         if v:IsA("IntValue") or v:IsA("NumberValue") then
             local valName = string.lower(v.Name)
             for _, word in ipairs(keywordsPrice) do
@@ -1602,7 +1606,7 @@ local function ForceUnlockElement(v)
             end
         end
         
-        -- Atributos Ocultos
+        -- 5. SOBREESCRITURA DE ATRIBUTOS
         local attributes = v:GetAttributes()
         for attrName, _ in pairs(attributes) do
             local lName = string.lower(attrName)
@@ -1615,17 +1619,22 @@ local function ForceUnlockElement(v)
             end
         end
 
-        -- Revelar Ocultos
+        -- 6. REVELAR TIENDAS OCULTAS Y PANELES NPC
         if v:IsA("CanvasGroup") then
             v.GroupTransparency = 0
             v.Visible = true
         elseif v:IsA("ScrollingFrame") or v:IsA("Frame") then
-            if v.Visible == false and not string.find(name, "template") then v.Visible = true end
-            if v:IsA("ScrollingFrame") then v.ScrollingEnabled = true end
+            if v.Visible == false and not string.find(name, "template") then
+                v.Visible = true
+            end
+            if v:IsA("ScrollingFrame") then
+                v.ScrollingEnabled = true
+            end
         end
     end)
 end
 
+-- Hook dinámico para el switch de Loop General
 local function HookElement(v)
     if not uiLoopActive then return end
     ForceUnlockElement(v)
@@ -1639,24 +1648,33 @@ local function HookElement(v)
 
     if v:IsA("GuiObject") then
         local conn = v:GetPropertyChangedSignal("Visible"):Connect(function()
-            if uiLoopActive and v.Visible == false then v.Visible = true end
+            if uiLoopActive and v.Visible == false then
+                v.Visible = true
+            end
         end)
         table.insert(activeConnections, conn)
     end
 end
 
 local function InitExtremeBypass()
-    for _, v in pairs(PlayerGui:GetDescendants()) do HookElement(v) end
+    for _, v in pairs(PlayerGui:GetDescendants()) do
+        HookElement(v)
+    end
 end
 
+-- =====================================================================
+-- INTERRUPTOR GENERAL (SWITCH PRINCIPAL)
+-- =====================================================================
 UITab:CreateToggle({
    Name = "Loop: ALL EQUIPPED + 0 COST + 99:99",
    CurrentValue = false,
    Flag = "UI_Extreme_Bypass", 
    Callback = function(Value)
        uiLoopActive = Value
+       
        if uiLoopActive then
            Rayfield:Notify({Title = "GLITCH CRÍTICO INYECTADO", Content = "Todo equipado, tiendas gratis y timers bloqueados.", Duration = 4})
+           
            InitExtremeBypass()
 
            local connAdd = PlayerGui.DescendantAdded:Connect(function(descendant)
@@ -1667,100 +1685,120 @@ UITab:CreateToggle({
 
            task.spawn(function()
                while uiLoopActive do 
-                   for _, v in pairs(PlayerGui:GetDescendants()) do ForceUnlockElement(v) end
+                   for _, v in pairs(PlayerGui:GetDescendants()) do
+                       ForceUnlockElement(v)
+                   end
                    task.wait(0.5) 
                end
            end)
        else
-           Rayfield:Notify({Title = "Bypass Desactivado", Content = "Restaurando estado normal.", Duration = 3})
+           Rayfield:Notify({Title = "Bypass Desactivado", Content = "Restaurando estado normal (requiere recargar UI).", Duration = 3})
            ClearConnections()
        end
    end,
 })
 
--- ==========================================
--- 2. EJECUCIÓN AISLADA POR PALABRA CLAVE
--- ==========================================
-local function ExecuteSingleKeyword(keyword, category)
-    local affectedElements = 0
+-- =====================================================================
+-- NUEVA LÓGICA DE DETECCIÓN ACTIVA POR PALABRAS CLAVE (BOTONES INDIVIDUALES)
+-- =====================================================================
+local function ApplyKeywordBypass(v, keyword, category)
+    pcall(function()
+        local name = string.lower(v.Name)
+        local matched = false
 
-    for _, v in pairs(PlayerGui:GetDescendants()) do
-        pcall(function()
-            local name = string.lower(v.Name)
-            local matched = false
-
-            -- Textos e Interfaz Visual
-            if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-                local txt = string.lower(v.Text)
-                if string.find(txt, keyword) or string.find(name, keyword) then
-                    matched = true
-                    if category == "Price" then
-                        v.Text = "0"
-                        v.TextColor3 = Color3.fromRGB(85, 255, 127)
-                    elseif category == "Equip" then
-                        v.Text = targetEquippedText
-                        v.TextColor3 = Color3.fromRGB(255, 215, 0)
-                    elseif category == "SoldOut" then
-                        v.Text = "Available"
-                        v.TextColor3 = Color3.fromRGB(0, 255, 0)
-                    end
+        -- Textos e Interfaz Visual
+        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
+            local txt = string.lower(v.Text)
+            if string.find(txt, keyword) or string.find(name, keyword) then
+                matched = true
+                if category == "Price" then
+                    v.Text = "0"
+                    v.TextColor3 = Color3.fromRGB(85, 255, 127)
+                elseif category == "Equip" then
+                    v.Text = targetEquippedText
+                    v.TextColor3 = Color3.fromRGB(255, 215, 0)
+                elseif category == "SoldOut" then
+                    v.Text = "Available"
+                    v.TextColor3 = Color3.fromRGB(0, 255, 0)
                 end
             end
+        end
 
-            -- Valores Int/Number/Bool
-            if v:IsA("IntValue") or v:IsA("NumberValue") then
-                if string.find(name, keyword) then
-                    matched = true
-                    if category == "Price" then v.Value = freeCost 
-                    elseif category == "Stock" then v.Value = targetNumber end
-                end
-            elseif v:IsA("BoolValue") then
-                if string.find(name, keyword) and category == "Equip" then
-                    matched = true
-                    v.Value = true
-                end
+        -- Valores Int/Number/Bool
+        if v:IsA("IntValue") or v:IsA("NumberValue") then
+            if string.find(name, keyword) then
+                matched = true
+                if category == "Price" then v.Value = freeCost 
+                elseif category == "Stock" then v.Value = targetNumber end
             end
-
-            -- Atributos de Instancia
-            local attributes = v:GetAttributes()
-            for attrName, _ in pairs(attributes) do
-                local lName = string.lower(attrName)
-                if string.find(lName, keyword) then
-                    matched = true
-                    if category == "Price" then v:SetAttribute(attrName, freeCost)
-                    elseif category == "Stock" then v:SetAttribute(attrName, targetNumber)
-                    elseif category == "Equip" then v:SetAttribute(attrName, true) end
-                end
+        elseif v:IsA("BoolValue") then
+            if string.find(name, keyword) and category == "Equip" then
+                matched = true
+                v.Value = true
             end
+        end
 
-            -- Si hubo coincidencia, forzamos la visibilidad e interacción del objeto
-            if matched then
-                affectedElements = affectedElements + 1
-                if v:IsA("GuiButton") then
-                    v.Active = true 
-                    v.Interactable = true 
-                    v.Visible = true 
-                    v.Selectable = true
-                elseif v:IsA("GuiObject") and not v.Visible then
-                    v.Visible = true
-                end
+        -- Atributos de Instancia
+        local attributes = v:GetAttributes()
+        for attrName, _ in pairs(attributes) do
+            local lName = string.lower(attrName)
+            if string.find(lName, keyword) then
+                matched = true
+                if category == "Price" then v:SetAttribute(attrName, freeCost)
+                elseif category == "Stock" then v:SetAttribute(attrName, targetNumber)
+                elseif category == "Equip" then v:SetAttribute(attrName, true) end
             end
-        end)
-    end
+        end
 
-    Rayfield:Notify({
-        Title = "Keyword Ejecutada", 
-        Content = "Categoría: " .. category .. "\n[" .. keyword .. "] modificó " .. affectedElements .. " elementos.", 
-        Duration = 3
-    })
+        -- Si coincide, se hace visible e interactuable
+        if matched then
+            if v:IsA("GuiButton") then
+                v.Active = true 
+                v.Interactable = true 
+                v.Visible = true 
+                v.Selectable = true
+            elseif v:IsA("GuiObject") and not v.Visible then
+                v.Visible = true
+            end
+        end
+    end)
 end
 
--- Generador Dinámico de Botones Organizados
+-- Función para registrar y mantener activa la palabra clave seleccionada
+local function RegisterSingleKeyword(keyword, category)
+    -- Si ya estaba activa, se reinicia para forzar una nueva pasada
+    activeSingleKeywords[keyword] = {Category = category}
+
+    Rayfield:Notify({
+        Title = "Filtro Individual Activo", 
+        Content = "Monitoreando activamente: [" .. keyword .. "] (" .. category .. ")", 
+        Duration = 3
+    })
+
+    -- 1. Ejecución instantánea para lo que ya esté en pantalla
+    for _, v in pairs(PlayerGui:GetDescendants()) do
+        ApplyKeywordBypass(v, keyword, category)
+    end
+
+    -- 2. Hilo en segundo plano que vigila el PlayerGui y aplica el bypass constantemente a esa palabra
+    task.spawn(function()
+        while activeSingleKeywords[keyword] do
+            for _, v in pairs(PlayerGui:GetDescendants()) do
+                ApplyKeywordBypass(v, keyword, category)
+            end
+            task.wait(0.5) -- Ciclo rápido para interceptar dinámicamente
+        end
+    end)
+end
+
+-- =====================================================================
+-- GENERADOR DINÁMICO DE BOTONES ORGANIZADOS POR SECCIÓN
+-- =====================================================================
 UITab:CreateSection("Bypass Individual: PRECIOS (0 Cost)")
 for _, keyword in ipairs(keywordsPrice) do
     UITab:CreateButton({
         Name = "Force Price: " .. keyword,
-        Callback = function() ExecuteSingleKeyword(keyword, "Price") end,
+        Callback = function() RegisterSingleKeyword(keyword, "Price") end,
     })
 end
 
@@ -1768,7 +1806,7 @@ UITab:CreateSection("Bypass Individual: PROPIEDAD (Equip/Unlock)")
 for _, keyword in ipairs(keywordsEquip) do
     UITab:CreateButton({
         Name = "Force Unlock: " .. keyword,
-        Callback = function() ExecuteSingleKeyword(keyword, "Equip") end,
+        Callback = function() RegisterSingleKeyword(keyword, "Equip") end,
     })
 end
 
@@ -1776,7 +1814,7 @@ UITab:CreateSection("Bypass Individual: STATS & LIMITS (Max)")
 for _, keyword in ipairs(keywordsStock) do
     UITab:CreateButton({
         Name = "Force Max: " .. keyword,
-        Callback = function() ExecuteSingleKeyword(keyword, "Stock") end,
+        Callback = function() RegisterSingleKeyword(keyword, "Stock") end,
     })
 end
 
@@ -1784,7 +1822,7 @@ UITab:CreateSection("Bypass Individual: BLOQUEOS (Sold Out)")
 for _, keyword in ipairs(keywordsSoldOut) do
     UITab:CreateButton({
         Name = "Force Available: " .. keyword,
-        Callback = function() ExecuteSingleKeyword(keyword, "SoldOut") end,
+        Callback = function() RegisterSingleKeyword(keyword, "SoldOut") end,
     })
 end
 
