@@ -1510,7 +1510,7 @@ MorphTab:CreateButton({
 })
 
 -- =====================================================================
--- TAB 7: NPC SHOP & INVENTORY BYPASS (OPTIMIZED EDITION)
+-- TAB 8: NPC SHOP & INVENTORY BYPASS (OPTIMIZED EDITION)
 -- =====================================================================
 local UITab = Window:CreateTab("UI Manipulation", "box")
 
@@ -1521,11 +1521,14 @@ local maxStatNumber = 9999999999
 local freeCost = 0
 local targetEquippedText = "Equipped"
 
--- Diccionarios depurados: Solo términos específicos implementados para minería/bypass
+-- Diccionarios depurados
 local keywordsLocked = {"locked", "cooldown", "requires", "premium_only", "depleted", "unavailable"}
 local keywordsPrice = {"gem", "diamond", "robux", "currency", "tokens", "required", "pay"}
 local keywordsStats = {"depth", "power", "multiplier", "speed", "luck", "yield", "durability", "storage", "weight", "tier", "capacity"}
 local keywordsEquip = {"equip", "own", "purchas", "claim", "has", "inventory"}
+
+-- Nuevo diccionario para detectar y abrir menús ocultos sin trabar la UI general
+local keywordsHiddenMenus = {"secret", "hidden", "admin", "dev", "shop", "npc", "blackmarket", "store", "vip", "special"}
 
 local activeConnections = {}
 
@@ -1536,7 +1539,6 @@ local function ClearConnections()
     table.clear(activeConnections)
 end
 
--- Lógica pura de infiltración y falsificación de estado
 local function ForceUnlockElement(v)
     pcall(function()
         local name = string.lower(v.Name)
@@ -1555,7 +1557,6 @@ local function ForceUnlockElement(v)
                 if string.find(txt, word) or string.find(name, word) then isEquip = true break end
             end
             
-            -- Aplicar 0 Free o Falso Equipado
             if isPrice and v.Text ~= "0" then
                 v.Text = "0"
                 v.TextColor3 = Color3.fromRGB(85, 255, 127)
@@ -1565,7 +1566,7 @@ local function ForceUnlockElement(v)
             end
         end
         
-        -- 2. DESBLOQUEO DE BOTONES (Sin forzar Visible para no trabar menús)
+        -- 2. DESBLOQUEO DE BOTONES
         if v:IsA("GuiButton") then
             if not v.Active or not v.Interactable then
                 v.Active = true 
@@ -1609,9 +1610,24 @@ local function ForceUnlockElement(v)
             end
         end
         
-        -- 6. DESBLOQUEO DE SCROLL (Permitir navegar en listas bloqueadas)
-        if v:IsA("ScrollingFrame") and not v.ScrollingEnabled then
+        -- 6. REVELAR TIENDAS OCULTAS Y PANELES NPC (Filtro Inteligente Anti-Lag)
+        if v:IsA("CanvasGroup") then
+            v.GroupTransparency = 0
+        end
+        
+        if v:IsA("ScrollingFrame") then
             v.ScrollingEnabled = true
+            if v.Visible == false then v.Visible = true end -- Las listas de items siempre deben verse
+        end
+
+        -- Solo forzamos Frame a ser visible si detectamos que es un menú secreto (Evita trabar la "X" de cerrar)
+        if (v:IsA("Frame") or v:IsA("CanvasGroup")) and v.Visible == false then
+            for _, word in ipairs(keywordsHiddenMenus) do
+                if string.find(name, word) then
+                    v.Visible = true
+                    break
+                end
+            end
         end
     end)
 end
@@ -1637,25 +1653,25 @@ local function InitCleanBypass()
 end
 
 UITab:CreateToggle({
-   Name = "Loop: 0 Free & Auto-Equip (Optimized)",
+   Name = "Loop: 0 Free, Auto-Equip & Reveal Hidden",
    CurrentValue = false,
    Flag = "UI_Clean_Bypass", 
    Callback = function(Value)
        uiLoopActive = Value
        
        if uiLoopActive then
-           Rayfield:Notify({Title = "Infiltración Exitosa", Content = "Stats al máximo, precios a 0 y propiedad falsa inyectada.", Duration = 4})
+           Rayfield:Notify({Title = "Infiltración Exitosa", Content = "Buscando menús ocultos, Stats al máximo y precios a 0.", Duration = 4})
            
            InitCleanBypass()
 
-           -- Capturar elementos nuevos (ej: Al abrir un menú secreto)
+           -- Capturar elementos nuevos
            local connAdd = PlayerGui.DescendantAdded:Connect(function(descendant)
                task.wait(0.01) 
                HookElement(descendant)
            end)
            table.insert(activeConnections, connAdd)
 
-           -- Bucle de fondo lento (1 segundo en lugar de 0.3s) para mantener los cambios sin causar lag
+           -- Bucle de fondo lento (1 segundo) para mantener cambios sin lag
            task.spawn(function()
                while uiLoopActive do 
                    for _, v in pairs(PlayerGui:GetDescendants()) do
