@@ -1510,112 +1510,120 @@ MorphTab:CreateButton({
 })
 
 -- =====================================================================
--- TAB 8: UI MANIPULATION & NPC SHOP BYPASS (OPTIMIZED TOGGLES)
+-- TAB 8: UI MANIPULATION & NPC SHOP BYPASS (ORCHESTRATOR VERSION)
 -- =====================================================================
 local UITab = Window:CreateTab("UI Manipulation", "box")
 
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+local RunService = game:GetService("RunService")
+
+-- Estado Global de los Filtros
+local ActiveFilters = {
+    Price = {},
+    Stock = {},
+    Equip = {},
+    SoldOut = {},
+    RevealMenus = false
+}
+
+-- Configuración Base
 local targetNumber = 9999999999
 local freeCost = 0
 local targetTimer = "99:99"
 local targetEquippedText = "Equipped"
 
--- Diccionarios
-local keywordsPrice = {"price", "premium", "cost", "value", "gem", "diamond", "robux", "currency", "tokens", "required", "pay"}
-local keywordsStock = {"stock", "backpack", "capacity", "depth", "power", "multiplier", "speed", "luck", "yield", "durability", "storage", "weight", "level"}
-local keywordsEquip = {"equip", "own", "unlock", "buy", "purchas", "claim", "tier", "has", "inventory"}
-local keywordsSoldOut = {"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "locked", "cooldown", "unavailable", "depleted", "requires", "premium_only"}
-
--- Función universal de bypass
-local function ApplyBypass(v, keyword, category, enabled)
-    if not enabled then return end
-    pcall(function()
-        local name = string.lower(v.Name)
+-- =====================================================================
+-- MOTOR CENTRAL (ORQUESTADOR)
+-- =====================================================================
+task.spawn(function()
+    while true do
+        task.wait(0.5) -- Velocidad constante optimizada
         
-        -- Manipulación Visual de Menús y Botones (Revelar todo)
-        if v:IsA("GuiObject") then
-            if not v.Visible then v.Visible = true end
-            if v:IsA("CanvasGroup") then v.GroupTransparency = 0 end
-            if v:IsA("ScrollingFrame") then v.ScrollingEnabled = true end
-        end
-
-        -- Manipulación de Textos
-        if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
-            local txt = string.lower(v.Text)
-            if string.find(txt, keyword) or string.find(name, keyword) then
-                if category == "Price" then v.Text = "0" v.TextColor3 = Color3.fromRGB(85, 255, 127)
-                elseif category == "Equip" then v.Text = targetEquippedText v.TextColor3 = Color3.fromRGB(255, 215, 0)
-                elseif category == "SoldOut" then v.Text = "Available" v.TextColor3 = Color3.fromRGB(0, 255, 0) end
+        -- 1. Revelado de Menús (Si está activo)
+        if ActiveFilters.RevealMenus then
+            for _, v in pairs(PlayerGui:GetDescendants()) do
+                if v:IsA("GuiObject") and not string.find(v.Name:lower(), "template") then
+                    if not v.Visible then v.Visible = true end
+                    if v:IsA("CanvasGroup") then v.GroupTransparency = 0 end
+                    if v:IsA("ScrollingFrame") then v.ScrollingEnabled = true end
+                end
             end
         end
 
-        -- Manipulación de Valores
-        if v:IsA("IntValue") or v:IsA("NumberValue") then
-            if string.find(name, keyword) then
-                if category == "Price" then v.Value = freeCost
-                elseif category == "Stock" then v.Value = targetNumber end
-            end
-        elseif v:IsA("BoolValue") then
-            if string.find(name, keyword) and category == "Equip" then v.Value = true end
-        end
-    end)
-end
+        -- 2. Bypass de elementos (Busca solo lo que está activo)
+        for _, v in pairs(PlayerGui:GetDescendants()) do
+            pcall(function()
+                local name = v.Name:lower()
+                local txt = (v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox")) and v.Text:lower() or ""
 
--- Generador de Switches Dinámicos
-local function CreateKeywordToggle(section, keyword, category)
-    UITab:CreateToggle({
-        Name = "Toggle [" .. category .. "]: " .. keyword,
-        CurrentValue = false,
-        Flag = "Toggle_" .. category .. "_" .. keyword,
-        Callback = function(Value)
-            if Value then
-                task.spawn(function()
-                    while Rayfield.Flags["Toggle_" .. category .. "_" .. keyword] do
-                        for _, v in pairs(PlayerGui:GetDescendants()) do
-                            ApplyBypass(v, keyword, category, true)
-                        end
-                        task.wait(0.5) -- Velocidad constante sin lag excesivo
+                -- Chequeo de Price
+                for kw, enabled in pairs(ActiveFilters.Price) do
+                    if enabled and (string.find(txt, kw) or string.find(name, kw)) then
+                        v.Text = "0"
+                        v.TextColor3 = Color3.fromRGB(85, 255, 127)
+                        if v:IsA("IntValue") or v:IsA("NumberValue") then v.Value = freeCost end
                     end
-                end)
-            end
-        end,
-    })
-end
+                end
+
+                -- Chequeo de Equip
+                for kw, enabled in pairs(ActiveFilters.Equip) do
+                    if enabled and (string.find(txt, kw) or string.find(name, kw)) then
+                        v.Text = targetEquippedText
+                        v.TextColor3 = Color3.fromRGB(255, 215, 0)
+                        if v:IsA("BoolValue") then v.Value = true end
+                    end
+                end
+
+                -- Chequeo de Stock
+                for kw, enabled in pairs(ActiveFilters.Stock) do
+                    if enabled and string.find(name, kw) then
+                        if v:IsA("IntValue") or v:IsA("NumberValue") then v.Value = targetNumber end
+                    end
+                end
+
+                -- Chequeo de SoldOut
+                for kw, enabled in pairs(ActiveFilters.SoldOut) do
+                    if enabled and (string.find(txt, kw) or string.find(name, kw)) then
+                        v.Text = "Available"
+                        v.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 -- =====================================================================
--- CREACIÓN DE LA INTERFAZ
+-- CREACIÓN DE INTERFAZ
 -- =====================================================================
-UITab:CreateSection("--- REVELAR MENÚS OCULTOS ---")
+UITab:CreateSection("--- SISTEMA MAESTRO ---")
 UITab:CreateToggle({
     Name = "FORCE REVEAL ALL UI PANELS",
     CurrentValue = false,
-    Callback = function(Value)
-        _G.RevealAll = Value
-        task.spawn(function()
-            while _G.RevealAll do
-                for _, v in pairs(PlayerGui:GetDescendants()) do
-                    if v:IsA("Frame") or v:IsA("ScrollingFrame") or v:IsA("CanvasGroup") then
-                        v.Visible = true
-                        if v:IsA("CanvasGroup") then v.GroupTransparency = 0 end
-                    end
-                end
-                task.wait(0.5)
-            end
-        end)
-    end
+    Callback = function(Value) ActiveFilters.RevealMenus = Value end
 })
 
-UITab:CreateSection("--- FILTROS INDIVIDUALES (PRECIOS) ---")
-for _, kw in ipairs(keywordsPrice) do CreateKeywordToggle("Price", kw, "Price") end
+local function CreateToggle(sectionName, category, kw)
+    UITab:CreateToggle({
+        Name = "Toggle [" .. category .. "]: " .. kw,
+        CurrentValue = false,
+        Callback = function(Value)
+            ActiveFilters[category][kw] = Value
+        end
+    })
+end
 
-UITab:CreateSection("--- FILTROS INDIVIDUALES (EQUIP) ---")
-for _, kw in ipairs(keywordsEquip) do CreateKeywordToggle("Equip", kw, "Equip") end
+UITab:CreateSection("--- PRECIOS (0 Cost) ---")
+for _, kw in ipairs({"price", "premium", "cost", "value", "gem", "diamond", "robux", "currency", "tokens", "required", "pay"}) do CreateToggle("Precios", "Price", kw) end
 
-UITab:CreateSection("--- FILTROS INDIVIDUALES (STATS) ---")
-for _, kw in ipairs(keywordsStock) do CreateKeywordToggle("Stock", kw, "Stock") end
+UITab:CreateSection("--- EQUIPAMIENTO ---")
+for _, kw in ipairs({"equip", "own", "unlock", "buy", "purchas", "claim", "tier", "has", "inventory"}) do CreateToggle("Equip", "Equip", kw) end
 
-UITab:CreateSection("--- FILTROS INDIVIDUALES (SOLD OUT) ---")
-for _, kw in ipairs(keywordsSoldOut) do CreateKeywordToggle("SoldOut", kw, "SoldOut") end
+UITab:CreateSection("--- STATS (Max) ---")
+for _, kw in ipairs({"stock", "backpack", "capacity", "depth", "power", "multiplier", "speed", "luck", "yield", "durability", "storage", "weight", "level"}) do CreateToggle("Stock", "Stock", kw) end
+
+UITab:CreateSection("--- BLOQUEOS (Sold Out) ---")
+for _, kw in ipairs({"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "locked", "cooldown", "unavailable", "depleted", "requires", "premium_only"}) do CreateToggle("SoldOut", "SoldOut", kw) end
 
 -- =====================================================================
 -- TAB 8: PHYSICAL ZONES (From Source 6)
