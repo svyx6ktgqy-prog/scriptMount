@@ -1510,23 +1510,22 @@ MorphTab:CreateButton({
 })
 
 -- =====================================================================
--- TAB 7: UI MANIPULATION & NPC SHOP BYPASS (EXTREME EDITION)
+-- TAB 7: NPC SHOP & INVENTORY BYPASS (OPTIMIZED EDITION)
 -- =====================================================================
 local UITab = Window:CreateTab("UI Manipulation", "box")
 
 local uiLoopActive = false
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
-local targetNumber = 9999999999
+local maxStatNumber = 9999999999
 local freeCost = 0
-local targetTimer = "99:99"
 local targetEquippedText = "Equipped"
 
--- Diccionarios hiper-expandidos
-local keywordsSoldOut = {"sold out", "lucky", "vip", "time", "out of stock", "max", "all", "locked", "cooldown", "unavailable", "depleted", "requires", "premium_only"}
-local keywordsPrice = {"price", "premium", "cost", "value", "gem", "diamond", "robux", "currency", "tokens", "required", "pay"}
-local keywordsStock = {"stock", "backpack", "capacity", "depth", "power", "multiplier", "speed", "luck", "yield", "durability", "storage", "weight", "level"}
-local keywordsEquip = {"equip", "own", "unlock", "buy", "purchas", "claim", "tier", "has", "inventory"}
+-- Diccionarios depurados: Solo términos específicos implementados para minería/bypass
+local keywordsLocked = {"locked", "cooldown", "requires", "premium_only", "depleted", "unavailable"}
+local keywordsPrice = {"gem", "diamond", "robux", "currency", "tokens", "required", "pay"}
+local keywordsStats = {"depth", "power", "multiplier", "speed", "luck", "yield", "durability", "storage", "weight", "tier", "capacity"}
+local keywordsEquip = {"equip", "own", "purchas", "claim", "has", "inventory"}
 
 local activeConnections = {}
 
@@ -1537,162 +1536,137 @@ local function ClearConnections()
     table.clear(activeConnections)
 end
 
--- Función para forzar agresivamente un elemento a estar desbloqueado/gratis
+-- Lógica pura de infiltración y falsificación de estado
 local function ForceUnlockElement(v)
     pcall(function()
         local name = string.lower(v.Name)
         
-        -- 1. MANIPULACIÓN DE TEXTOS Y BOTONES DE TIENDAS NPC
+        -- 1. MANIPULACIÓN DE TEXTOS EN TIENDAS Y BOTONES
         if v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("TextBox") then
             local txt = string.lower(v.Text)
             
-            -- Temporizadores estrictos a 99:99
-            if string.match(txt, "^%d%d?:%d%d$") or string.match(txt, "^%d%d?:%d%d:%d%d$") or string.find(name, "timer") or string.find(name, "time") then
-                if v.Text ~= targetTimer then
-                    v.Text = targetTimer
-                    v.TextColor3 = Color3.fromRGB(0, 255, 0)
-                end
-            else
-                -- Forzar TODO a "Equipped" o "0"
-                local isPrice = false
-                for _, word in ipairs(keywordsPrice) do
-                    if string.find(txt, word) or string.find(name, word) or string.find(txt, "%$") then isPrice = true break end
-                end
+            local isPrice = false
+            for _, word in ipairs(keywordsPrice) do
+                if string.find(txt, word) or string.find(name, word) or string.find(txt, "%$") then isPrice = true break end
+            end
 
-                local isEquip = false
-                for _, word in ipairs(keywordsEquip) do
-                    if string.find(txt, word) or string.find(name, word) then isEquip = true break end
-                end
-                
-                if isPrice then
-                    v.Text = "0"
-                    v.TextColor3 = Color3.fromRGB(85, 255, 127)
-                elseif isEquip or string.find(txt, "buy") then
-                    v.Text = targetEquippedText
-                    v.TextColor3 = Color3.fromRGB(255, 215, 0) -- Oro, indicando propiedad
-                end
+            local isEquip = false
+            for _, word in ipairs(keywordsEquip) do
+                if string.find(txt, word) or string.find(name, word) then isEquip = true break end
+            end
+            
+            -- Aplicar 0 Free o Falso Equipado
+            if isPrice and v.Text ~= "0" then
+                v.Text = "0"
+                v.TextColor3 = Color3.fromRGB(85, 255, 127)
+            elseif isEquip and v.Text ~= targetEquippedText then
+                v.Text = targetEquippedText
+                v.TextColor3 = Color3.fromRGB(255, 215, 0)
             end
         end
         
-        -- 2. DESBLOQUEO ABSOLUTO DE INTERFAZ (BOTONES)
+        -- 2. DESBLOQUEO DE BOTONES (Sin forzar Visible para no trabar menús)
         if v:IsA("GuiButton") then
-            v.Active = true 
-            v.Interactable = true 
-            v.Visible = true 
-            v.AutoButtonColor = true
-            v.Selectable = true
+            if not v.Active or not v.Interactable then
+                v.Active = true 
+                v.Interactable = true 
+                v.AutoButtonColor = true
+                v.Selectable = true
+            end
         end
 
-        -- 3. FORZAR ESTADOS DE "PROPIEDAD" (BOOLVALUES)
+        -- 3. FALSIFICACIÓN DE PROPIEDAD (BOOLVALUES)
         if v:IsA("BoolValue") then
             local valName = string.lower(v.Name)
             for _, word in ipairs(keywordsEquip) do
-                if string.find(valName, word) then
-                    v.Value = true -- El juego pensará que ya lo tienes o está equipado
+                if string.find(valName, word) and v.Value == false then
+                    v.Value = true
                 end
             end
         end
 
-        -- 4. DESTRUCCIÓN DE PRECIOS Y MAXIMIZACIÓN DE STATS GLOBALES
+        -- 4. MAXIMIZACIÓN DE STATS Y COSTO CERO (VALORES INTERNOS)
         if v:IsA("IntValue") or v:IsA("NumberValue") then
             local valName = string.lower(v.Name)
             for _, word in ipairs(keywordsPrice) do
-                if string.find(valName, word) then v.Value = freeCost end -- Gratis
+                if string.find(valName, word) and v.Value ~= freeCost then v.Value = freeCost end
             end
-            for _, word in ipairs(keywordsStock) do
-                if string.find(valName, word) then v.Value = targetNumber end -- Stats al máximo
+            for _, word in ipairs(keywordsStats) do
+                if string.find(valName, word) and v.Value ~= maxStatNumber then v.Value = maxStatNumber end
             end
         end
         
-        -- 5. SOBREESCRITURA DE ATRIBUTOS (NUEVO MÉTODO DE SEGURIDAD ROBLOX)
+        -- 5. MANIPULACIÓN DE ATRIBUTOS (ANTI-ANTICHEAT)
         local attributes = v:GetAttributes()
         for attrName, _ in pairs(attributes) do
             local lName = string.lower(attrName)
-            if string.find(lName, "price") or string.find(lName, "cost") then
+            if string.find(lName, "cost") or string.find(lName, "price") then
                 v:SetAttribute(attrName, freeCost)
             elseif string.find(lName, "owned") or string.find(lName, "unlocked") or string.find(lName, "equipped") then
                 v:SetAttribute(attrName, true)
-            elseif string.find(lName, "stock") or string.find(lName, "capacity") or string.find(lName, "multiplier") then
-                v:SetAttribute(attrName, targetNumber)
+            elseif string.find(lName, "capacity") or string.find(lName, "multiplier") or string.find(lName, "power") then
+                v:SetAttribute(attrName, maxStatNumber)
             end
         end
-
-        -- 6. REVELAR TIENDAS OCULTAS Y PANELES NPC
-        if v:IsA("CanvasGroup") then
-            v.GroupTransparency = 0
-            v.Visible = true
-        elseif v:IsA("ScrollingFrame") or v:IsA("Frame") then
-            if v.Visible == false and not string.find(name, "template") then
-                v.Visible = true
-            end
-            if v:IsA("ScrollingFrame") then
-                v.ScrollingEnabled = true
-            end
+        
+        -- 6. DESBLOQUEO DE SCROLL (Permitir navegar en listas bloqueadas)
+        if v:IsA("ScrollingFrame") and not v.ScrollingEnabled then
+            v.ScrollingEnabled = true
         end
     end)
 end
 
--- Función para anclar eventos a un elemento (Inyección Agresiva)
+-- Anclaje ligero para evitar lag
 local function HookElement(v)
     if not uiLoopActive then return end
     ForceUnlockElement(v)
 
-    -- Si el juego intenta cambiar el texto para decir "Bloqueado" o un precio, lo revertimos al instante
+    -- Solo reaccionamos si el texto cambia (ahorra muchísima memoria)
     if v:IsA("TextLabel") or v:IsA("TextButton") then
         local conn = v:GetPropertyChangedSignal("Text"):Connect(function()
             if uiLoopActive then ForceUnlockElement(v) end
         end)
         table.insert(activeConnections, conn)
     end
-
-    -- Si el juego intenta esconder un botón, lo volvemos a mostrar
-    if v:IsA("GuiObject") then
-        local conn = v:GetPropertyChangedSignal("Visible"):Connect(function()
-            if uiLoopActive and v.Visible == false then
-                v.Visible = true
-            end
-        end)
-        table.insert(activeConnections, conn)
-    end
 end
 
-local function InitExtremeBypass()
+local function InitCleanBypass()
     for _, v in pairs(PlayerGui:GetDescendants()) do
         HookElement(v)
     end
 end
 
 UITab:CreateToggle({
-   Name = "Loop: ALL EQUIPPED + 0 COST + 99:99",
+   Name = "Loop: 0 Free & Auto-Equip (Optimized)",
    CurrentValue = false,
-   Flag = "UI_Extreme_Bypass", 
+   Flag = "UI_Clean_Bypass", 
    Callback = function(Value)
        uiLoopActive = Value
        
        if uiLoopActive then
-           Rayfield:Notify({Title = "GLITCH CRÍTICO INYECTADO", Content = "Todo equipado, tiendas gratis y timers bloqueados.", Duration = 4})
+           Rayfield:Notify({Title = "Infiltración Exitosa", Content = "Stats al máximo, precios a 0 y propiedad falsa inyectada.", Duration = 4})
            
-           InitExtremeBypass()
+           InitCleanBypass()
 
-           -- Atrapar cualquier elemento nuevo que se genere al abrir una tienda NPC
+           -- Capturar elementos nuevos (ej: Al abrir un menú secreto)
            local connAdd = PlayerGui.DescendantAdded:Connect(function(descendant)
-               task.wait(0.01) -- Micro-pausa para asegurar que cargó
+               task.wait(0.01) 
                HookElement(descendant)
            end)
            table.insert(activeConnections, connAdd)
 
-           -- Bucle de barrido profundo continuo (por si fallan los eventos)
+           -- Bucle de fondo lento (1 segundo en lugar de 0.3s) para mantener los cambios sin causar lag
            task.spawn(function()
                while uiLoopActive do 
                    for _, v in pairs(PlayerGui:GetDescendants()) do
                        ForceUnlockElement(v)
                    end
-                   task.wait(0.5) 
+                   task.wait(1) 
                end
            end)
 
        else
-           Rayfield:Notify({Title = "Bypass Desactivado", Content = "Restaurando estado normal (requiere recargar UI).", Duration = 3})
+           Rayfield:Notify({Title = "Sistema Detenido", Content = "Infiltración desactivada. Cierra y abre los menús para normalizar.", Duration = 3})
            ClearConnections()
        end
    end,
