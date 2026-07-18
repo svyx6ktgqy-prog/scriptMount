@@ -3,7 +3,7 @@ repeat task.wait() until game:IsLoaded()
 
 -- Cargar la librería Rayfield de forma segura
 local successRayfield, Rayfield = pcall(function()
-    return loadstring(game:HttpGet('https://sirblood.github.io/Rayfield/source'))()
+    return loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/rayfield/refs/heads/main/source.lua'))()
 end)
 
 if not successRayfield then
