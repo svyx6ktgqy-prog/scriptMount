@@ -92,7 +92,7 @@ local function TransformToCustomSkeleton()
 
     -- 3. CARGAR EL MODELO DEL ESQUELETO DESDE EL ASSET ID[span_5](start_span)[span_5](end_span)
     local success, objects = pcall(function()
-        return game:GetObjects("rbxassetid://254123406")
+        return game:GetObjects("rbxassetid://127994220189422")
     end)
 
     if success and objects and objects[1] then
