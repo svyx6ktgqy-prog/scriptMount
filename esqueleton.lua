@@ -128,7 +128,7 @@ local function TransformToCustomSkeleton()
             
             -- Encogemos la bomba al 50%
             if customHead:IsA("BasePart") then
-                customHead.Size = customHead.Size * 0.5 
+                customHead.Size = customHead.Size * 1.0 
             end
             
             local mesh = customHead:FindFirstChildWhichIsA("DataModelMesh")
