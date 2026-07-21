@@ -140,7 +140,7 @@ local function TransformToCustomSkeleton()
             -- NUEVO PARÁMETRO: AJUSTE DE CABEZA
             -- Modifica el valor Y de en medio (ej. 0.5) para subir (+) o bajar (-)
             -- =========================================================
-            local ajusteCabeza = CFrame.new(0, 3.0, 0)
+            local ajusteCabeza = CFrame.new(0, 4.5, 0)
 
             -- Soldamos la Agony Bomb aplicando la misma elevación + el ajuste extra
             customHead.Parent = char
