@@ -306,7 +306,6 @@ local StealthToggle = StealthTab:CreateToggle({
                     if model then
                         for _, item in ipairs(model:GetChildren()) do
                             if item:IsA("Accessory") or item:IsA("Hat") then
-                                -- Sistema de Soldadura Forzada para asegurar el Casco
                                 local acc = item:Clone()
                                 acc.Parent = char
                                 
@@ -351,7 +350,7 @@ local StealthToggle = StealthTab:CreateToggle({
                 end)
             end
             
-            -- Búsqueda inicial del ControlModule para que el joystick sea detectado
+            -- Búsqueda inicial del ControlModule
             local controlModule = nil
             pcall(function()
                 local playerModule = LocalPlayer.PlayerScripts:FindFirstChild("PlayerModule")
@@ -360,34 +359,30 @@ local StealthToggle = StealthTab:CreateToggle({
                 end
             end)
             
-            -- 2. FLY + NOCLIP CAUTELOSO PURO (Sin Suelo + Control Total de Cámara + Joystick)
+            -- 2. FLY + NOCLIP CAUTELOSO PURO
             flyConn = RunService.RenderStepped:Connect(function()
                 local currentChar = LocalPlayer.Character
                 local hrp = currentChar and currentChar:FindFirstChild("HumanoidRootPart")
                 local hum = currentChar and currentChar:FindFirstChild("Humanoid")
                 
                 if hrp and hum and hum.Health > 0 then
-                    -- Noclip
                     for _, part in ipairs(currentChar:GetDescendants()) do
                         if part:IsA("BasePart") then
                             part.CanCollide = false
                         end
                     end
                     
-                    -- Estabilidad Física Absoluta
                     hrp.Velocity = Vector3.new(0, 0, 0)
                     hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     hum.AutoRotate = false
                     
                     local moveDir = Vector3.new(0, 0, 0)
                     
-                    -- Lógica Universal: Interpreta el joystick y orienta según la cámara
                     if controlModule then
                         local rawVector = controlModule:GetMoveVector()
                         moveDir = (camera.CFrame.LookVector * -rawVector.Z) + (camera.CFrame.RightVector * rawVector.X)
                     end
                     
-                    -- Fallback de seguridad en caso de que no haya cargado ControlModule (PC)
                     if moveDir.Magnitude == 0 then
                         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
@@ -398,21 +393,18 @@ local StealthToggle = StealthTab:CreateToggle({
                     if moveDir.Magnitude > 0 then
                         local moveUnit = moveDir.Unit
                         local nuevaPosicion = hrp.Position + (moveUnit * 0.35)
-                        
-                        -- Extraemos únicamente X y Z para que el personaje mire al lugar correcto sin alterar el eje Y
                         local orientacionVisual = Vector3.new(moveUnit.X, 0, moveUnit.Z)
                         
                         if orientacionVisual.Magnitude > 0.001 then
                             hrp.CFrame = CFrame.lookAt(nuevaPosicion, nuevaPosicion + orientacionVisual.Unit)
                         else
-                            -- Para aquellos casos raros donde se vuele en línea recta hacia el cénit absoluto
                             hrp.CFrame = CFrame.new(nuevaPosicion) * hrp.CFrame.Rotation
                         end
                     end
                 end
             end)
             
-            -- 3. ACTIVAR SISTEMA VISUAL ESP ROJO SANGRE
+            -- 3. ACTIVAR SISTEMA VISUAL ESP
             espFolder = Instance.new("Folder")
             espFolder.Name = "StealthESP_Folder"
             espFolder.Parent = workspace
@@ -422,7 +414,7 @@ local StealthToggle = StealthTab:CreateToggle({
             end
             espConn = Players.PlayerAdded:Connect(createPlayerESP)
             
-            -- 4. GUI DE ALERTA SANGRE LATENTE
+            -- 4. GUI DE ALERTA SANGRE LATENTE Y BOTÓN FLOTANTE
             stealthGui = Instance.new("ScreenGui")
             stealthGui.Name = "SilentAlertGui"
             stealthGui.IgnoreGuiInset = true
@@ -449,6 +441,35 @@ local StealthToggle = StealthTab:CreateToggle({
                 TextStrokeTransparency = 0.8
             })
             tween:Play()
+
+            -- NUEVO: Botón Flotante Seguros para Muros
+            local tpButton = Instance.new("TextButton")
+            tpButton.Name = "WallTPButton"
+            tpButton.Parent = stealthGui
+            tpButton.Size = UDim2.new(0, 160, 0, 50)
+            tpButton.Position = UDim2.new(0.85, 0, 0.6, 0) -- Ubicado a la derecha
+            tpButton.AnchorPoint = Vector2.new(0.5, 0.5)
+            tpButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            tpButton.BorderColor3 = Color3.fromRGB(170, 0, 0)
+            tpButton.BorderSizePixel = 2
+            tpButton.TextColor3 = Color3.fromRGB(255, 50, 50)
+            tpButton.Font = Enum.Font.GothamBold
+            tpButton.TextSize = 14
+            tpButton.Text = "Traspasar\n(Anti-Ban)"
+            
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = tpButton
+
+            tpButton.MouseButton1Click:Connect(function()
+                local c = LocalPlayer.Character
+                local hrp = c and c:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    -- Teletransporta suavemente 4.5 studs en la dirección actual
+                    local forwardVector = hrp.CFrame.LookVector
+                    hrp.CFrame = hrp.CFrame + (forwardVector * 4.5)
+                end
+            end)
             
         else
             -- ==========================================
@@ -485,6 +506,7 @@ local StealthToggle = StealthTab:CreateToggle({
                 end)
             end
             
+            -- Al destruir stealthGui, el botón flotante también se destruye automáticamente
             if stealthGui then
                 stealthGui:Destroy()
                 stealthGui = nil
@@ -492,3 +514,4 @@ local StealthToggle = StealthTab:CreateToggle({
         end
     end,
 })
+
