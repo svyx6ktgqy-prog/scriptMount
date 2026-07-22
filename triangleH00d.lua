@@ -407,13 +407,13 @@ local StealthToggle = StealthTab:CreateToggle({
             corner.CornerRadius = UDim.new(0, 8)
             corner.Parent = tpButton
 
-            -- LÓGICA DE MANTENER PRESIONADO (HOLD TO NOCLIP/FLY)
+                        -- LÓGICA DE MANTENER PRESIONADO (NUEVO SISTEMA MÓVIL/PC SEGURO)
             local isHolding = false
 
             local function startNoclip()
                 if isHolding then return end
                 isHolding = true
-                tpButton.BackgroundColor3 = Color3.fromRGB(70, 0, 0) -- Cambia de color al presionar
+                tpButton.BackgroundColor3 = Color3.fromRGB(70, 0, 0) -- Rojo oscuro al presionar
                 
                 local controlModule = nil
                 pcall(function()
@@ -455,10 +455,10 @@ local StealthToggle = StealthTab:CreateToggle({
                             if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
                         end
                         
-                        -- Mover al personaje suavemente mientras se mantiene presionado
+                        -- Mover al personaje suavemente
                         if moveDir.Magnitude > 0 then
                             local moveUnit = moveDir.Unit
-                            local nuevaPosicion = hrp.Position + (moveUnit * 0.35) -- Velocidad cautelosa
+                            local nuevaPosicion = hrp.Position + (moveUnit * 0.35)
                             local orientacionVisual = Vector3.new(moveUnit.X, 0, moveUnit.Z)
                             
                             if orientacionVisual.Magnitude > 0.001 then
@@ -472,6 +472,7 @@ local StealthToggle = StealthTab:CreateToggle({
             end
 
             local function stopNoclip()
+                if not isHolding then return end
                 isHolding = false
                 tpButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25) -- Vuelve al color normal
                 
@@ -479,12 +480,35 @@ local StealthToggle = StealthTab:CreateToggle({
                     flyConn:Disconnect()
                     flyConn = nil
                 end
+
+                -- RESTAURAR FÍSICAS INMEDIATAMENTE AL SOLTAR
+                local char = LocalPlayer.Character
+                if char then
+                    local hum = char:FindFirstChild("Humanoid")
+                    if hum then hum.AutoRotate = true end
+                    
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    local head = char:FindFirstChild("Head")
+                    local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+                    
+                    if hrp then hrp.CanCollide = true end
+                    if head then head.CanCollide = true end
+                    if torso then torso.CanCollide = true end
+                end
             end
 
-            -- Conectar los eventos táctiles y de ratón
-            tpButton.MouseButton1Down:Connect(startNoclip)
-            tpButton.MouseButton1Up:Connect(stopNoclip)
-            tpButton.MouseLeave:Connect(stopNoclip)
+            -- Conectar usando InputBegan e InputEnded (Infalible en pantallas táctiles)
+            tpButton.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    startNoclip()
+                end
+            end)
+
+            tpButton.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    stopNoclip()
+                end
+            end)
             
         else
             -- ==========================================
@@ -521,7 +545,6 @@ local StealthToggle = StealthTab:CreateToggle({
                 end)
             end
             
-            -- Se destruye la interfaz (y con ella, el botón flotante)
             if stealthGui then
                 stealthGui:Destroy()
                 stealthGui = nil
