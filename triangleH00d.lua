@@ -293,7 +293,7 @@ local StealthToggle = StealthTab:CreateToggle({
         local humanoid = char and char:FindFirstChildOfClass("Humanoid")
         
         if Value then
-            -- 1. CAMBIAR APARIENCIA COMPLETA (Soldadura de Casco)
+            -- 1. CAMBIAR APARIENCIA COMPLETA (Transformación Natural Anti-Ban)
             if char and humanoid then
                 pcall(function()
                     for _, v in ipairs(char:GetDescendants()) do
@@ -307,8 +307,6 @@ local StealthToggle = StealthTab:CreateToggle({
                         for _, item in ipairs(model:GetChildren()) do
                             if item:IsA("Accessory") or item:IsA("Hat") then
                                 local acc = item:Clone()
-                                acc.Parent = char
-                                
                                 local handle = acc:FindFirstChild("Handle")
                                 local head = char:FindFirstChild("Head")
                                 
@@ -316,11 +314,7 @@ local StealthToggle = StealthTab:CreateToggle({
                                     handle.CanCollide = false
                                     handle.Massless = true
                                     
-                                    local weld = Instance.new("WeldConstraint")
-                                    weld.Part0 = head
-                                    weld.Part1 = handle
-                                    weld.Parent = handle
-                                    
+                                    -- ¡CORRECCIÓN AQUÍ! 1. Alinear el objeto antes de soldar
                                     local att = handle:FindFirstChildOfClass("Attachment")
                                     local headAtt = att and head:FindFirstChild(att.Name)
                                     
@@ -329,6 +323,15 @@ local StealthToggle = StealthTab:CreateToggle({
                                     else
                                         handle.CFrame = head.CFrame
                                     end
+                                    
+                                    -- 2. Emparentar al personaje
+                                    acc.Parent = char
+                                    
+                                    -- 3. Soldar DESPUÉS de alinear. Evita que el personaje salga volando al cielo.
+                                    local weld = Instance.new("WeldConstraint")
+                                    weld.Part0 = head
+                                    weld.Part1 = handle
+                                    weld.Parent = handle
                                 end
                             elseif item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("BodyColors") or item:IsA("CharacterMesh") then
                                 item:Clone().Parent = char
@@ -393,7 +396,7 @@ local StealthToggle = StealthTab:CreateToggle({
             tpButton.Name = "WallTPButton"
             tpButton.Parent = stealthGui
             tpButton.Size = UDim2.new(0, 160, 0, 50)
-            tpButton.Position = UDim2.new(0.85, 0, 0.6, 0) -- Ubicado a la derecha
+            tpButton.Position = UDim2.new(0.85, 0, 0.6, 0)
             tpButton.AnchorPoint = Vector2.new(0.5, 0.5)
             tpButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
             tpButton.BorderColor3 = Color3.fromRGB(170, 0, 0)
@@ -407,13 +410,13 @@ local StealthToggle = StealthTab:CreateToggle({
             corner.CornerRadius = UDim.new(0, 8)
             corner.Parent = tpButton
 
-                        -- LÓGICA DE MANTENER PRESIONADO (NUEVO SISTEMA MÓVIL/PC SEGURO)
+            -- LÓGICA DE MANTENER PRESIONADO (NUEVO SISTEMA MÓVIL/PC SEGURO)
             local isHolding = false
 
             local function startNoclip()
                 if isHolding then return end
                 isHolding = true
-                tpButton.BackgroundColor3 = Color3.fromRGB(70, 0, 0) -- Rojo oscuro al presionar
+                tpButton.BackgroundColor3 = Color3.fromRGB(70, 0, 0) 
                 
                 local controlModule = nil
                 pcall(function()
@@ -429,25 +432,21 @@ local StealthToggle = StealthTab:CreateToggle({
                     local hum = currentChar and currentChar:FindFirstChild("Humanoid")
                     
                     if hrp and hum and hum.Health > 0 then
-                        -- Desactiva colisiones para atravesar la pared
                         for _, part in ipairs(currentChar:GetDescendants()) do
                             if part:IsA("BasePart") then
                                 part.CanCollide = false
                             end
                         end
                         
-                        -- Estabiliza al personaje en el aire
                         hrp.Velocity = Vector3.new(0, 0, 0)
                         
                         local moveDir = Vector3.new(0, 0, 0)
                         
-                        -- Leer controles (Joystick o Teclado)
                         if controlModule then
                             local rawVector = controlModule:GetMoveVector()
                             moveDir = (camera.CFrame.LookVector * -rawVector.Z) + (camera.CFrame.RightVector * rawVector.X)
                         end
                         
-                        -- Fallback para PC
                         if moveDir.Magnitude == 0 then
                             if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
                             if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
@@ -455,7 +454,6 @@ local StealthToggle = StealthTab:CreateToggle({
                             if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
                         end
                         
-                        -- Mover al personaje suavemente
                         if moveDir.Magnitude > 0 then
                             local moveUnit = moveDir.Unit
                             local nuevaPosicion = hrp.Position + (moveUnit * 0.35)
@@ -474,14 +472,13 @@ local StealthToggle = StealthTab:CreateToggle({
             local function stopNoclip()
                 if not isHolding then return end
                 isHolding = false
-                tpButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25) -- Vuelve al color normal
+                tpButton.BackgroundColor3 = Color3.fromRGB(25, 25, 25) 
                 
                 if flyConn then
                     flyConn:Disconnect()
                     flyConn = nil
                 end
 
-                -- RESTAURAR FÍSICAS INMEDIATAMENTE AL SOLTAR
                 local char = LocalPlayer.Character
                 if char then
                     local hum = char:FindFirstChild("Humanoid")
@@ -497,7 +494,6 @@ local StealthToggle = StealthTab:CreateToggle({
                 end
             end
 
-            -- Conectar usando InputBegan e InputEnded (Infalible en pantallas táctiles)
             tpButton.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     startNoclip()
