@@ -350,61 +350,9 @@ local StealthToggle = StealthTab:CreateToggle({
                 end)
             end
             
-            -- Búsqueda inicial del ControlModule
-            local controlModule = nil
-            pcall(function()
-                local playerModule = LocalPlayer.PlayerScripts:FindFirstChild("PlayerModule")
-                if playerModule then
-                    controlModule = require(playerModule:FindFirstChild("ControlModule"))
-                end
-            end)
+            -- ¡ELIMINADO EL BUCLE DE FLY CONTINUO AQUÍ! Tu personaje ahora caminará normal.
             
-            -- 2. FLY + NOCLIP CAUTELOSO PURO
-            flyConn = RunService.RenderStepped:Connect(function()
-                local currentChar = LocalPlayer.Character
-                local hrp = currentChar and currentChar:FindFirstChild("HumanoidRootPart")
-                local hum = currentChar and currentChar:FindFirstChild("Humanoid")
-                
-                if hrp and hum and hum.Health > 0 then
-                    for _, part in ipairs(currentChar:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
-                    end
-                    
-                    hrp.Velocity = Vector3.new(0, 0, 0)
-                    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    hum.AutoRotate = false
-                    
-                    local moveDir = Vector3.new(0, 0, 0)
-                    
-                    if controlModule then
-                        local rawVector = controlModule:GetMoveVector()
-                        moveDir = (camera.CFrame.LookVector * -rawVector.Z) + (camera.CFrame.RightVector * rawVector.X)
-                    end
-                    
-                    if moveDir.Magnitude == 0 then
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
-                    end
-                    
-                    if moveDir.Magnitude > 0 then
-                        local moveUnit = moveDir.Unit
-                        local nuevaPosicion = hrp.Position + (moveUnit * 0.35)
-                        local orientacionVisual = Vector3.new(moveUnit.X, 0, moveUnit.Z)
-                        
-                        if orientacionVisual.Magnitude > 0.001 then
-                            hrp.CFrame = CFrame.lookAt(nuevaPosicion, nuevaPosicion + orientacionVisual.Unit)
-                        else
-                            hrp.CFrame = CFrame.new(nuevaPosicion) * hrp.CFrame.Rotation
-                        end
-                    end
-                end
-            end)
-            
-            -- 3. ACTIVAR SISTEMA VISUAL ESP
+            -- 2. ACTIVAR SISTEMA VISUAL ESP
             espFolder = Instance.new("Folder")
             espFolder.Name = "StealthESP_Folder"
             espFolder.Parent = workspace
@@ -414,7 +362,7 @@ local StealthToggle = StealthTab:CreateToggle({
             end
             espConn = Players.PlayerAdded:Connect(createPlayerESP)
             
-            -- 4. GUI DE ALERTA SANGRE LATENTE Y BOTÓN FLOTANTE
+            -- 3. GUI DE ALERTA SANGRE LATENTE Y BOTÓN FLOTANTE
             stealthGui = Instance.new("ScreenGui")
             stealthGui.Name = "SilentAlertGui"
             stealthGui.IgnoreGuiInset = true
@@ -429,7 +377,7 @@ local StealthToggle = StealthTab:CreateToggle({
             alertLabel.AnchorPoint = Vector2.new(0.5, 0.5)
             alertLabel.Size = UDim2.new(0, 300, 0, 40)
             alertLabel.Font = Enum.Font.GothamBold
-            alertLabel.Text = "!Atravesar paredes de forma silenciosa!"
+            alertLabel.Text = "!Modo Sigilo: ESP Activo!"
             alertLabel.TextColor3 = Color3.fromRGB(170, 0, 0)
             alertLabel.TextSize = 16
             alertLabel.TextStrokeTransparency = 0
@@ -442,7 +390,7 @@ local StealthToggle = StealthTab:CreateToggle({
             })
             tween:Play()
 
-            -- NUEVO: Botón Flotante Seguros para Muros
+            -- Botón Flotante Seguro para Muros
             local tpButton = Instance.new("TextButton")
             tpButton.Name = "WallTPButton"
             tpButton.Parent = stealthGui
@@ -461,11 +409,12 @@ local StealthToggle = StealthTab:CreateToggle({
             corner.CornerRadius = UDim.new(0, 8)
             corner.Parent = tpButton
 
+            -- Lógica única del botón para traspasar
             tpButton.MouseButton1Click:Connect(function()
                 local c = LocalPlayer.Character
                 local hrp = c and c:FindFirstChild("HumanoidRootPart")
                 if hrp then
-                    -- Teletransporta suavemente 4.5 studs en la dirección actual
+                    -- Teletransporta 4.5 studs hacia adelante al instante
                     local forwardVector = hrp.CFrame.LookVector
                     hrp.CFrame = hrp.CFrame + (forwardVector * 4.5)
                 end
@@ -475,10 +424,7 @@ local StealthToggle = StealthTab:CreateToggle({
             -- ==========================================
             -- APAGADO Y RESTAURACIÓN ABSOLUTA
             -- ==========================================
-            if flyConn then
-                flyConn:Disconnect()
-                flyConn = nil
-            end
+            -- (Ya no hay flyConn que desconectar)
             
             if humanoid then
                 humanoid.AutoRotate = true
@@ -506,7 +452,7 @@ local StealthToggle = StealthTab:CreateToggle({
                 end)
             end
             
-            -- Al destruir stealthGui, el botón flotante también se destruye automáticamente
+            -- Se destruye la interfaz (y con ella, el botón flotante)
             if stealthGui then
                 stealthGui:Destroy()
                 stealthGui = nil
@@ -514,4 +460,3 @@ local StealthToggle = StealthTab:CreateToggle({
         end
     end,
 })
-
