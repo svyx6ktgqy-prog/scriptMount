@@ -302,7 +302,7 @@ local StealthToggle = StealthTab:CreateToggle({
                         end
                     end
                     
-                    --100522151681725/13372374109
+                    -- Guest666 ID: 100522151681725/ Ninja ID: 13372374109
                     local model = game:GetObjects("rbxassetid://100522151681725")[1]
                     if model then
                         for _, item in ipairs(model:GetChildren()) do
