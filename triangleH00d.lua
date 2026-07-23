@@ -290,6 +290,8 @@ local NombresPersonajes = {
     "Tr$xsh",
     "OnlyJdottt888",
     "Guest666-v2",
+    "4Slasher",
+    "JohnDoe",
     "Anime",
     "Pet-Skyler",
     "Tattoo",
@@ -322,6 +324,8 @@ local IDsPersonajes = {
     ["Tr$xsh"] = "12543836003",
     ["OnlyJdottt888"] = "16694425947",
     ["Guest666-v2"] = "86164748594934",
+    ["4Slasher"] = "115403024944965",
+    ["JohnDoe"] = "103232099547025",
     ["Anime"] = "12620017502",
     ["Pet-Skyler"] = "16305734736",
     ["Tattoo"] = "2471099435",
@@ -349,16 +353,16 @@ local IDsPersonajes = {
     ["angelBlack"] = "979928372"
 }
 
-local PersonajeSeleccionadoID = IDsPersonajes["Reaper"]
+local PersonajeSeleccionadoID = IDsPersonajes["Tr$xsh"]
 
 local CharacterSpinner = StealthTab:CreateDropdown({
     Name = "Seleccionar Personaje de Sigilo",
     Options = NombresPersonajes,
-    CurrentOption = {"Reaper"},
+    CurrentOption = {"Tr$xsh"},
     MultipleOptions = false,
     Flag = "DropdownPersonajes",
     Callback = function(Options)
-        local seleccion = Options[1]
+        local seleccion = Options[2]
         PersonajeSeleccionadoID = IDsPersonajes[seleccion]
     end,
 })
