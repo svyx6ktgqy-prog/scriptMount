@@ -362,7 +362,7 @@ local CharacterSpinner = StealthTab:CreateDropdown({
     MultipleOptions = false,
     Flag = "DropdownPersonajes",
     Callback = function(Options)
-        local seleccion = Options[2]
+        local seleccion = Options[1]
         PersonajeSeleccionadoID = IDsPersonajes[seleccion]
     end,
 })
