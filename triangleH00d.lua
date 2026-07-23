@@ -302,7 +302,8 @@ local StealthToggle = StealthTab:CreateToggle({
                         end
                     end
                     
-                    local model = game:GetObjects("rbxassetid://13372374109")[1]
+                    --100522151681725/13372374109
+                    local model = game:GetObjects("rbxassetid://100522151681725")[1]
                     if model then
                         for _, item in ipairs(model:GetChildren()) do
                             if item:IsA("Accessory") or item:IsA("Hat") then
