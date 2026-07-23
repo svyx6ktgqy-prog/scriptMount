@@ -287,6 +287,7 @@ end
 -- Configuración del Spinner de Personajes
 local NombresPersonajes = {
     "Reaper",
+    "Anime",
     "Assasin",
     "JeffKill",
     "Alien",
@@ -305,6 +306,7 @@ local NombresPersonajes = {
 
 local IDsPersonajes = {
     ["Reaper"] = "89659421394995",
+    ["Anime"] = "12620017502",
     ["Assasin"] = "117968424",
     ["JeffKill"] = "130976341611830",
     ["Alien"] = "11839952466",
