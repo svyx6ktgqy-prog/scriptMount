@@ -286,6 +286,8 @@ end
 
 -- Configuración del Spinner de Personajes
 local NombresPersonajes = {
+    "Alien",
+    "Galaxy",
     "Guest 666",
     "Ninja",
     "Emo-no-head",
@@ -299,6 +301,8 @@ local NombresPersonajes = {
 }
 
 local IDsPersonajes = {
+    ["Alien"] = "11839952466",
+    ["Galaxy"] = "119402454246397",
     ["Guest 666"] = "100522151681725",
     ["Ninja"] = "13372374109",
     ["Emo-no-head"] = "138953153245508",   -- Reemplazar con ID real en producción
