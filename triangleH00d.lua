@@ -286,6 +286,8 @@ end
 
 -- Configuración del Spinner de Personajes
 local NombresPersonajes = {
+    "Assasin",
+    "JeffKill",
     "Alien",
     "Galaxy",
     "Guest 666",
@@ -301,6 +303,8 @@ local NombresPersonajes = {
 }
 
 local IDsPersonajes = {
+    ["Assasin"] = "117968424",
+    ["JeffKill"] = "130976341611830",
     ["Alien"] = "11839952466",
     ["Galaxy"] = "119402454246397",
     ["Guest 666"] = "100522151681725",
@@ -320,7 +324,7 @@ local PersonajeSeleccionadoID = IDsPersonajes["Guest 666"]
 local CharacterSpinner = StealthTab:CreateDropdown({
     Name = "Seleccionar Personaje de Sigilo",
     Options = NombresPersonajes,
-    CurrentOption = {"Guest 666"},
+    CurrentOption = {"Assasin"},
     MultipleOptions = false,
     Flag = "DropdownPersonajes",
     Callback = function(Options)
