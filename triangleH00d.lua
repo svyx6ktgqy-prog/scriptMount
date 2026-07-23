@@ -288,9 +288,14 @@ end
 local NombresPersonajes = {
     "Guest 666",
     "Ninja",
-    "Espectro (Ficticio)",
-    "Mercenario (Ficticio)",
-    "Soldado (Ficticio)"
+    "Emo-no-head",
+    "3luc1dator",
+    "deathcore",
+    "zzzz",
+    "mark",
+    "arabic",
+    "ultra-DARK",
+    "angelBlack"
 }
 
 local IDsPersonajes = {
