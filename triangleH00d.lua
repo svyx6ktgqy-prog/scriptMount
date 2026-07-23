@@ -286,8 +286,8 @@ end
 
 -- Configuración del Spinner de Personajes
 local NombresPersonajes = {
-    "Reaper",
     "Tr$xsh",
+    "Reaper",
     "OnlyJdottt888",
     "Guest666-v2",
     "4Slasher",
@@ -320,8 +320,8 @@ local NombresPersonajes = {
 }
 
 local IDsPersonajes = {
-    ["Reaper"] = "89659421394995",
     ["Tr$xsh"] = "12543836003",
+    ["Reaper"] = "89659421394995",
     ["OnlyJdottt888"] = "16694425947",
     ["Guest666-v2"] = "86164748594934",
     ["4Slasher"] = "115403024944965",
