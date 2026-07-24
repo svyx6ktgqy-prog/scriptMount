@@ -681,3 +681,89 @@ local StealthToggle = StealthTab:CreateToggle({
         end
     end,
 })
+
+-- ==========================================
+-- 4. APARTADO: REPRODUCTOR WARZONE
+-- ==========================================
+local MusicTab = Window:CreateTab("Música Warzone", 4483362458) 
+
+-- Lista de reproducción con el orden específico
+local playlist = {
+    "rbxassetid://9112893134",
+    "rbxassetid://9112892993",
+    "rbxassetid://9112893131"
+}
+
+local currentTrackIndex = 1
+local isPlaying = false
+
+-- Creación del reproductor de audio oculto
+local audioPlayer = Instance.new("Sound")
+audioPlayer.Name = "WarzoneAudioPlayer"
+audioPlayer.Volume = 1
+
+-- Alojamos el audio en CoreGui (o Workspace como respaldo) para que no se interrumpa al morir o reiniciar
+pcall(function()
+    local coreGui = game:GetService("CoreGui")
+    audioPlayer.Parent = pcall(function() return coreGui.Name end) and coreGui or workspace
+end)
+if not audioPlayer.Parent then
+    audioPlayer.Parent = workspace
+end
+
+-- Lógica para avanzar en la lista
+local function playNextTrack()
+    currentTrackIndex = currentTrackIndex + 1
+    
+    -- Si llegamos al final, reiniciamos desde el principio
+    if currentTrackIndex > #playlist then
+        currentTrackIndex = 1 
+    end
+    
+    audioPlayer.SoundId = playlist[currentTrackIndex]
+    
+    -- Solo reproducir automáticamente si el toggle está activo
+    if isPlaying then
+        audioPlayer:Play()
+    end
+end
+
+-- Evento que dispara la siguiente canción al terminar la actual
+audioPlayer.Ended:Connect(function()
+    if isPlaying then
+        playNextTrack()
+    end
+end)
+
+-- Interfaz Rayfield
+local PlayToggle = MusicTab:CreateToggle({
+    Name = "Play / Pause (Música y Disparos)",
+    CurrentValue = false,
+    Flag = "ToggleWarzoneMusic",
+    Callback = function(Value)
+        isPlaying = Value
+        
+        if isPlaying then
+            -- Cargar la primera canción si el reproductor está vacío
+            if audioPlayer.SoundId == "" then
+                audioPlayer.SoundId = playlist[currentTrackIndex]
+            end
+            audioPlayer:Play() -- Reanuda desde donde se quedó
+        else
+            audioPlayer:Pause() -- Pausa el tiempo actual de la pista
+        end
+    end,
+})
+
+local SkipButton = MusicTab:CreateButton({
+    Name = "Forzar siguiente pista",
+    Callback = function()
+        audioPlayer:Stop()
+        playNextTrack()
+        
+        -- Si el usuario cambia de canción mientras está en Pause, la nueva canción cargará pausada
+        if not isPlaying then
+            audioPlayer:Pause()
+        end
+    end,
+})
