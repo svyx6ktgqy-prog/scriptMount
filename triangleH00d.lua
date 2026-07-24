@@ -701,8 +701,9 @@ local isPlaying = false
 local audioPlayer = Instance.new("Sound")
 audioPlayer.Name = "WarzoneAudioPlayer"
 audioPlayer.Volume = 1
+audioPlayer.Looped = false -- CRUCIAL: Evita que la pista repita internamente sin disparar el final
 
--- Alojamos el audio en CoreGui (o Workspace como respaldo) para que no se interrumpa al morir o reiniciar
+-- Alojamos el audio en CoreGui para que no se interrumpa al morir
 pcall(function()
     local coreGui = game:GetService("CoreGui")
     audioPlayer.Parent = pcall(function() return coreGui.Name end) and coreGui or workspace
@@ -711,7 +712,7 @@ if not audioPlayer.Parent then
     audioPlayer.Parent = workspace
 end
 
--- Lógica para avanzar en la lista
+-- Lógica ultra robusta para avanzar en la lista
 local function playNextTrack()
     currentTrackIndex = currentTrackIndex + 1
     
@@ -720,11 +721,17 @@ local function playNextTrack()
         currentTrackIndex = 1 
     end
     
+    -- Frenamos el reproductor por completo antes de inyectar el nuevo ID
+    audioPlayer:Stop()
     audioPlayer.SoundId = playlist[currentTrackIndex]
     
-    -- Solo reproducir automáticamente si el toggle está activo
     if isPlaying then
-        audioPlayer:Play()
+        -- task.spawn con delay permite que el motor de Roblox registre el nuevo ID antes de reproducirlo
+        task.spawn(function()
+            task.wait(0.15) 
+            audioPlayer.TimePosition = 0
+            audioPlayer:Play()
+        end)
     end
 end
 
@@ -744,11 +751,14 @@ local PlayToggle = MusicTab:CreateToggle({
         isPlaying = Value
         
         if isPlaying then
-            -- Cargar la primera canción si el reproductor está vacío
             if audioPlayer.SoundId == "" then
                 audioPlayer.SoundId = playlist[currentTrackIndex]
             end
-            audioPlayer:Play() -- Reanuda desde donde se quedó
+            
+            task.spawn(function()
+                task.wait(0.1)
+                audioPlayer:Play() -- Reanuda desde donde se quedó
+            end)
         else
             audioPlayer:Pause() -- Pausa el tiempo actual de la pista
         end
@@ -758,12 +768,15 @@ local PlayToggle = MusicTab:CreateToggle({
 local SkipButton = MusicTab:CreateButton({
     Name = "Forzar siguiente pista",
     Callback = function()
-        audioPlayer:Stop()
         playNextTrack()
         
-        -- Si el usuario cambia de canción mientras está en Pause, la nueva canción cargará pausada
+        -- Si cambias de canción mientras está en Pause, la nueva canción cargará pausada
         if not isPlaying then
-            audioPlayer:Pause()
+            task.spawn(function()
+                task.wait(0.2)
+                audioPlayer:Pause()
+            end)
         end
     end,
 })
+
