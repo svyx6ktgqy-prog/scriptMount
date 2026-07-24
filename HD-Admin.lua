@@ -1,5 +1,5 @@
 -- Cargar Rayfield usando la rama optimizada y compatible con Delta
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/rayfield/refs/heads/main'))()
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/rayfield/refs/main'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "HD Admin Auto-Spammer & Utility",
