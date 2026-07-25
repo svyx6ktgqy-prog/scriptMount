@@ -903,6 +903,9 @@ BoomboxTab:CreateToggle({
                frame.BorderColor3 = Color3.fromRGB(0, 255, 128)
                frame.Visible = false
                
+               -- ==========================================
+               -- [SISTEMA DE APERTURA CORREGIDO Y BLINDADO]
+               -- ==========================================
                local touchZone = Instance.new("BillboardGui")
                touchZone.Name = "RadioTouchZone"
                touchZone.Size = UDim2.new(3, 0, 3, 0) 
@@ -914,11 +917,19 @@ BoomboxTab:CreateToggle({
                touchBtn.Size = UDim2.new(1, 0, 1, 0)
                touchBtn.BackgroundTransparency = 1 
                touchBtn.Text = ""
+               touchBtn.Active = true
                touchBtn.Parent = touchZone
                
-               touchBtn.MouseButton1Click:Connect(function()
-                   frame.Visible = not frame.Visible
-               end)
+               -- Función global para alternar la visibilidad
+               local function toggleMenu()
+                   if frame then frame.Visible = not frame.Visible end
+               end
+               
+               -- Múltiples disparadores para evitar fallos en móviles/PC
+               touchBtn.MouseButton1Click:Connect(toggleMenu)
+               touchBtn.Activated:Connect(toggleMenu)
+               boomboxClonedTool.Activated:Connect(toggleMenu) -- Abre al hacer clic/tocar con la radio en la mano
+               -- ==========================================
                
                local title = Instance.new("TextLabel", frame)
                title.Size = UDim2.new(1, 0, 0, 25)
@@ -1015,7 +1026,7 @@ BoomboxTab:CreateToggle({
                
                Rayfield:Notify({
                    Title = "Radio Operational",
-                   Content = "Invisible touch zone applied. Tap the radio to open the menu.",
+                   Content = "Tap the radio or click your screen to open the menu.",
                    Duration = 4,
                })
            end)
