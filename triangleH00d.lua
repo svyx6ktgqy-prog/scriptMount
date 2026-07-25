@@ -805,13 +805,14 @@ local boomboxAssetId = "rbxassetid://15876467320"
 local boomboxClonedTool = nil
 local boomboxCustomUI = nil
 
+-- Playlist con tu nueva integración añadida
 local boomboxPlaylist = {
     "136674057014960",
     "133761848795389",
     "138950692714324",
     "91563677636564",
     "103409297553965",
-    "", 
+    "140511755680557", -- NUEVA CANCIÓN AÑADIDA
     ""  
 }
 local boomboxCurrentTrackIndex = 1
@@ -887,7 +888,7 @@ BoomboxTab:CreateToggle({
                local radioSound = Instance.new("Sound")
                radioSound.Name = "CustomMusicPlayer"
                radioSound.Volume = 1
-               radioSound.Looped = true
+               radioSound.Looped = false -- CORRECCIÓN: Apagamos el bucle infinito para que detecte el final
                radioSound.Parent = handle
                
                boomboxCustomUI = Instance.new("ScreenGui")
@@ -903,9 +904,6 @@ BoomboxTab:CreateToggle({
                frame.BorderColor3 = Color3.fromRGB(0, 255, 128)
                frame.Visible = false
                
-               -- ==========================================
-               -- [SISTEMA DE APERTURA CORREGIDO Y BLINDADO]
-               -- ==========================================
                local touchZone = Instance.new("BillboardGui")
                touchZone.Name = "RadioTouchZone"
                touchZone.Size = UDim2.new(3, 0, 3, 0) 
@@ -920,16 +918,13 @@ BoomboxTab:CreateToggle({
                touchBtn.Active = true
                touchBtn.Parent = touchZone
                
-               -- Función global para alternar la visibilidad
                local function toggleMenu()
                    if frame then frame.Visible = not frame.Visible end
                end
                
-               -- Múltiples disparadores para evitar fallos en móviles/PC
                touchBtn.MouseButton1Click:Connect(toggleMenu)
                touchBtn.Activated:Connect(toggleMenu)
-               boomboxClonedTool.Activated:Connect(toggleMenu) -- Abre al hacer clic/tocar con la radio en la mano
-               -- ==========================================
+               boomboxClonedTool.Activated:Connect(toggleMenu) 
                
                local title = Instance.new("TextLabel", frame)
                title.Size = UDim2.new(1, 0, 0, 25)
@@ -956,13 +951,14 @@ BoomboxTab:CreateToggle({
                playBtn.TextColor3 = Color3.new(1, 1, 1)
                playBtn.Font = Enum.Font.SourceSansBold
                
-               local stopBtn = Instance.new("TextButton", frame)
-               stopBtn.Size = UDim2.new(0.4, 0, 0, 35)
-               stopBtn.Position = UDim2.new(0.55, 0, 0.48, 0)
-               stopBtn.Text = "⏹ STOP"
-               stopBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-               stopBtn.TextColor3 = Color3.new(1, 1, 1)
-               stopBtn.Font = Enum.Font.SourceSansBold
+               -- CORRECCIÓN: Botón cambiado a PAUSE real
+               local pauseBtn = Instance.new("TextButton", frame)
+               pauseBtn.Size = UDim2.new(0.4, 0, 0, 35)
+               pauseBtn.Position = UDim2.new(0.55, 0, 0.48, 0)
+               pauseBtn.Text = "⏸ PAUSE"
+               pauseBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+               pauseBtn.TextColor3 = Color3.new(1, 1, 1)
+               pauseBtn.Font = Enum.Font.SourceSansBold
 
                local prevBtn = Instance.new("TextButton", frame)
                prevBtn.Size = UDim2.new(0.4, 0, 0, 35)
@@ -985,6 +981,7 @@ BoomboxTab:CreateToggle({
                    if id and id ~= "" then
                        inputBox.Text = id
                        radioSound.SoundId = "rbxassetid://" .. id
+                       radioSound.TimePosition = 0
                        radioSound:Play()
                    else
                        inputBox.Text = "[Empty Slot]"
@@ -995,13 +992,22 @@ BoomboxTab:CreateToggle({
                playBtn.MouseButton1Click:Connect(function()
                    local id = inputBox.Text:match("%d+")
                    if id then
-                       radioSound.SoundId = "rbxassetid://" .. id
-                       radioSound:Play()
+                       local fullId = "rbxassetid://" .. id
+                       -- CORRECCIÓN: Si es la misma canción, solo quita la pausa. Si es una nueva, empieza de cero.
+                       if radioSound.SoundId == fullId then
+                           if not radioSound.IsPlaying then
+                               radioSound:Play()
+                           end
+                       else
+                           radioSound.SoundId = fullId
+                           radioSound.TimePosition = 0
+                           radioSound:Play()
+                       end
                    end
                end)
                
-               stopBtn.MouseButton1Click:Connect(function()
-                   radioSound:Stop()
+               pauseBtn.MouseButton1Click:Connect(function()
+                   radioSound:Pause()
                end)
 
                prevBtn.MouseButton1Click:Connect(function()
@@ -1013,6 +1019,15 @@ BoomboxTab:CreateToggle({
                end)
 
                nextBtn.MouseButton1Click:Connect(function()
+                   boomboxCurrentTrackIndex = boomboxCurrentTrackIndex + 1
+                   if boomboxCurrentTrackIndex > #boomboxPlaylist then
+                       boomboxCurrentTrackIndex = 1
+                   end
+                   playPlaylistTrack()
+               end)
+
+               -- CORRECCIÓN: Salto automático a la siguiente canción al terminar
+               radioSound.Ended:Connect(function()
                    boomboxCurrentTrackIndex = boomboxCurrentTrackIndex + 1
                    if boomboxCurrentTrackIndex > #boomboxPlaylist then
                        boomboxCurrentTrackIndex = 1
