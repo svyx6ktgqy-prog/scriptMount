@@ -987,6 +987,7 @@ BoomboxTab:CreateToggle({
                
                local frameStroke = Instance.new("UIStroke", frame)
 frameStroke.Thickness = 3 -- Puedes subirlo a 4 si quieres que el espectro destaque aún más
+frameStroke.Color = Color3.fromRGB(255, 255, 255) -- <<< ¡AGREGA ESTA LÍNEA!
 frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local strokeGradient = Instance.new("UIGradient", frameStroke)
