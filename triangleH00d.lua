@@ -819,13 +819,14 @@ local boomboxCurrentTrackIndex = 1
 
 local TweenService = game:GetService("TweenService")
 
--- Helper para crear botones 3D animados
+-- Helper para crear botones 3D animados con ZIndex forzado
 local function create3DButton(parent, name, text, pos, size, baseColor)
     local btnContainer = Instance.new("Frame", parent)
     btnContainer.Name = name .. "Container"
     btnContainer.Position = pos
     btnContainer.Size = size
     btnContainer.BackgroundTransparency = 1
+    btnContainer.ZIndex = 3
 
     -- Sombra/Base (Crea la profundidad 3D)
     local shadow = Instance.new("Frame", btnContainer)
@@ -833,7 +834,7 @@ local function create3DButton(parent, name, text, pos, size, baseColor)
     shadow.Position = UDim2.new(0, 0, 0, 0)
     shadow.BackgroundColor3 = Color3.new(baseColor.R * 0.4, baseColor.G * 0.4, baseColor.B * 0.4) 
     shadow.BorderSizePixel = 0
-    -- CORRECCIÓN: UDim en lugar de UDim2
+    shadow.ZIndex = 3
     Instance.new("UICorner", shadow).CornerRadius = UDim.new(0, 6)
 
     -- Botón Superior Interactuable
@@ -847,10 +848,9 @@ local function create3DButton(parent, name, text, pos, size, baseColor)
     btn.TextColor3 = Color3.fromRGB(240, 240, 240)
     btn.AutoButtonColor = false
     btn.BackgroundColor3 = baseColor
-    -- CORRECCIÓN: UDim en lugar de UDim2
+    btn.ZIndex = 4
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     
-    -- Efecto reflectivo en el botón
     local grad = Instance.new("UIGradient", btn)
     grad.Color = ColorSequence.new{
         ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)), 
@@ -863,7 +863,7 @@ local function create3DButton(parent, name, text, pos, size, baseColor)
     stroke.Color = Color3.fromRGB(15, 15, 15)
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
-    -- Animaciones de Hover y Clic
+    -- Animaciones
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.new(baseColor.R * 1.3, baseColor.G * 1.3, baseColor.B * 1.3)}):Play()
     end)
@@ -894,19 +894,18 @@ BoomboxTab:CreateToggle({
                
                pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, true) end)
                
-               -- Descarga y carga de la imagen de fondo para Delta Executor
+               -- 1. DESCARGA DEL FONDO ALIENWARE
                local bgAssetId = ""
                pcall(function()
                    local url = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/DJ-bg.jpg"
                    local fileName = "DJ-bg-alienware.jpg"
                    if writefile and readfile and isfile and getcustomasset then
-                       if not isfile(fileName) then
-                           writefile(fileName, game:HttpGet(url))
-                       end
+                       if not isfile(fileName) then writefile(fileName, game:HttpGet(url)) end
                        bgAssetId = getcustomasset(fileName)
                    end
                end)
                
+               -- 2. CORRECCIÓN: EXTRACCIÓN REAL DEL MODELO 3D DE LA RADIO
                local objects = game:GetObjects(boomboxAssetId)
                local obj = objects[1]
                local realTool = nil
@@ -915,16 +914,31 @@ BoomboxTab:CreateToggle({
                    realTool = obj 
                else
                    local innerTool = obj:FindFirstChildWhichIsA("Tool", true)
-                   if innerTool then realTool = innerTool
+                   if innerTool then 
+                       realTool = innerTool
                    else
                        realTool = Instance.new("Tool")
                        realTool.RequiresHandle = true
-                       local handle = Instance.new("Part", realTool)
-                       handle.Name = "Handle"
-                       handle.Size = Vector3.new(1, 1, 1)
-                       handle.Transparency = 1
+                       if obj:IsA("BasePart") then
+                           obj.Name = "Handle"
+                           obj.Parent = realTool
+                       elseif obj:IsA("Model") or obj:IsA("Folder") then
+                           for _, child in pairs(obj:GetChildren()) do child.Parent = realTool end
+                           local handle = realTool:FindFirstChild("Handle") or realTool:FindFirstChildWhichIsA("BasePart")
+                           if handle then 
+                               handle.Name = "Handle"
+                           else
+                               handle = Instance.new("Part")
+                               handle.Name = "Handle"
+                               handle.Size = Vector3.new(1, 1, 1)
+                               handle.Transparency = 1
+                               handle.Parent = realTool
+                           end
+                       end
                    end
                end
+               
+               if not realTool then error("No se pudo generar la radio.") end
                
                boomboxClonedTool = realTool
                boomboxClonedTool.Name = boomboxToolName
@@ -947,15 +961,14 @@ BoomboxTab:CreateToggle({
                radioSound.Volume = 1
                radioSound.Looped = false 
                
+               -- 3. CORRECCIÓN: SISTEMA DE CAPAS (ZINDEX)
                boomboxCustomUI = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
                boomboxCustomUI.Name = "ExploitRadioUI"
                boomboxCustomUI.ResetOnSpawn = false
+               boomboxCustomUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Fuerza el orden correcto
                
-               -- ==========================================
-               -- DISEÑO ALIENWARE / METÁLICO 3D
-               -- ==========================================
                local frame = Instance.new("Frame", boomboxCustomUI)
-               frame.Size = UDim2.new(0, 0, 0, 0) -- Inicia en 0 para animación
+               frame.Size = UDim2.new(0, 0, 0, 0)
                frame.Position = UDim2.new(0.5, 0, 0.8, -100)
                frame.AnchorPoint = Vector2.new(0.5, 0.5)
                frame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
@@ -963,36 +976,73 @@ BoomboxTab:CreateToggle({
                frame.Visible = false
                
                local frameCorner = Instance.new("UICorner", frame)
-               -- CORRECCIÓN: UDim en lugar de UDim2
                frameCorner.CornerRadius = UDim.new(0, 12)
                
-               -- Borde Metálico Arco 3D
                local frameStroke = Instance.new("UIStroke", frame)
                frameStroke.Thickness = 3
                frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
                local strokeGradient = Instance.new("UIGradient", frameStroke)
                strokeGradient.Color = ColorSequence.new({
                    ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 50)),
-                   ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 210)), -- Reflejo metálico
+                   ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 210)),
                    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
                })
                strokeGradient.Rotation = 45
 
-               -- Fondo Base (Imagen Descargada)
+               -- CAPA 1: Imagen de Fondo
                local bgImage = Instance.new("ImageLabel", frame)
                bgImage.Size = UDim2.new(1, 0, 1, 0)
                bgImage.BackgroundTransparency = 1
                bgImage.Image = bgAssetId
                bgImage.ScaleType = Enum.ScaleType.Crop
-               bgImage.ZIndex = 0
+               bgImage.ZIndex = 1 
 
-               -- Filtro Oscuro / Carbónico sobre la imagen para legibilidad
+               -- CAPA 2: Filtro carbónico/oscuro
                local darkOverlay = Instance.new("Frame", frame)
                darkOverlay.Size = UDim2.new(1, 0, 1, 0)
                darkOverlay.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
                darkOverlay.BackgroundTransparency = 0.35
-               darkOverlay.ZIndex = 1
+               darkOverlay.ZIndex = 2 
                
+               -- CAPA 3+: Textos y Botones
+               local title = Instance.new("TextLabel", frame)
+               title.Size = UDim2.new(1, 0, 0, 30)
+               title.Position = UDim2.new(0, 0, 0, 5)
+               title.Text = "A L I E N  A U D I O"
+               title.TextColor3 = Color3.fromRGB(0, 255, 204)
+               title.BackgroundTransparency = 1
+               title.Font = Enum.Font.GothamBlack
+               title.TextSize = 16
+               title.ZIndex = 3
+               
+               local titleGlow = Instance.new("UIStroke", title)
+               titleGlow.Thickness = 1
+               titleGlow.Color = Color3.fromRGB(0, 255, 204)
+               titleGlow.Transparency = 0.6
+               
+               local inputBox = Instance.new("TextBox", frame)
+               inputBox.Size = UDim2.new(0.88, 0, 0, 32)
+               inputBox.Position = UDim2.new(0.06, 0, 0.22, 0)
+               inputBox.PlaceholderText = "ASSET ID (Ex: 140511755680557)"
+               inputBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+               inputBox.Text = ""
+               inputBox.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+               inputBox.TextColor3 = Color3.fromRGB(0, 255, 204)
+               inputBox.Font = Enum.Font.GothamBold
+               inputBox.TextSize = 13
+               inputBox.ZIndex = 3
+               Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 4)
+               
+               local inputStroke = Instance.new("UIStroke", inputBox)
+               inputStroke.Color = Color3.fromRGB(0, 150, 120)
+               inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+               
+               local playBtn = create3DButton(frame, "PlayBtn", "▶ PLAY", UDim2.new(0.06, 0, 0.45, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(0, 120, 60))
+               local pauseBtn = create3DButton(frame, "PauseBtn", "⏸ PAUSE", UDim2.new(0.52, 0, 0.45, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(150, 100, 0))
+               local prevBtn = create3DButton(frame, "PrevBtn", "⏪ PREV", UDim2.new(0.06, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
+               local nextBtn = create3DButton(frame, "NextBtn", "NEXT ⏩", UDim2.new(0.52, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
+
+               -- LÓGICA DE APERTURA (Touch/Click)
                local touchZone = Instance.new("BillboardGui", boomboxCustomUI)
                touchZone.Size = UDim2.new(3, 0, 3, 0) 
                touchZone.Adornee = handle
@@ -1002,7 +1052,6 @@ BoomboxTab:CreateToggle({
                touchBtn.Size = UDim2.new(1, 0, 1, 0)
                touchBtn.BackgroundTransparency = 1; touchBtn.Text = ""
                
-               -- Sistema de Animación de Apertura
                local isMenuOpen = false
                local function toggleMenu()
                    isMenuOpen = not isMenuOpen
@@ -1024,54 +1073,8 @@ BoomboxTab:CreateToggle({
                touchBtn.MouseButton1Click:Connect(toggleMenu)
                touchBtn.Activated:Connect(toggleMenu)
                boomboxClonedTool.Activated:Connect(toggleMenu) 
-               
-               local title = Instance.new("TextLabel", frame)
-               title.Size = UDim2.new(1, 0, 0, 30)
-               title.Position = UDim2.new(0, 0, 0, 5)
-               title.Text = "A L I E N  A U D I O"
-               title.TextColor3 = Color3.fromRGB(0, 255, 204) -- Neón Cyan
-               title.BackgroundTransparency = 1
-               title.Font = Enum.Font.GothamBlack
-               title.TextSize = 16
-               title.ZIndex = 2
-               
-               local titleGlow = Instance.new("UIStroke", title)
-               titleGlow.Thickness = 1
-               titleGlow.Color = Color3.fromRGB(0, 255, 204)
-               titleGlow.Transparency = 0.6
-               
-               local inputBox = Instance.new("TextBox", frame)
-               inputBox.Size = UDim2.new(0.88, 0, 0, 32)
-               inputBox.Position = UDim2.new(0.06, 0, 0.22, 0)
-               inputBox.PlaceholderText = "ASSET ID (Ex: 140511755680557)"
-               inputBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
-               inputBox.Text = ""
-               inputBox.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-               inputBox.TextColor3 = Color3.fromRGB(0, 255, 204)
-               inputBox.Font = Enum.Font.GothamBold
-               inputBox.TextSize = 13
-               inputBox.ZIndex = 2
-               -- CORRECCIÓN: UDim en lugar de UDim2
-               Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 4)
-               
-               local inputStroke = Instance.new("UIStroke", inputBox)
-               inputStroke.Color = Color3.fromRGB(0, 150, 120)
-               inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-               
-               -- Creación de Botones 3D (ZIndex 2 para estar sobre el overlay)
-               local btnBaseZIndex = Instance.new("Folder", frame)
-               
-               -- Colores Alienware: Verdes, Ámbares y Cyans oscuros
-               local playBtn = create3DButton(frame, "PlayBtn", "▶ PLAY", UDim2.new(0.06, 0, 0.45, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(0, 120, 60))
-               local pauseBtn = create3DButton(frame, "PauseBtn", "⏸ PAUSE", UDim2.new(0.52, 0, 0.45, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(150, 100, 0))
-               local prevBtn = create3DButton(frame, "PrevBtn", "⏪ PREV", UDim2.new(0.06, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
-               local nextBtn = create3DButton(frame, "NextBtn", "NEXT ⏩", UDim2.new(0.52, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
 
-               -- Configurar ZIndex para los botones 3D
-               for _, child in pairs(frame:GetChildren()) do
-                   if child.Name:match("Container") then child.ZIndex = 2 end
-               end
-               
+               -- LÓGICA DEL REPRODUCTOR
                local function playPlaylistTrack()
                    local id = boomboxPlaylist[boomboxCurrentTrackIndex]
                    if id and id ~= "" then
