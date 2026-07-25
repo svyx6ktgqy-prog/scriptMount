@@ -981,15 +981,27 @@ BoomboxTab:CreateToggle({
                frameCorner.CornerRadius = UDim.new(0, 12)
                
                local frameStroke = Instance.new("UIStroke", frame)
-               frameStroke.Thickness = 3
-               frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-               local strokeGradient = Instance.new("UIGradient", frameStroke)
-               strokeGradient.Color = ColorSequence.new({
-                   ColorSequenceKeypoint.new(0, Color3.fromRGB(50, 50, 50)),
-                   ColorSequenceKeypoint.new(0.5, Color3.fromRGB(200, 200, 210)),
-                   ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
-               })
-               strokeGradient.Rotation = 45
+frameStroke.Thickness = 3 -- Puedes subirlo a 4 si quieres que el espectro destaque aún más
+frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local strokeGradient = Instance.new("UIGradient", frameStroke)
+-- Configuramos la paleta: Negro -> Azul -> Rojo -> Negro (cierra el ciclo para un giro suave)
+strokeGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+    ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 100, 255)), -- Azul neón
+    ColorSequenceKeypoint.new(0.66, Color3.fromRGB(255, 10, 50)), -- Rojo intenso
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+})
+strokeGradient.Rotation = 0
+
+-- Sistema de animación en segundo plano para la rotación 360
+task.spawn(function()
+    while strokeGradient and strokeGradient.Parent do
+        -- Aumenta los grados poco a poco y reinicia al llegar a 360
+        strokeGradient.Rotation = (strokeGradient.Rotation + 1.5) % 360 
+        task.wait(0.01) -- Velocidad de los fotogramas de rotación (menor = más fluido)
+    end
+end)
 
                -- CAPA 1: Imagen de Fondo (CORREGIDA: Bordes redondeados añadidos, Opacidad eliminada)
                local bgImage = Instance.new("ImageLabel", frame)
