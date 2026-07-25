@@ -980,7 +980,7 @@ BoomboxTab:CreateToggle({
                
                -- AGREGAMOS UN UISCALE PARA LA ANIMACIÓN
                local uiScale = Instance.new("UIScale", frame)
-               uiScale.Scale = 0 -- Empieza en 0 (invisible/encogido)
+               uiScale.Scale = 1 -- Empieza en 0 (invisible/encogido)
                
                local frameCorner = Instance.new("UICorner", frame)
                frameCorner.CornerRadius = UDim.new(0, 12)
