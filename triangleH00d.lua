@@ -1020,7 +1020,8 @@ BoomboxTab:CreateToggle({
                inputBox.PlaceholderText = "ASSET ID (Ex: 140511755680557)"
                inputBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
                inputBox.Text = ""
-               inputBox.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+               inputBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+               inputBox.BackgroundTransparency = 0.5
                inputBox.TextColor3 = Color3.fromRGB(0, 255, 204)
                inputBox.Font = Enum.Font.GothamBold
                inputBox.TextSize = 13
