@@ -969,13 +969,18 @@ BoomboxTab:CreateToggle({
                boomboxCustomUI.ResetOnSpawn = false
                boomboxCustomUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
                
+                              -- CREACIÓN DEL FRAME (Modificado)
                local frame = Instance.new("Frame", boomboxCustomUI)
-               frame.Size = UDim2.new(0, 0, 0, 0)
+               frame.Size = UDim2.new(0, 270, 0, 190) -- Ponemos el tamaño final desde el principio
                frame.Position = UDim2.new(0.5, 0, 0.8, -100)
                frame.AnchorPoint = Vector2.new(0.5, 0.5)
                frame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
                frame.ClipsDescendants = true
                frame.Visible = false
+               
+               -- AGREGAMOS UN UISCALE PARA LA ANIMACIÓN
+               local uiScale = Instance.new("UIScale", frame)
+               uiScale.Scale = 0 -- Empieza en 0 (invisible/encogido)
                
                local frameCorner = Instance.new("UICorner", frame)
                frameCorner.CornerRadius = UDim.new(0, 12)
