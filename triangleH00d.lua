@@ -833,7 +833,8 @@ local function create3DButton(parent, name, text, pos, size, baseColor)
     shadow.Position = UDim2.new(0, 0, 0, 0)
     shadow.BackgroundColor3 = Color3.new(baseColor.R * 0.4, baseColor.G * 0.4, baseColor.B * 0.4) 
     shadow.BorderSizePixel = 0
-    Instance.new("UICorner", shadow).CornerRadius = UDim2.new(0, 6)
+    -- CORRECCIÓN: UDim en lugar de UDim2
+    Instance.new("UICorner", shadow).CornerRadius = UDim.new(0, 6)
 
     -- Botón Superior Interactuable
     local btn = Instance.new("TextButton", btnContainer)
@@ -846,7 +847,8 @@ local function create3DButton(parent, name, text, pos, size, baseColor)
     btn.TextColor3 = Color3.fromRGB(240, 240, 240)
     btn.AutoButtonColor = false
     btn.BackgroundColor3 = baseColor
-    Instance.new("UICorner", btn).CornerRadius = UDim2.new(0, 6)
+    -- CORRECCIÓN: UDim en lugar de UDim2
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     
     -- Efecto reflectivo en el botón
     local grad = Instance.new("UIGradient", btn)
@@ -961,7 +963,8 @@ BoomboxTab:CreateToggle({
                frame.Visible = false
                
                local frameCorner = Instance.new("UICorner", frame)
-               frameCorner.CornerRadius = UDim2.new(0, 12)
+               -- CORRECCIÓN: UDim en lugar de UDim2
+               frameCorner.CornerRadius = UDim.new(0, 12)
                
                -- Borde Metálico Arco 3D
                local frameStroke = Instance.new("UIStroke", frame)
@@ -1048,7 +1051,9 @@ BoomboxTab:CreateToggle({
                inputBox.Font = Enum.Font.GothamBold
                inputBox.TextSize = 13
                inputBox.ZIndex = 2
-               Instance.new("UICorner", inputBox).CornerRadius = UDim2.new(0, 4)
+               -- CORRECCIÓN: UDim en lugar de UDim2
+               Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 4)
+               
                local inputStroke = Instance.new("UIStroke", inputBox)
                inputStroke.Color = Color3.fromRGB(0, 150, 120)
                inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
