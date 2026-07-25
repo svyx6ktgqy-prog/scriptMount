@@ -1022,7 +1022,7 @@ end)
                local title = Instance.new("TextLabel", frame)
                title.Size = UDim2.new(1, 0, 0, 30)
                title.Position = UDim2.new(0, 0, 0, 5)
-               title.Text = "📻R A D I O📻"
+               title.Text = "📻 R A D I O 📻"
                title.TextColor3 = Color3.fromRGB(0, 255, 204)
                title.BackgroundTransparency = 1
                title.Font = Enum.Font.GothamBlack
