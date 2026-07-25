@@ -287,19 +287,19 @@ local function createPlayerESP(player)
 end
 
 local NombresPersonajes = {
-    "Tr$xsh", "Reaper", "OnlyJdottt888", "SpyEffect", "DemonSuite",
+    "Tr$xsh", "Alien", "Reaper", "OnlyJdottt888", "SpyEffect", "DemonSuite",
     "BearBlack", "KingV1", "KingV2", "Ninjaco80", "CJ", "MeKing",
     "JasonX", "PandiMan", "AppleJuice", "Tr$xshV2", "SuiteWhiteFF",
     "Otaku", "Halloween", "Zombie", "Blood", "HalloweenV4", "Anime",
     "Pet-Skyler", "Tattoo", "Necklace", "HellxCult", "Pepperm3n",
     "BattleCAT", "Yamal-Lamine", "NecroL", "Ninjaco99", "GasMask",
-    "Assasin", "JeffKill", "Alien", "Galaxy", "Guest 666", "Ninja",
+    "Assasin", "JeffKill", "Galaxy", "Guest 666", "Ninja",
     "Emo-no-head", "3luc1dator", "deathcore", "zzzz", "mark",
     "arabic", "ultra-DARK", "angelBlack"
 }
 
 local IDsPersonajes = {
-    ["Tr$xsh"] = "12543836003", ["Reaper"] = "89659421394995", ["OnlyJdottt888"] = "16694425947",
+    ["Tr$xsh"] = "12543836003", ["Alien"] = "11839952466", ["Reaper"] = "89659421394995", ["OnlyJdottt888"] = "16694425947",
     ["SpyEffect"] = "2614544836", ["DemonSuite"] = "14288252360", ["BearBlack"] = "10059678189",
     ["KingV1"] = "1502622602", ["KingV2"] = "10332438725", ["Ninjaco80"] = "10926342089",
     ["CJ"] = "110223007877573", ["MeKing"] = "49618066", ["JasonX"] = "17462621551",
@@ -310,7 +310,7 @@ local IDsPersonajes = {
     ["Necklace"] = "10253040", ["HellxCult"] = "6231360322", ["Pepperm3n"] = "5219495877",
     ["BattleCAT"] = "108399584052276", ["Yamal-Lamine"] = "73762465274540", ["NecroL"] = "5077070408",
     ["Ninjaco99"] = "17397372642", ["GasMask"] = "9416404023", ["Assasin"] = "117968424",
-    ["JeffKill"] = "130976341611830", ["Alien"] = "11839952466", ["Galaxy"] = "119402454246397",
+    ["JeffKill"] = "130976341611830", ["Galaxy"] = "119402454246397",
     ["Guest 666"] = "100522151681725", ["Ninja"] = "13372374109", ["Emo-no-head"] = "138953153245508",
     ["3luc1dator"] = "13488199451", ["deathcore"] = "17258275053", ["zzzz"] = "15483662986",  
     ["mark"] = "15273480838", ["arabic"] = "115260634647279", ["ultra-DARK"] = "113805405663467",
