@@ -1057,7 +1057,7 @@ end)
                local prevBtn = create3DButton(frame, "PrevBtn", "⏪ PREV", UDim2.new(0.06, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
                local nextBtn = create3DButton(frame, "NextBtn", "NEXT ⏩", UDim2.new(0.52, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
 
-                              -- LÓGICA DE APERTURA (Touch/Click)
+                                             -- LÓGICA DE APERTURA (Con Seguro Anti-Doble Toque)
                local touchZone = Instance.new("BillboardGui", boomboxCustomUI)
                touchZone.Size = UDim2.new(3, 0, 3, 0) 
                touchZone.Adornee = handle
@@ -1069,30 +1069,34 @@ end)
                touchBtn.Text = ""
                
                local isMenuOpen = false
+               local isAnimating = false -- <<< NUESTRO SEGURO ANTI-BUGS
+               
                local function toggleMenu()
+                   if isAnimating then return end -- Si está a mitad de animación, ignora los toques
+                   isAnimating = true
+                   
                    isMenuOpen = not isMenuOpen
+                   
                    if isMenuOpen then
                        frame.Visible = true
-                       TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                       local openTween = TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                            Size = UDim2.new(0, 270, 0, 190)
-                       }):Play()
+                       })
+                       openTween:Play()
+                       openTween.Completed:Wait() -- Espera a que termine de abrirse
                    else
                        local closeTween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                           Size = UDim2.new(0, 1, 0, 1) -- El truco de 1 píxel para salvar el stroke neón
+                           Size = UDim2.new(0, 1, 0, 1) -- Tamaño mínimo para salvar el stroke neón
                        })
                        closeTween:Play()
-                       
-                       -- Solución al bug de invisibilidad usando task.spawn
-                       task.spawn(function()
-                           closeTween.Completed:Wait()
-                           if not isMenuOpen then -- Solo se oculta si realmente sigue cerrado
-                               frame.Visible = false
-                           end
-                       end)
+                       closeTween.Completed:Wait() -- Espera a que termine de cerrarse
+                       frame.Visible = false
                    end
+                   
+                   isAnimating = false -- Libera el seguro para el siguiente toque
                end
                
-               -- ¡ESTAS SON LAS LÍNEAS VITALES QUE DETECTAN EL TOQUE!
+               -- Las 3 formas de tocar conectadas a nuestra función blindada
                touchBtn.MouseButton1Click:Connect(toggleMenu)
                touchBtn.Activated:Connect(toggleMenu)
                boomboxClonedTool.Activated:Connect(toggleMenu) 
