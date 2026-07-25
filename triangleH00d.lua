@@ -1066,17 +1066,18 @@ end)
                touchBtn.Size = UDim2.new(1, 0, 1, 0)
                touchBtn.BackgroundTransparency = 1; touchBtn.Text = ""
                
+               -- LÓGICA DE APERTURA MODIFICADA (Usa UIScale en vez de Size)
                local isMenuOpen = false
                local function toggleMenu()
                    isMenuOpen = not isMenuOpen
                    if isMenuOpen then
                        frame.Visible = true
-                       TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                           Size = UDim2.new(0, 270, 0, 190)
+                       TweenService:Create(uiScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                           Scale = 1 -- Crece a su escala normal
                        }):Play()
                    else
-                       local closeTween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                           Size = UDim2.new(0, 0, 0, 0)
+                       local closeTween = TweenService:Create(uiScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                           Scale = 0 -- Se vuelve a encoger
                        })
                        closeTween:Play()
                        closeTween.Completed:Wait()
