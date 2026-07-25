@@ -971,7 +971,7 @@ BoomboxTab:CreateToggle({
                
                               -- CREACIÓN DEL FRAME (Modificado)
                local frame = Instance.new("Frame", boomboxCustomUI)
-               frame.Size = UDim2.new(0, 270, 0, 190) -- Ponemos el tamaño final desde el principio
+               frame.Size = UDim2.new(0, 1, 0, 1)
                frame.Position = UDim2.new(0.5, 0, 0.8, -100)
                frame.AnchorPoint = Vector2.new(0.5, 0.5)
                frame.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
@@ -1067,18 +1067,18 @@ end)
                touchBtn.Size = UDim2.new(1, 0, 1, 0)
                touchBtn.BackgroundTransparency = 1; touchBtn.Text = ""
                
-               -- LÓGICA DE APERTURA MODIFICADA (Usa UIScale en vez de Size)
+                              -- LÓGICA DE APERTURA (Restaurada y Mejorada)
                local isMenuOpen = false
                local function toggleMenu()
                    isMenuOpen = not isMenuOpen
                    if isMenuOpen then
                        frame.Visible = true
-                       TweenService:Create(uiScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                           Scale = 1 -- Crece a su escala normal
+                       TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                           Size = UDim2.new(0, 270, 0, 190) -- Crece y los elementos se acomodan
                        }):Play()
                    else
-                       local closeTween = TweenService:Create(uiScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                           Scale = 0 -- Se vuelve a encoger
+                       local closeTween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                           Size = UDim2.new(0, 1, 0, 1) -- Se encoje a 1 píxel para no romper el color
                        })
                        closeTween:Play()
                        closeTween.Completed:Wait()
