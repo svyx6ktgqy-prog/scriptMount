@@ -905,7 +905,7 @@ BoomboxTab:CreateToggle({
                    end
                end)
                
-               -- 2. CORRECCIÓN: EXTRACCIÓN REAL DEL MODELO 3D DE LA RADIO
+               -- 2. EXTRACCIÓN REAL DEL MODELO 3D DE LA RADIO
                local objects = game:GetObjects(boomboxAssetId)
                local obj = objects[1]
                local realTool = nil
@@ -961,11 +961,11 @@ BoomboxTab:CreateToggle({
                radioSound.Volume = 1
                radioSound.Looped = false 
                
-               -- 3. CORRECCIÓN: SISTEMA DE CAPAS (ZINDEX)
+               -- 3. SISTEMA DE CAPAS (ZINDEX)
                boomboxCustomUI = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
                boomboxCustomUI.Name = "ExploitRadioUI"
                boomboxCustomUI.ResetOnSpawn = false
-               boomboxCustomUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Fuerza el orden correcto
+               boomboxCustomUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
                
                local frame = Instance.new("Frame", boomboxCustomUI)
                frame.Size = UDim2.new(0, 0, 0, 0)
@@ -989,22 +989,16 @@ BoomboxTab:CreateToggle({
                })
                strokeGradient.Rotation = 45
 
-               -- CAPA 1: Imagen de Fondo
+               -- CAPA 1: Imagen de Fondo (CORREGIDA: Bordes redondeados añadidos, Opacidad eliminada)
                local bgImage = Instance.new("ImageLabel", frame)
                bgImage.Size = UDim2.new(1, 0, 1, 0)
                bgImage.BackgroundTransparency = 1
                bgImage.Image = bgAssetId
                bgImage.ScaleType = Enum.ScaleType.Crop
                bgImage.ZIndex = 1 
-
-               -- CAPA 2: Filtro carbónico/oscuro
-               local darkOverlay = Instance.new("Frame", frame)
-               darkOverlay.Size = UDim2.new(1, 0, 1, 0)
-               darkOverlay.BackgroundColor3 = Color3.fromRGB(5, 5, 10)
-               darkOverlay.BackgroundTransparency = 0.35
-               darkOverlay.ZIndex = 2 
+               Instance.new("UICorner", bgImage).CornerRadius = UDim.new(0, 12) -- Solución Detalle 1
                
-               -- CAPA 3+: Textos y Botones
+               -- CAPA 2+: Textos y Botones
                local title = Instance.new("TextLabel", frame)
                title.Size = UDim2.new(1, 0, 0, 30)
                title.Position = UDim2.new(0, 0, 0, 5)
@@ -1074,7 +1068,7 @@ BoomboxTab:CreateToggle({
                touchBtn.Activated:Connect(toggleMenu)
                boomboxClonedTool.Activated:Connect(toggleMenu) 
 
-               -- LÓGICA DEL REPRODUCTOR
+               -- LÓGICA DEL REPRODUCTOR (CORREGIDA: Pausa perfecta)
                local function playPlaylistTrack()
                    local id = boomboxPlaylist[boomboxCurrentTrackIndex]
                    if id and id ~= "" then
@@ -1091,11 +1085,18 @@ BoomboxTab:CreateToggle({
                playBtn.MouseButton1Click:Connect(function()
                    local id = inputBox.Text:match("%d+")
                    if id then
-                       local fullId = "rbxassetid://" .. id
-                       if radioSound.SoundId == fullId then
-                           if not radioSound.IsPlaying then radioSound:Play() end
+                       -- Solución Detalle 3: Compara solo los números para evitar falsos positivos
+                       local currentPlayingId = ""
+                       if radioSound.SoundId then
+                           currentPlayingId = radioSound.SoundId:match("%d+")
+                       end
+                       
+                       if currentPlayingId == id then
+                           if not radioSound.IsPlaying then 
+                               radioSound:Resume() 
+                           end
                        else
-                           radioSound.SoundId = fullId
+                           radioSound.SoundId = "rbxassetid://" .. id
                            radioSound.TimePosition = 0
                            radioSound:Play()
                        end
