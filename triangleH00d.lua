@@ -1131,7 +1131,7 @@ BoomboxTab:CreateToggle({
                if humanoid then humanoid:EquipTool(boomboxClonedTool) end
                
                Rayfield:Notify({
-                   Title = "Alien Audio System",
+                   Title = "📻Radio System📻",
                    Content = "Terminal interface injected. Tap radio to deploy.",
                    Duration = 4,
                })
