@@ -1057,7 +1057,7 @@ end)
                local prevBtn = create3DButton(frame, "PrevBtn", "⏪ PREV", UDim2.new(0.06, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
                local nextBtn = create3DButton(frame, "NextBtn", "NEXT ⏩", UDim2.new(0.52, 0, 0.70, 0), UDim2.new(0.42, 0, 0, 35), Color3.fromRGB(15, 60, 120))
 
-               -- LÓGICA DE APERTURA (Touch/Click)
+                              -- LÓGICA DE APERTURA (Touch/Click)
                local touchZone = Instance.new("BillboardGui", boomboxCustomUI)
                touchZone.Size = UDim2.new(3, 0, 3, 0) 
                touchZone.Adornee = handle
@@ -1065,27 +1065,34 @@ end)
                
                local touchBtn = Instance.new("TextButton", touchZone)
                touchBtn.Size = UDim2.new(1, 0, 1, 0)
-               touchBtn.BackgroundTransparency = 1; touchBtn.Text = ""
+               touchBtn.BackgroundTransparency = 1
+               touchBtn.Text = ""
                
-                              -- LÓGICA DE APERTURA (Restaurada y Mejorada)
                local isMenuOpen = false
                local function toggleMenu()
                    isMenuOpen = not isMenuOpen
                    if isMenuOpen then
                        frame.Visible = true
                        TweenService:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                           Size = UDim2.new(0, 270, 0, 190) -- Crece y los elementos se acomodan
+                           Size = UDim2.new(0, 270, 0, 190)
                        }):Play()
                    else
                        local closeTween = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                           Size = UDim2.new(0, 1, 0, 1) -- Se encoje a 1 píxel para no romper el color
+                           Size = UDim2.new(0, 1, 0, 1) -- El truco de 1 píxel para salvar el stroke neón
                        })
                        closeTween:Play()
-                       closeTween.Completed:Wait()
-                       frame.Visible = false
+                       
+                       -- Solución al bug de invisibilidad usando task.spawn
+                       task.spawn(function()
+                           closeTween.Completed:Wait()
+                           if not isMenuOpen then -- Solo se oculta si realmente sigue cerrado
+                               frame.Visible = false
+                           end
+                       end)
                    end
                end
                
+               -- ¡ESTAS SON LAS LÍNEAS VITALES QUE DETECTAN EL TOQUE!
                touchBtn.MouseButton1Click:Connect(toggleMenu)
                touchBtn.Activated:Connect(toggleMenu)
                boomboxClonedTool.Activated:Connect(toggleMenu) 
