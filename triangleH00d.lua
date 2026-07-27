@@ -1280,7 +1280,7 @@ BoomboxTab:CreateToggle({
 -- SWITCH RADIO RAINBOW (TODO EL MODELO SÓLIDO)
 -- ==========================================
 local rainbowRadioLoop = nil
-local originalRadioProps = {} -- Almacena propiedades originales: {Part = {Color, Material}}
+local originalRadioProps = {} -- Almacena propiedades originales
 
 BoomboxTab:CreateToggle({
     Name = "Efecto Radio RAINBOW (Modelo Completo)",
@@ -1295,13 +1295,30 @@ BoomboxTab:CreateToggle({
         if Value then
             originalRadioProps = {}
             
-            -- Guardar propiedades originales de TODAS las partes
+            -- Guardar propiedades originales y ELIMINAR texturas
             for _, part in ipairs(boomboxClonedTool:GetDescendants()) do
                 if part:IsA("BasePart") then
                     originalRadioProps[part] = {
                         Color = part.Color,
                         Material = part.Material
                     }
+                    -- Si la parte es un MeshPart, ocultamos su textura
+                    if part:IsA("MeshPart") then
+                        originalRadioProps[part].TextureID = part.TextureID
+                        part.TextureID = "" 
+                    end
+                elseif part:IsA("SpecialMesh") then
+                    -- Si la parte contiene un SpecialMesh (muy común en radios de Roblox)
+                    originalRadioProps[part] = {
+                        TextureId = part.TextureId
+                    }
+                    part.TextureId = ""
+                elseif part:IsA("Decal") or part:IsA("Texture") then
+                    -- Si la radio usa calcomanías, las hacemos transparentes
+                    originalRadioProps[part] = {
+                        Transparency = part.Transparency
+                    }
+                    part.Transparency = 1 
                 end
             end
             
@@ -1330,14 +1347,23 @@ BoomboxTab:CreateToggle({
                 rainbowRadioLoop = nil
             end
             
-            -- Restaurar color y material de TODAS las partes
+            -- Restaurar color, material y TEXTURAS de todas las partes
             for part, props in pairs(originalRadioProps) do
                 if part and part.Parent then
-                    part.Color = props.Color
-                    part.Material = props.Material
+                    if part:IsA("BasePart") then
+                        part.Color = props.Color
+                        part.Material = props.Material
+                        if props.TextureID then
+                            part.TextureID = props.TextureID
+                        end
+                    elseif part:IsA("SpecialMesh") then
+                        part.TextureId = props.TextureId
+                    elseif part:IsA("Decal") or part:IsA("Texture") then
+                        part.Transparency = props.Transparency
+                    end
                 end
             end
-            originalRadioProps = {} -- Limpiar tabla
+            originalRadioProps = {} -- Limpiar tabla para evitar fugas de memoria
             
             Rayfield:Notify({Title = "Rainbow Desactivado", Content = "Apariencia original de la radio restaurada.", Duration = 3})
         end
