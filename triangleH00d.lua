@@ -287,7 +287,7 @@ local function createPlayerESP(player)
 end
 
 local NombresPersonajes = {
-    "Tr$xsh", "Alien", "Reaper", "OnlyJdottt888", "SpyEffect", "DemonSuite",
+    "Tr$xsh", "Alien", "Everlasting", "TrashGang", "Goat", "Monster", "Reaper", "OnlyJdottt888", "SpyEffect", "DemonSuite",
     "BearBlack", "KingV1", "KingV2", "Ninjaco80", "CJ", "MeKing",
     "JasonX", "PandiMan", "AppleJuice", "Tr$xshV2", "SuiteWhiteFF",
     "Otaku", "Halloween", "Zombie", "Blood", "HalloweenV4", "Anime",
@@ -299,13 +299,13 @@ local NombresPersonajes = {
 }
 
 local IDsPersonajes = {
-    ["Tr$xsh"] = "12543836003", ["Alien"] = "11839952466", ["Reaper"] = "89659421394995", ["OnlyJdottt888"] = "16694425947",
+    ["Tr$xsh"] = "12543836003", ["Alien"] = "11839952466", ["Everlasting"] = "95946418542389", ["TrashGang"] = "5339731779", ["Goat"] = "2415658611", ["Monster"] = "906155708", ["Reaper"] = "89659421394995", ["OnlyJdottt888"] = "16694425947",
     ["SpyEffect"] = "2614544836", ["DemonSuite"] = "14288252360", ["BearBlack"] = "10059678189",
     ["KingV1"] = "1502622602", ["KingV2"] = "10332438725", ["Ninjaco80"] = "10926342089",
     ["CJ"] = "110223007877573", ["MeKing"] = "49618066", ["JasonX"] = "17462621551",
     ["PandiMan"] = "2482936370", ["AppleJuice"] = "5231922649", ["Tr$xshV2"] = "17357198199",
     ["SuiteWhiteFF"] = "149649724", ["Otaku"] = "10066776256", ["Halloween"] = "14943840836",
-    ["Zombie"] = "119189164", ["Blood"] = "181798652", ["HalloweenV4"] = "12533875804",
+    ["Zombie"] = "90944268", ["Blood"] = "181798652", ["HalloweenV4"] = "12533875804",
     ["Anime"] = "12620017502", ["Pet-Skyler"] = "16305734736", ["Tattoo"] = "2471099435",
     ["Necklace"] = "10253040", ["HellxCult"] = "6231360322", ["Pepperm3n"] = "5219495877",
     ["BattleCAT"] = "108399584052276", ["Yamal-Lamine"] = "73762465274540", ["NecroL"] = "5077070408",
