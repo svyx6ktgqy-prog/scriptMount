@@ -1326,7 +1326,7 @@ BoomboxTab:CreateToggle({
                            -- ==========================================
                            -- Usamos un Atributo para evitar que se multiplique el tamaño cada vez que la equipas
                            if not boomboxClonedTool:GetAttribute("MochilaEscalada") then
-                               local escala = 1.5 -- AJUSTA ESTE NÚMERO (1.5 = 50% más grande, 0.5 = mitad del tamaño, etc.)
+                               local escala = 2.5 -- AJUSTA ESTE NÚMERO (1.5 = 50% más grande, 0.5 = mitad del tamaño, etc.)
                                
                                for _, part in pairs(boomboxClonedTool:GetDescendants()) do
                                    if part:IsA("BasePart") then
