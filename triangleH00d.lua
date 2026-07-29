@@ -889,47 +889,43 @@ ScreenTab:CreateSlider({
 })
 
 -- ==========================================
--- 6. NEW TAB: BOOMBOX ITEM (ALIENWARE 3D EDITION)
+-- 6. NEW TAB: BOOMBOX ITEM (ALIENWARE 3D EDITION + CUSTOM MODELS)
 -- ==========================================
 local BoomboxTab = Window:CreateTab("BoomBox Item", 4483362458) 
 
 local boomboxToolName = "BoomBoxV3"
-local boomboxAssetId = "rbxassetid://9004999866"
 local boomboxClonedTool = nil
 local boomboxCustomUI = nil
+local boomboxSeleccionada = "Alienware (Textura + Partículas)"
+
+local OpcionesRadios = {
+    "Alienware (Textura + Partículas)",
+    "Default (Original con Partículas)",
+    "Mochila (Equipada y Vibratoria)",
+    "Rainbow (Mano Vibratoria)",
+    "Giratorio (360 sobre la Cabeza)"
+}
+
+BoomboxTab:CreateDropdown({
+    Name = "Seleccionar Modelo de Radio",
+    Options = OpcionesRadios,
+    CurrentOption = {"Alienware (Textura + Partículas)"},
+    MultipleOptions = false,
+    Flag = "BoomboxDropdown",
+    Callback = function(Options)
+        boomboxSeleccionada = Options[1]
+    end,
+})
 
 local boomboxPlaylist = {
-    "1847733588",
-    "9042281328",
-    "7215629038596",
-    "135992805356761",
-    "9040608027",
-    "128563409090413",
-    "123441580729534",
-    "91708959103436",
-    "139580603372223",
-    "86994715837320",
-    "89711658931291",
-    "92764139239354",
-    "70968010284997",
-    "78559808226136",
-    "1837113614",
-    "9045007759",
-    "136674057014960",
-    "133761848795389",
-    "138950692714324",
-    "91563677636564",
-    "134727517541596",
-    "136651974045498",
-    "111253513488600",
-    "80957235547859",
-    "132770464260876",
-    "90005076194066",
-    "98046995880242",
-    "140511755680557",
-    "140509080917186",
-    "138831051422752",  
-    ""
+    "1847733588", "9042281328", "7215629038596", "135992805356761",
+    "9040608027", "128563409090413", "123441580729534", "91708959103436",
+    "139580603372223", "86994715837320", "89711658931291", "92764139239354",
+    "70968010284997", "78559808226136", "1837113614", "9045007759",
+    "136674057014960", "133761848795389", "138950692714324", "91563677636564",
+    "134727517541596", "136651974045498", "111253513488600", "80957235547859",
+    "132770464260876", "90005076194066", "98046995880242", "140511755680557",
+    "140509080917186", "138831051422752", ""
 }
 local boomboxCurrentTrackIndex = 1
 
@@ -1016,7 +1012,18 @@ BoomboxTab:CreateToggle({
                    end
                end)
                
-               local objects = game:GetObjects(boomboxAssetId)
+               -- ==========================================
+               -- LÓGICA DE CARGA DE IDS (MULTIPLE BOOMBOX)
+               -- ==========================================
+               local idToLoad = "9004999866"
+               if boomboxSeleccionada == "Alienware (Textura + Partículas)" then idToLoad = "9004999866"
+               elseif boomboxSeleccionada == "Default (Original con Partículas)" then idToLoad = "15876467320"
+               elseif boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then idToLoad = "107737793234621"
+               elseif boomboxSeleccionada == "Rainbow (Mano Vibratoria)" then idToLoad = "99961136627124"
+               elseif boomboxSeleccionada == "Giratorio (360 sobre la Cabeza)" then idToLoad = "80384876408333"
+               end
+
+               local objects = game:GetObjects("rbxassetid://" .. idToLoad)
                local obj = objects[1]
                local realTool = nil
                
@@ -1065,6 +1072,22 @@ BoomboxTab:CreateToggle({
                end
                
                boomboxClonedTool.Grip = CFrame.new(0, -0.8, 0) * CFrame.Angles(math.rad(0), math.rad(-90), math.rad(15))
+
+               -- ==========================================
+               -- INYECCIÓN DE PARTÍCULAS (Solo para Alienware/Default)
+               -- ==========================================
+               if boomboxSeleccionada == "Alienware (Textura + Partículas)" or boomboxSeleccionada == "Default (Original con Partículas)" then
+                   pcall(function()
+                       local defObj = game:GetObjects("rbxassetid://15876467320")[1]
+                       if defObj then
+                           for _, v in ipairs(defObj:GetDescendants()) do
+                               if v:IsA("ParticleEmitter") then
+                                   v:Clone().Parent = handle
+                               end
+                           end
+                       end
+                   end)
+               end
                
                local radioSound = Instance.new("Sound", handle)
                radioSound.Name = "CustomMusicPlayer"
@@ -1252,6 +1275,74 @@ BoomboxTab:CreateToggle({
                    playPlaylistTrack()
                end)
                
+               -- ==========================================
+               -- LÓGICA DE ANIMACIÓN/POSICIÓN (VIBRAR/GIRAR/MOCHILA)
+               -- ==========================================
+               boomboxClonedTool.Equipped:Connect(function()
+                   local char = LocalPlayer.Character
+                   if not char then return end
+                   
+                   task.wait(0.05) -- Esperamos a que Roblox genere el RightGrip nativo
+                   local currentHandle = boomboxClonedTool:FindFirstChild("Handle")
+                   if not currentHandle then return end
+                   
+                   local rightArm = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
+                   local rightGrip = rightArm and rightArm:FindFirstChild("RightGrip")
+                   
+                   if boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then
+                       if rightGrip then rightGrip:Destroy() end
+                       local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+                       if torso then
+                           local w = Instance.new("Weld", currentHandle)
+                           w.Name = "MochilaWeld"
+                           w.Part0 = torso
+                           w.Part1 = currentHandle
+                           w.C0 = CFrame.new(0, 0, 1.2) * CFrame.Angles(0, math.rad(180), 0)
+                           
+                           local rs
+                           rs = RunService.RenderStepped:Connect(function()
+                               if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
+                               w.C1 = CFrame.new(math.random(-10,10)*0.005, math.random(-10,10)*0.005, math.random(-10,10)*0.005)
+                           end)
+                       end
+                       
+                   elseif boomboxSeleccionada == "Rainbow (Mano Vibratoria)" then
+                       if rightGrip then rightGrip:Destroy() end
+                       if rightArm then
+                           local w = Instance.new("Weld", currentHandle)
+                           w.Name = "RainbowWeld"
+                           w.Part0 = rightArm
+                           w.Part1 = currentHandle
+                           w.C0 = CFrame.new(0, -1, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                           
+                           local rs
+                           rs = RunService.RenderStepped:Connect(function()
+                               if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
+                               w.C1 = CFrame.new(math.random(-10,10)*0.005, math.random(-10,10)*0.005, math.random(-10,10)*0.005)
+                           end)
+                       end
+                       
+                   elseif boomboxSeleccionada == "Giratorio (360 sobre la Cabeza)" then
+                       if rightGrip then rightGrip:Destroy() end
+                       local head = char:FindFirstChild("Head")
+                       if head then
+                           local w = Instance.new("Weld", currentHandle)
+                           w.Name = "GiratorioWeld"
+                           w.Part0 = head
+                           w.Part1 = currentHandle
+                           w.C0 = CFrame.new(0, 2, 0)
+                           
+                           local angle = 0
+                           local rs
+                           rs = RunService.RenderStepped:Connect(function(dt)
+                               if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
+                               angle = angle + dt * 4 -- Velocidad de giro
+                               w.C1 = CFrame.Angles(0, angle, 0)
+                           end)
+                       end
+                   end
+               end)
+
                boomboxClonedTool.Parent = LocalPlayer.Backpack 
                task.wait(0.1) 
                if humanoid then humanoid:EquipTool(boomboxClonedTool) end
@@ -1281,7 +1372,7 @@ BoomboxTab:CreateToggle({
 -- SWITCH RADIO RAINBOW (TODO EL MODELO SÓLIDO)
 -- ==========================================
 local rainbowRadioLoop = nil
-local originalRadioProps = {} -- Almacena propiedades originales
+local originalRadioProps = {}
 
 BoomboxTab:CreateToggle({
     Name = "Efecto Radio RAINBOW (Modelo Completo)",
@@ -1289,33 +1380,29 @@ BoomboxTab:CreateToggle({
     Flag = "RainbowRadioToggle",
     Callback = function(Value)
         if not boomboxClonedTool then
-            Rayfield:Notify({Title = "Aviso", Content = "Primero equipa la radio Alienware para aplicar el efecto.", Duration = 4})
+            Rayfield:Notify({Title = "Aviso", Content = "Primero equipa una radio para aplicar el efecto.", Duration = 4})
             return
         end
         
         if Value then
             originalRadioProps = {}
             
-            -- Guardar propiedades originales y ELIMINAR texturas
             for _, part in ipairs(boomboxClonedTool:GetDescendants()) do
                 if part:IsA("BasePart") then
                     originalRadioProps[part] = {
                         Color = part.Color,
                         Material = part.Material
                     }
-                    -- Si la parte es un MeshPart, ocultamos su textura
                     if part:IsA("MeshPart") then
                         originalRadioProps[part].TextureID = part.TextureID
                         part.TextureID = "" 
                     end
                 elseif part:IsA("SpecialMesh") then
-                    -- Si la parte contiene un SpecialMesh (muy común en radios de Roblox)
                     originalRadioProps[part] = {
                         TextureId = part.TextureId
                     }
                     part.TextureId = ""
                 elseif part:IsA("Decal") or part:IsA("Texture") then
-                    -- Si la radio usa calcomanías, las hacemos transparentes
                     originalRadioProps[part] = {
                         Transparency = part.Transparency
                     }
@@ -1323,7 +1410,6 @@ BoomboxTab:CreateToggle({
                 end
             end
             
-            -- Bucle de colores RGB aplicado a cada pieza
             local hue = 0
             rainbowRadioLoop = RunService.RenderStepped:Connect(function(dt)
                 if boomboxClonedTool and boomboxClonedTool.Parent then
@@ -1342,13 +1428,11 @@ BoomboxTab:CreateToggle({
             end)
             Rayfield:Notify({Title = "Rainbow Activado", Content = "Efecto de color sólido aplicado a toda la radio.", Duration = 3})
         else
-            -- Limpiar efecto
             if rainbowRadioLoop then
                 rainbowRadioLoop:Disconnect()
                 rainbowRadioLoop = nil
             end
             
-            -- Restaurar color, material y TEXTURAS de todas las partes
             for part, props in pairs(originalRadioProps) do
                 if part and part.Parent then
                     if part:IsA("BasePart") then
@@ -1364,7 +1448,7 @@ BoomboxTab:CreateToggle({
                     end
                 end
             end
-            originalRadioProps = {} -- Limpiar tabla para evitar fugas de memoria
+            originalRadioProps = {}
             
             Rayfield:Notify({Title = "Rainbow Desactivado", Content = "Apariencia original de la radio restaurada.", Duration = 3})
         end
