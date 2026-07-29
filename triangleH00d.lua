@@ -743,8 +743,8 @@ local function crearArmaAjustada(objetosDescargados)
     -- Mover: X = Izq/Der (0), Y = Arriba/Abajo (Subimos a 0.3 para elevarla), Z = Profundidad (-0.9 que te funcionó)
     local OFFSET_POSICION = CFrame.new(0, 0.60, -0.99) 
     
-    -- Rotar (Grados): X = Subimos la punta cambiando de -75 a -60, Y = Mantenemos los 15 para la mano, Z = 0
-    local OFFSET_ROTACION = CFrame.Angles(math.rad(-46), math.rad(15), math.rad(0))
+    -- Rotar (Grados): X = Subimos la punta cambiando de -46 a -60, Y = Mantenemos los 15 para la mano, Z = 0
+    local OFFSET_ROTACION = CFrame.Angles(math.rad(-45), math.rad(15), math.rad(0))
     -- ==========================================
 
     local newTool = Instance.new("Tool")
