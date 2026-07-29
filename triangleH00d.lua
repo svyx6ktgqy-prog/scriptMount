@@ -740,7 +740,7 @@ local function crearArmaAjustada(objetosDescargados)
     local ESCALA = 1.25 -- Tamaño ideal
     
     -- Mover: X = Izq/Der, Y = Arriba/Abajo (Subimos a 0.1), Z = Adelante/Atrás (Más adelante a -0.4)
-    local OFFSET_POSICION = CFrame.new(0, 0.1, -0.8) 
+    local OFFSET_POSICION = CFrame.new(0, 0.1, -1.2) 
     
     -- Rotar (Grados): X = Inclinación (-75), Y = Giro hacia la izquierda (agregamos math.rad(15)), Z = Volante (0)
     local OFFSET_ROTACION = CFrame.Angles(math.rad(-75), math.rad(15), math.rad(0))
