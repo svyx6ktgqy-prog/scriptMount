@@ -1316,11 +1316,30 @@ BoomboxTab:CreateToggle({
                        if rightHand and rightHand:FindFirstChild("RightGrip") then rightHand.RightGrip:Destroy() end
                    end
                    
-                   -- Limpiamos el grip nativo
+                                      -- Limpiamos el grip nativo
                    clearGrip()
                    
                    if boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then
                        if torso then
+                           -- ==========================================
+                           -- PARÁMETRO PARA ESCALAR LA MOCHILA
+                           -- ==========================================
+                           -- Usamos un Atributo para evitar que se multiplique el tamaño cada vez que la equipas
+                           if not boomboxClonedTool:GetAttribute("MochilaEscalada") then
+                               local escala = 1.5 -- AJUSTA ESTE NÚMERO (1.5 = 50% más grande, 0.5 = mitad del tamaño, etc.)
+                               
+                               for _, part in pairs(boomboxClonedTool:GetDescendants()) do
+                                   if part:IsA("BasePart") then
+                                       part.Size = part.Size * escala
+                                   end
+                                   if part:IsA("SpecialMesh") then
+                                       part.Scale = part.Scale * escala
+                                   end
+                               end
+                               boomboxClonedTool:SetAttribute("MochilaEscalada", true)
+                           end
+                           -- ==========================================
+
                            -- ANCLAMOS temporalmente para forzar su posición e impedir que vuele a lo lejos
                            currentHandle.Anchored = true
                            currentHandle.CFrame = torso.CFrame
