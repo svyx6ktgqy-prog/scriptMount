@@ -1286,43 +1286,58 @@ BoomboxTab:CreateToggle({
                end)
 
                -- ==========================================
-               -- LÓGICA DE POSICIONAMIENTO Y ANIMACIONES
+               -- LÓGICA DE POSICIONAMIENTO Y ANIMACIONES (CORREGIDA)
                -- ==========================================
                boomboxClonedTool.Equipped:Connect(function()
                    local char = LocalPlayer.Character
                    if not char then return end
                    
-                   task.wait(0.05)
+                   -- Damos un ligero tiempo extra para que Roblox cree el RightGrip por defecto
+                   task.wait(0.1)
+                   
                    local currentHandle = boomboxClonedTool:FindFirstChild("Handle")
                    if not currentHandle then return end
                    
                    local rightArm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightUpperArm")
+                   local rightHand = char:FindFirstChild("RightHand")
                    local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+                   local head = char:FindFirstChild("Head")
+                   
+                   -- FUNCION PARA ELIMINAR EL GRIP DE LA MANO ANTES DE APLICAR EL NUEVO WELD
+                   local function clearGrip()
+                       if rightArm and rightArm:FindFirstChild("RightGrip") then rightArm.RightGrip:Destroy() end
+                       if rightHand and rightHand:FindFirstChild("RightGrip") then rightHand.RightGrip:Destroy() end
+                   end
+                   
+                   -- Limpiamos el grip nativo primero para evitar que la radio salga volando
+                   clearGrip()
                    
                    if boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then
                        if torso then
+                           -- Teletransportamos el handle al torso antes de soldarlo para evitar tirones físicos
+                           currentHandle.CFrame = torso.CFrame
+                           
                            local w = currentHandle:FindFirstChild("MochilaWeld") or Instance.new("Weld")
                            w.Name = "MochilaWeld"
                            w.Part0 = torso
                            w.Part1 = currentHandle
-                           -- Se desplazó más hacia atrás (Z=1.2) para que se pegue a la espalda
-                           w.C0 = CFrame.new(0, 0.1, 1.2) * CFrame.Angles(0, math.rad(180), 0)
+                           -- Z=0.9 lo mantiene pegado a la espalda de forma natural sin traspasar
+                           w.C0 = CFrame.new(0, 0.1, 0.9) * CFrame.Angles(0, math.rad(180), 0)
                            w.Parent = currentHandle
                            
                            local rs
                            rs = RunService.RenderStepped:Connect(function()
                                if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
                                
-                               local rightHand = char:FindFirstChild("RightHand")
-                               if rightArm and rightArm:FindFirstChild("RightGrip") then rightArm.RightGrip:Destroy() end
-                               if rightHand and rightHand:FindFirstChild("RightGrip") then rightHand.RightGrip:Destroy() end
-                               
+                               clearGrip() -- Seguimos limpiando por si Roblox intenta forzar el agarre
                                w.C1 = CFrame.new(math.random(-10,10)*0.003, math.random(-10,10)*0.003, math.random(-10,10)*0.003)
                            end)
                        end
                        
                    elseif boomboxSeleccionada == "Rainbow (Mano Vibratoria)" then
                        if rightArm then
+                           currentHandle.CFrame = rightArm.CFrame
+                           
                            local w = currentHandle:FindFirstChild("RainbowWeld") or Instance.new("Weld")
                            w.Name = "RainbowWeld"
                            w.Part0 = rightArm
@@ -1334,32 +1349,28 @@ BoomboxTab:CreateToggle({
                            rs = RunService.RenderStepped:Connect(function()
                                if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
                                
-                               local rightHand = char:FindFirstChild("RightHand")
-                               if rightArm and rightArm:FindFirstChild("RightGrip") then rightArm.RightGrip:Destroy() end
-                               if rightHand and rightHand:FindFirstChild("RightGrip") then rightHand.RightGrip:Destroy() end
-                               
+                               clearGrip()
                                w.C1 = CFrame.new(math.random(-10,10)*0.003, math.random(-10,10)*0.003, math.random(-10,10)*0.003)
                            end)
                        end
                        
                    elseif boomboxSeleccionada == "Giratorio (360 sobre la Cabeza)" then
-                       local head = char:FindFirstChild("Head")
                        if head then
+                           currentHandle.CFrame = head.CFrame
+                           
                            local w = currentHandle:FindFirstChild("GiratorioWeld") or Instance.new("Weld")
                            w.Name = "GiratorioWeld"
                            w.Part0 = head
                            w.Part1 = currentHandle
-                           -- Más arriba para no traspasar el cráneo de R15 / R6
-                           w.C0 = CFrame.new(0, 2.0, 0) 
+                           -- AUMENTADO a 3.5 para que quede por encima del pelo voluminoso sin tocarlo
+                           w.C0 = CFrame.new(0, 3.5, 0) 
                            w.Parent = currentHandle
                            
-                           -- === NUEVO: ELEVAR BRAZO APOYADO AL CILINDRO ===
                            if rightArm and torso then
                                local armWeld = currentHandle:FindFirstChild("ArmPoseWeld") or Instance.new("Weld")
                                armWeld.Name = "ArmPoseWeld"
                                armWeld.Part0 = torso
                                armWeld.Part1 = rightArm
-                               -- Forzamos la rotación del brazo para que apunte hacia el centro arriba
                                armWeld.C0 = CFrame.new(1.2, 1.2, -0.2) * CFrame.Angles(math.rad(150), 0, math.rad(-25))
                                armWeld.Parent = currentHandle
                            end
@@ -1369,11 +1380,7 @@ BoomboxTab:CreateToggle({
                            rs = RunService.RenderStepped:Connect(function(dt)
                                if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
                                
-                               -- Destruimos el Grip nativo para que el script pueda forzar el brazo hacia arriba
-                               local rightHand = char:FindFirstChild("RightHand")
-                               if rightArm and rightArm:FindFirstChild("RightGrip") then rightArm.RightGrip:Destroy() end
-                               if rightHand and rightHand:FindFirstChild("RightGrip") then rightHand.RightGrip:Destroy() end
-                               
+                               clearGrip()
                                angle = angle + dt * 4
                                w.C1 = CFrame.Angles(0, angle, 0)
                            end)
