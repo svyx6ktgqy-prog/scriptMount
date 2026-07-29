@@ -1012,9 +1012,6 @@ BoomboxTab:CreateToggle({
                    end
                end)
                
-               -- ==========================================
-               -- LÓGICA DE CARGA DE IDS (MULTIPLE BOOMBOX)
-               -- ==========================================
                local idToLoad = "9004999866"
                if boomboxSeleccionada == "Alienware (Textura + Partículas)" then idToLoad = "9004999866"
                elseif boomboxSeleccionada == "Default (Original con Partículas)" then idToLoad = "15876467320"
@@ -1061,6 +1058,18 @@ BoomboxTab:CreateToggle({
                boomboxClonedTool.Name = boomboxToolName
                local handle = boomboxClonedTool:FindFirstChild("Handle")
                
+               -- REDUCIR TAMAÑO SI ES LA RADIO GIRATORIA SOBRE LA CABEZA
+               if boomboxSeleccionada == "Giratorio (360 sobre la Cabeza)" then
+                   for _, part in pairs(boomboxClonedTool:GetDescendants()) do
+                       if part:IsA("BasePart") then
+                           part.Size = part.Size * 0.3
+                       end
+                       if part:IsA("SpecialMesh") then
+                           part.Scale = part.Scale * 0.3
+                       end
+                   end
+               end
+
                for _, part in pairs(boomboxClonedTool:GetDescendants()) do
                    if part:IsA("BasePart") then
                        part.Anchored = false; part.CanCollide = false; part.Massless = true 
@@ -1073,9 +1082,6 @@ BoomboxTab:CreateToggle({
                
                boomboxClonedTool.Grip = CFrame.new(0, -0.8, 0) * CFrame.Angles(math.rad(0), math.rad(-90), math.rad(15))
 
-               -- ==========================================
-               -- INYECCIÓN DE PARTÍCULAS (Solo para Alienware/Default)
-               -- ==========================================
                if boomboxSeleccionada == "Alienware (Textura + Partículas)" or boomboxSeleccionada == "Default (Original con Partículas)" then
                    pcall(function()
                        local defObj = game:GetObjects("rbxassetid://15876467320")[1]
@@ -1274,69 +1280,77 @@ BoomboxTab:CreateToggle({
                    if boomboxCurrentTrackIndex > #boomboxPlaylist then boomboxCurrentTrackIndex = 1 end
                    playPlaylistTrack()
                end)
-               
+
                -- ==========================================
-               -- LÓGICA DE ANIMACIÓN/POSICIÓN (VIBRAR/GIRAR/MOCHILA)
+               -- LÓGICA DE POSICIONAMIENTO Y ANIMACIONES
                -- ==========================================
                boomboxClonedTool.Equipped:Connect(function()
                    local char = LocalPlayer.Character
                    if not char then return end
                    
-                   task.wait(0.05) -- Esperamos a que Roblox genere el RightGrip nativo
+                   task.wait(0.05)
                    local currentHandle = boomboxClonedTool:FindFirstChild("Handle")
                    if not currentHandle then return end
                    
                    local rightArm = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
-                   local rightGrip = rightArm and rightArm:FindFirstChild("RightGrip")
                    
                    if boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then
-                       if rightGrip then rightGrip:Destroy() end
                        local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
                        if torso then
-                           local w = Instance.new("Weld", currentHandle)
+                           local w = currentHandle:FindFirstChild("MochilaWeld") or Instance.new("Weld")
                            w.Name = "MochilaWeld"
                            w.Part0 = torso
                            w.Part1 = currentHandle
-                           w.C0 = CFrame.new(0, 0, 1.2) * CFrame.Angles(0, math.rad(180), 0)
+                           w.C0 = CFrame.new(0, 0.2, 0.8) * CFrame.Angles(0, math.rad(180), 0)
+                           w.Parent = currentHandle
                            
                            local rs
                            rs = RunService.RenderStepped:Connect(function()
                                if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
-                               w.C1 = CFrame.new(math.random(-10,10)*0.005, math.random(-10,10)*0.005, math.random(-10,10)*0.005)
+                               if rightArm and rightArm:FindFirstChild("RightGrip") then
+                                   rightArm.RightGrip:Destroy()
+                               end
+                               w.C1 = CFrame.new(math.random(-10,10)*0.003, math.random(-10,10)*0.003, math.random(-10,10)*0.003)
                            end)
                        end
                        
                    elseif boomboxSeleccionada == "Rainbow (Mano Vibratoria)" then
-                       if rightGrip then rightGrip:Destroy() end
                        if rightArm then
-                           local w = Instance.new("Weld", currentHandle)
+                           local w = currentHandle:FindFirstChild("RainbowWeld") or Instance.new("Weld")
                            w.Name = "RainbowWeld"
                            w.Part0 = rightArm
                            w.Part1 = currentHandle
                            w.C0 = CFrame.new(0, -1, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                           w.Parent = currentHandle
                            
                            local rs
                            rs = RunService.RenderStepped:Connect(function()
                                if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
-                               w.C1 = CFrame.new(math.random(-10,10)*0.005, math.random(-10,10)*0.005, math.random(-10,10)*0.005)
+                               if rightArm and rightArm:FindFirstChild("RightGrip") then
+                                   rightArm.RightGrip:Destroy()
+                               end
+                               w.C1 = CFrame.new(math.random(-10,10)*0.003, math.random(-10,10)*0.003, math.random(-10,10)*0.003)
                            end)
                        end
                        
                    elseif boomboxSeleccionada == "Giratorio (360 sobre la Cabeza)" then
-                       if rightGrip then rightGrip:Destroy() end
                        local head = char:FindFirstChild("Head")
                        if head then
-                           local w = Instance.new("Weld", currentHandle)
+                           local w = currentHandle:FindFirstChild("GiratorioWeld") or Instance.new("Weld")
                            w.Name = "GiratorioWeld"
                            w.Part0 = head
                            w.Part1 = currentHandle
-                           w.C0 = CFrame.new(0, 2, 0)
+                           w.C0 = CFrame.new(0, 2, 0) -- Eleva la radio 2 bloques por encima de la cabeza
+                           w.Parent = currentHandle
                            
                            local angle = 0
                            local rs
                            rs = RunService.RenderStepped:Connect(function(dt)
                                if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
-                               angle = angle + dt * 4 -- Velocidad de giro
+                               if rightArm and rightArm:FindFirstChild("RightGrip") then
+                                   rightArm.RightGrip:Destroy()
+                               end
+                               angle = angle + dt * 4
                                w.C1 = CFrame.Angles(0, angle, 0)
                            end)
                        end
