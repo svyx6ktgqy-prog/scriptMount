@@ -1303,47 +1303,69 @@ BoomboxTab:CreateToggle({
                    local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
                    local head = char:FindFirstChild("Head")
                    
-                   -- FUNCION PARA ELIMINAR EL GRIP DE LA MANO ANTES DE APLICAR EL NUEVO WELD
+                   -- Identificamos si es una radio que DEBE ir en la mano normalmente
+                   local isHandheld = (boomboxSeleccionada == "Alienware (Textura + Partículas)" or boomboxSeleccionada == "Default (Original con Partículas)")
+                   
+                   -- Si es una radio normal, ABORTAMOS aquí. 
+                   -- Dejamos que Roblox mantenga el RightGrip natural y evitamos que caiga al vacío.
+                   if isHandheld then return end
+                   
+                   -- FUNCION PARA ELIMINAR EL GRIP DE LA MANO (Solo se ejecuta en Mochila, Rainbow y Giratorio)
                    local function clearGrip()
                        if rightArm and rightArm:FindFirstChild("RightGrip") then rightArm.RightGrip:Destroy() end
                        if rightHand and rightHand:FindFirstChild("RightGrip") then rightHand.RightGrip:Destroy() end
                    end
                    
-                   -- Limpiamos el grip nativo primero para evitar que la radio salga volando
+                   -- Limpiamos el grip nativo
                    clearGrip()
                    
                    if boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then
                        if torso then
-                           -- Teletransportamos el handle al torso antes de soldarlo para evitar tirones físicos
+                           -- ANCLAMOS temporalmente para forzar su posición e impedir que vuele a lo lejos
+                           currentHandle.Anchored = true
                            currentHandle.CFrame = torso.CFrame
                            
                            local w = currentHandle:FindFirstChild("MochilaWeld") or Instance.new("Weld")
                            w.Name = "MochilaWeld"
                            w.Part0 = torso
                            w.Part1 = currentHandle
-                           -- Z=0.9 lo mantiene pegado a la espalda de forma natural sin traspasar
                            w.C0 = CFrame.new(0, 0.1, 0.9) * CFrame.Angles(0, math.rad(180), 0)
                            w.Parent = currentHandle
+                           
+                           -- DESANCLAMOS una vez soldada correctamente a la espalda
+                           currentHandle.Anchored = false
                            
                            local rs
                            rs = RunService.RenderStepped:Connect(function()
                                if not w.Parent or boomboxClonedTool.Parent ~= char then rs:Disconnect() return end
                                
-                               clearGrip() -- Seguimos limpiando por si Roblox intenta forzar el agarre
+                               clearGrip()
                                w.C1 = CFrame.new(math.random(-10,10)*0.003, math.random(-10,10)*0.003, math.random(-10,10)*0.003)
                            end)
                        end
                        
                    elseif boomboxSeleccionada == "Rainbow (Mano Vibratoria)" then
-                       if rightArm then
-                           currentHandle.CFrame = rightArm.CFrame
+                       local gripPart = rightHand or rightArm
+                       if gripPart then
+                           -- Anclamos temporalmente
+                           currentHandle.Anchored = true
+                           currentHandle.CFrame = gripPart.CFrame
                            
                            local w = currentHandle:FindFirstChild("RainbowWeld") or Instance.new("Weld")
                            w.Name = "RainbowWeld"
-                           w.Part0 = rightArm
+                           w.Part0 = gripPart
                            w.Part1 = currentHandle
-                           w.C0 = CFrame.new(0, -1, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                           
+                           -- Diferenciamos la altura dependiendo si el juego usa R15 o R6
+                           if gripPart.Name == "RightHand" then
+                               w.C0 = CFrame.new(0, 0, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                           else
+                               w.C0 = CFrame.new(0, -1, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                           end
                            w.Parent = currentHandle
+                           
+                           -- Desanclamos
+                           currentHandle.Anchored = false
                            
                            local rs
                            rs = RunService.RenderStepped:Connect(function()
@@ -1356,24 +1378,29 @@ BoomboxTab:CreateToggle({
                        
                    elseif boomboxSeleccionada == "Giratorio (360 sobre la Cabeza)" then
                        if head then
+                           -- Anclamos temporalmente
+                           currentHandle.Anchored = true
                            currentHandle.CFrame = head.CFrame
                            
                            local w = currentHandle:FindFirstChild("GiratorioWeld") or Instance.new("Weld")
                            w.Name = "GiratorioWeld"
                            w.Part0 = head
                            w.Part1 = currentHandle
-                           -- AUMENTADO a 3.5 para que quede por encima del pelo voluminoso sin tocarlo
                            w.C0 = CFrame.new(0, 3.5, 0) 
                            w.Parent = currentHandle
                            
-                           if rightArm and torso then
+                           if (rightArm or char:FindFirstChild("RightUpperArm")) and torso then
+                               local targetArm = char:FindFirstChild("RightUpperArm") or rightArm
                                local armWeld = currentHandle:FindFirstChild("ArmPoseWeld") or Instance.new("Weld")
                                armWeld.Name = "ArmPoseWeld"
                                armWeld.Part0 = torso
-                               armWeld.Part1 = rightArm
+                               armWeld.Part1 = targetArm
                                armWeld.C0 = CFrame.new(1.2, 1.2, -0.2) * CFrame.Angles(math.rad(150), 0, math.rad(-25))
                                armWeld.Parent = currentHandle
                            end
+                           
+                           -- Desanclamos
+                           currentHandle.Anchored = false
                            
                            local angle = 0
                            local rs
