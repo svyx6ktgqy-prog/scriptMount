@@ -816,15 +816,16 @@ local function crearArmaAjustada(objetosDescargados)
         
         local manoDerecha = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
         
-        if manoDerecha then
+                if manoDerecha then
             -- Borrar el RightGrip automático
             task.defer(function()
                 local rightGrip = manoDerecha:FindFirstChild("RightGrip")
                 if rightGrip then rightGrip:Destroy() end
             end)
 
-            -- APLICAR LOS PARÁMETROS DE POSICIÓN Y ROTACIÓN AQUÍ
-            masterHandle.CFrame = manoDerecha.CFrame * OFFSET_POSICION * OFFSET_ROTACION
+            -- CORRECCIÓN DE ORDEN: Aplicamos la rotación primero y luego sumamos el desplazamiento 
+            -- usando CFrame.new() directo para que mueva el arma exactamente hacia donde apunta la mano.
+            masterHandle.CFrame = manoDerecha.CFrame * OFFSET_ROTACION * OFFSET_POSICION
             
             local oldGrip = masterHandle:FindFirstChild("ManualGripAttachment")
             if oldGrip then oldGrip:Destroy() end
