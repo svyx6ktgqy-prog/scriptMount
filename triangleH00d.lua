@@ -894,7 +894,7 @@ ScreenTab:CreateSlider({
 local BoomboxTab = Window:CreateTab("BoomBox Item", 4483362458) 
 
 local boomboxToolName = "BoomBoxV3"
-local boomboxAssetId = "rbxassetid://15876467320"
+local boomboxAssetId = "rbxassetid://9004999866"
 local boomboxClonedTool = nil
 local boomboxCustomUI = nil
 
