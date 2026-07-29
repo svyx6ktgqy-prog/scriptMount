@@ -749,7 +749,14 @@ local function crearArmaAjustada(objetosDescargados)
     
     if #partes3D == 0 then return nil end
 
-    -- Handle base sin peso
+    -- 1. Calcular el centro exacto del modelo 3D descargado
+    local posSum = Vector3.new()
+    for _, p in ipairs(partes3D) do
+        posSum = posSum + p.Position
+    end
+    local centerPos = posSum / #partes3D
+
+    -- 2. Posicionar el Handle exactamente en el centro ANTES de crear los welds
     local masterHandle = Instance.new("Part")
     masterHandle.Name = "Handle"
     masterHandle.Size = Vector3.new(0.2, 0.2, 0.2)
@@ -757,8 +764,10 @@ local function crearArmaAjustada(objetosDescargados)
     masterHandle.CanCollide = false
     masterHandle.Anchored = false
     masterHandle.Massless = true
+    masterHandle.CFrame = CFrame.new(centerPos)
     masterHandle.Parent = newTool
 
+    -- 3. Soldar cada parte al Handle manteniendo su alineación real
     for _, parte in ipairs(partes3D) do
         for _, child in ipairs(parte:GetChildren()) do
             if child:IsA("JointInstance") or child:IsA("WeldConstraint") then child:Destroy() end
@@ -774,7 +783,7 @@ local function crearArmaAjustada(objetosDescargados)
         parte.Parent = newTool
     end
 
-    -- AL EQUIPAR: AJUSTE DE CODO MAS DOBLADO Y ENCAJE EN EL MANGO
+    -- AL EQUIPAR: Forzar alineación y eliminar el agarrador por defecto de Roblox
     newTool.Equipped:Connect(function()
         local char = LocalPlayer.Character
         if not char then return end
@@ -782,8 +791,13 @@ local function crearArmaAjustada(objetosDescargados)
         local manoDerecha = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
         
         if manoDerecha then
-            -- Posicionar el masterHandle desplazado para que la mano calce exacto en la empuñadura
-            masterHandle.CFrame = manoDerecha.CFrame * CFrame.new(0, -0.15, -0.45) * CFrame.Angles(math.rad(-10), 0, 0)
+            -- Borrar el RightGrip automático para que Roblox no pelee con el CFrame
+            task.defer(function()
+                local rightGrip = manoDerecha:FindFirstChild("RightGrip")
+                if rightGrip then rightGrip:Destroy() end
+            end)
+
+            masterHandle.CFrame = manoDerecha.CFrame * CFrame.new(0, -0.15, -0.3) * CFrame.Angles(math.rad(-10), 0, 0)
             
             local oldGrip = masterHandle:FindFirstChild("ManualGripAttachment")
             if oldGrip then oldGrip:Destroy() end
@@ -795,15 +809,14 @@ local function crearArmaAjustada(objetosDescargados)
             manualGrip.Parent = masterHandle
         end
 
-        -- DOBLAR MÁS EL CODO (Aumentado a -60 grados para flexionarlo más)
+        -- Ajustar doblez del codo
         local elbowJoint = char:FindFirstChild("RightElbow", true) or char:FindFirstChild("Right Elbow", true)
         if elbowJoint and elbowJoint:IsA("Motor6D") then
             if not originalElbowC0 then originalElbowC0 = elbowJoint.C0 end
-            -- Ajuste en Y y Z leve para compensar la flexión pronunciada
             elbowJoint.C0 = originalElbowC0 * CFrame.new(0, -0.15, 0.1) * CFrame.Angles(math.rad(-60), 0, 0)
         end
         
-        -- Cargar animación de sostener
+        -- Animación de sostener
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             local animator = hum:FindFirstChildOfClass("Animator") or hum
@@ -818,7 +831,6 @@ local function crearArmaAjustada(objetosDescargados)
     newTool.Unequipped:Connect(function()
         local char = LocalPlayer.Character
         if char then
-            -- Restaurar codo a su estado original
             local elbowJoint = char:FindFirstChild("RightElbow", true) or char:FindFirstChild("Right Elbow", true)
             if elbowJoint and elbowJoint:IsA("Motor6D") and originalElbowC0 then
                 elbowJoint.C0 = originalElbowC0
