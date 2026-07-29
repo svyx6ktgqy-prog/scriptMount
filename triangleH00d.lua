@@ -742,7 +742,7 @@ local function crearArmaAjustada(objetosDescargados)
     
     -- Si necesitas adelantar la culata, cambia el último valor (Z). 
     -- Prueba con -0.5 o -0.8; ahora sí responderá directo al frente.
-    local OFFSET_POSICION = CFrame.new(0, 0.1, -1.5) 
+    local OFFSET_POSICION = CFrame.new(0, 0.1, -1.2) 
     
     -- Mantenemos la rotación que dejó perfecta la dirección del arma y de la mano
     local OFFSET_ROTACION = CFrame.Angles(math.rad(-75), math.rad(15), math.rad(0))
