@@ -735,16 +735,16 @@ local originalElbowC0 = nil
 
 local function crearArmaAjustada(objetosDescargados)
                                     -- ==========================================
-        -- ==========================================
+            -- ==========================================
     -- ⚙️ PARÁMETROS CONFIGURABLES DEL ARMA ⚙️
     -- ==========================================
-    local ESCALA = 1.25 -- Tamaño ideal
+    local ESCALA = 1.25
     
-    -- Mover: Usaremos el CFrame de desplazamiento global para asegurar que se mueva al frente real.
-    -- X = Izq/Der, Y = Arriba/Abajo, Z = Adelante/Atrás (Usa este valor para empujarla al frente)
-    local OFFSET_POSICION = Vector3.new(0, 0.15, -0.5) 
+    -- Si necesitas adelantar la culata, cambia el último valor (Z). 
+    -- Prueba con -0.5 o -0.8; ahora sí responderá directo al frente.
+    local OFFSET_POSICION = CFrame.new(0, 0.1, -0.6) 
     
-    -- Rotar (Grados): Mantenemos la rotación exacta que ya logró la posición correcta de la mano
+    -- Mantenemos la rotación que dejó perfecta la dirección del arma y de la mano
     local OFFSET_ROTACION = CFrame.Angles(math.rad(-75), math.rad(15), math.rad(0))
     -- ==========================================
 
