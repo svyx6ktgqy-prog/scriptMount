@@ -1018,7 +1018,7 @@ BoomboxTab:CreateToggle({
                local idToLoad = "9004999866"
                if boomboxSeleccionada == "Alienware (Textura + Partículas)" then idToLoad = "9004999866"
                elseif boomboxSeleccionada == "Default (Original con Partículas)" then idToLoad = "15876467320"
-               elseif boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then idToLoad = "107737793234621"
+               elseif boomboxSeleccionada == "Mochila (Equipada y Vibratoria)" then idToLoad = "100630796151651"
                elseif boomboxSeleccionada == "Rainbow (Mano Vibratoria)" then idToLoad = "99961136627124"
                elseif boomboxSeleccionada == "Giratorio (360 sobre la Cabeza)" then idToLoad = "80384876408333"
                end
