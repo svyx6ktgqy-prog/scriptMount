@@ -734,16 +734,16 @@ local loadedAnimTrack = nil
 local originalElbowC0 = nil
 
 local function crearArmaAjustada(objetosDescargados)
-                    -- ==========================================
+                        -- ==========================================
     -- ⚙️ PARÁMETROS CONFIGURABLES DEL ARMA ⚙️
     -- ==========================================
-    local ESCALA = 1.25 -- Tamaño ideal que ya logramos
+    local ESCALA = 1.25 -- Tamaño ideal
     
-    -- Mover: X = Izq/Der, Y = Arriba/Abajo (Bajamos a -0.05), Z = Adelante/Atrás (Cambiamos a -0.3 para llevarla al frente)
-    local OFFSET_POSICION = CFrame.new(0, -0.05, -0.3) 
+    -- Mover: X = Izq/Der, Y = Arriba/Abajo (Subimos a 0.1), Z = Adelante/Atrás (Más adelante a -0.4)
+    local OFFSET_POSICION = CFrame.new(0, 0.1, -0.4) 
     
-    -- Rotar (Grados): Mantenemos los -75 que dejaban el cañón en la dirección correcta
-    local OFFSET_ROTACION = CFrame.Angles(math.rad(-75), math.rad(0), math.rad(0))
+    -- Rotar (Grados): X = Inclinación (-75), Y = Giro hacia la izquierda (agregamos math.rad(15)), Z = Volante (0)
+    local OFFSET_ROTACION = CFrame.Angles(math.rad(-75), math.rad(15), math.rad(0))
     -- ==========================================
 
     local newTool = Instance.new("Tool")
