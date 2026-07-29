@@ -734,6 +734,20 @@ local loadedAnimTrack = nil
 local originalElbowC0 = nil
 
 local function crearArmaAjustada(objetosDescargados)
+        -- ==========================================
+    -- ⚙️ PARÁMETROS CONFIGURABLES DEL ARMA ⚙️
+    -- ==========================================
+    local ESCALA = 1.25 -- Subido de 1.0 a 1.25 para hacerla más robusta
+    
+    -- Mover (Elevar/Alejar): X = Izq/Der, Y = Arriba/Abajo, Z = Adelante/Atrás
+    -- Compensamos un poco el agarre ahora que el arma está acostada
+    local OFFSET_POSICION = CFrame.new(0, -0.2, 0.1) 
+    
+    -- Rotar (Grados): X = Inclinación punta, Y = Girar costados, Z = Volante
+    -- Cambiado de -10 a -100 para bajar la punta del arma y que apunte al frente
+    local OFFSET_ROTACION = CFrame.Angles(math.rad(-100), math.rad(0), math.rad(0))
+    -- ==========================================
+
     local newTool = Instance.new("Tool")
     newTool.Name = weaponToolName
     newTool.RequiresHandle = true
@@ -749,7 +763,16 @@ local function crearArmaAjustada(objetosDescargados)
     
     if #partes3D == 0 then return nil end
 
-    -- 1. Calcular el centro exacto del modelo 3D descargado
+    -- APLICAR ESCALA: Agrupamos en un modelo temporal para escalar perfecto sin romper piezas
+    local tempModel = Instance.new("Model")
+    for _, p in ipairs(partes3D) do
+        p.Parent = tempModel
+    end
+    if ESCALA ~= 1.0 then
+        tempModel:ScaleTo(ESCALA)
+    end
+
+    -- 1. Calcular el centro exacto del modelo 3D descargado (ya escalado)
     local posSum = Vector3.new()
     for _, p in ipairs(partes3D) do
         posSum = posSum + p.Position
@@ -782,8 +805,11 @@ local function crearArmaAjustada(objetosDescargados)
         weld.Parent = masterHandle
         parte.Parent = newTool
     end
+    
+    -- Destruimos el modelo temporal porque ya pasamos todo a la Tool
+    tempModel:Destroy()
 
-    -- AL EQUIPAR: Forzar alineación y eliminar el agarrador por defecto de Roblox
+    -- AL EQUIPAR: Forzar alineación y aplicar los parámetros configurables
     newTool.Equipped:Connect(function()
         local char = LocalPlayer.Character
         if not char then return end
@@ -791,13 +817,14 @@ local function crearArmaAjustada(objetosDescargados)
         local manoDerecha = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
         
         if manoDerecha then
-            -- Borrar el RightGrip automático para que Roblox no pelee con el CFrame
+            -- Borrar el RightGrip automático
             task.defer(function()
                 local rightGrip = manoDerecha:FindFirstChild("RightGrip")
                 if rightGrip then rightGrip:Destroy() end
             end)
 
-            masterHandle.CFrame = manoDerecha.CFrame * CFrame.new(0, -0.15, -0.3) * CFrame.Angles(math.rad(-10), 0, 0)
+            -- APLICAR LOS PARÁMETROS DE POSICIÓN Y ROTACIÓN AQUÍ
+            masterHandle.CFrame = manoDerecha.CFrame * OFFSET_POSICION * OFFSET_ROTACION
             
             local oldGrip = masterHandle:FindFirstChild("ManualGripAttachment")
             if oldGrip then oldGrip:Destroy() end
