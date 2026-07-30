@@ -326,7 +326,7 @@ local TweenService = game:GetService("TweenService")
 local PersonajeSeleccionadoID = IDsPersonajes["Tr$xsh"] -- Asumo que esto lo tienes definido arriba
 
 -- ==========================================
--- FUNCIONES DE TRANSFORMACIÓN Y ROBUX (CORREGIDO)
+-- FUNCIONES DE TRANSFORMACIÓN Y ROBUX (ACTUALIZADA CON LOGO CUSTOM)
 -- ==========================================
 
 local function FormatearRobux(numero)
@@ -345,11 +345,9 @@ local function CrearEfectoRobux(char)
     local head = char:WaitForChild("Head", 5)
     if not head then return end
     
-    -- Obtener el jugador real basado en el personaje (para que no todos tengan tu nombre)
     local player = Players:GetPlayerFromCharacter(char)
     local displayName = player and player.DisplayName or char.Name
 
-    -- Prevenir duplicados
     local oldAura = char:FindFirstChild("RobuxAura")
     if oldAura then oldAura:Destroy() end
 
@@ -357,17 +355,14 @@ local function CrearEfectoRobux(char)
     folder.Name = "RobuxAura"
     folder.Parent = char
 
-    -- =======================================
-    -- BILLBOARD GUI (Contenedor Principal)
-    -- =======================================
+    -- Contenedor Principal (BillboardGui)
     local bb = Instance.new("BillboardGui")
-    bb.Size = UDim2.new(0, 200, 0, 70) -- Lo hacemos más alto para que quepa el nombre y los robux
-    bb.StudsOffset = Vector3.new(0, 3, 0) -- Un poco más alto para no tapar la cara
+    bb.Size = UDim2.new(0, 200, 0, 70)
+    bb.StudsOffset = Vector3.new(0, 3, 0)
     bb.AlwaysOnTop = true
     bb.Parent = folder
     bb.Adornee = head
 
-    -- Contenedor vertical para apilar el Nombre arriba y los Robux abajo
     local mainContainer = Instance.new("Frame")
     mainContainer.Size = UDim2.new(1, 0, 1, 0)
     mainContainer.BackgroundTransparency = 1
@@ -388,7 +383,7 @@ local function CrearEfectoRobux(char)
     topRow.Size = UDim2.new(1, 0, 0, 20)
     topRow.BackgroundTransparency = 1
     topRow.LayoutOrder = 1
-    topRow.Parent = mainContainer -- ¡Ahora es hijo del BillboardGui!
+    topRow.Parent = mainContainer
     
     local topLayout = Instance.new("UIListLayout")
     topLayout.Parent = topRow
@@ -421,32 +416,80 @@ local function CrearEfectoRobux(char)
     verifiedIcon.Parent = topRow
 
     -- =======================================
-    -- FILA 2: ICONO DE ROBUX + CONTADOR
+    -- FILA 2: LOGO CUSTOM ROBUX + CONTADOR
     -- =======================================
     local robuxRow = Instance.new("Frame")
-    robuxRow.Size = UDim2.new(0, 160, 0, 40)
+    robuxRow.Size = UDim2.new(1, 0, 0, 35) -- Ancho completo para centrar bien
     robuxRow.BackgroundTransparency = 1
     robuxRow.LayoutOrder = 2
     robuxRow.Parent = mainContainer
     
-    local icon = Instance.new("ImageLabel")
-    icon.Size = UDim2.new(0, 40, 0, 40)
-    icon.Position = UDim2.new(0, 0, 0, 0)
-    icon.BackgroundTransparency = 1
-    icon.Image = "rbxassetid://11560341824"
-    icon.Parent = robuxRow
+    -- Usamos un ListLayout horizontal para que el icono y el texto se acomoden solos
+    local robuxLayout = Instance.new("UIListLayout")
+    robuxLayout.Parent = robuxRow
+    robuxLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    robuxLayout.FillDirection = Enum.FillDirection.Horizontal
+    robuxLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    robuxLayout.Padding = UDim.new(0, 8) -- Espacio entre el logo R$ y los números
 
+    -- 🎨 CREACIÓN DEL LOGO R$ POR CÓDIGO 🎨
+    local iconWrapper = Instance.new("Frame")
+    iconWrapper.Name = "CustomRobuxLogo"
+    iconWrapper.Size = UDim2.new(0, 32, 0, 32)
+    iconWrapper.BackgroundTransparency = 1
+    iconWrapper.LayoutOrder = 1
+    iconWrapper.Parent = robuxRow
+
+    -- Sombra (fondo ligeramente desplazado)
+    local iconShadow = Instance.new("Frame")
+    iconShadow.Size = UDim2.new(1, 0, 1, 0)
+    iconShadow.Position = UDim2.new(0, 1, 0, 2) -- Desplazamiento para emular la sombra
+    iconShadow.BackgroundColor3 = Color3.fromRGB(180, 180, 180) -- Gris claro
+    iconShadow.Parent = iconWrapper
+    local shadowCorner = Instance.new("UICorner")
+    shadowCorner.CornerRadius = UDim.new(1, 0)
+    shadowCorner.Parent = iconShadow
+
+    -- Círculo verde principal
+    local iconMain = Instance.new("Frame")
+    iconMain.Size = UDim2.new(1, 0, 1, 0)
+    iconMain.BackgroundColor3 = Color3.fromRGB(14, 185, 85) -- Verde muestreado de la imagen
+    iconMain.Parent = iconWrapper
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(1, 0)
+    mainCorner.Parent = iconMain
+
+    -- Borde Blanco
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 2.5 -- Grosor del borde como en la imagen
+    stroke.Parent = iconMain
+
+    -- Texto "R$" Inclinado
+    local rbxText = Instance.new("TextLabel")
+    rbxText.Size = UDim2.new(1, 0, 1, 0)
+    rbxText.Position = UDim2.new(0, 1, 0, 0) -- Ajuste micrométrico visual
+    rbxText.BackgroundTransparency = 1
+    rbxText.Text = "R$"
+    rbxText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    rbxText.Font = Enum.Font.GothamBlack
+    rbxText.TextSize = 21
+    rbxText.Rotation = -18 -- Rotación exacta para dar el efecto del logo original
+    rbxText.Parent = iconMain
+
+    -- 🔢 NÚMEROS DEL CONTADOR
     local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, -45, 1, 0)
-    textLabel.Position = UDim2.new(0, 45, 0, 0)
+    textLabel.AutomaticSize = Enum.AutomaticSize.X
+    textLabel.Size = UDim2.new(0, 0, 1, 0)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = "0"
     textLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
     textLabel.Font = Enum.Font.GothamBlack
     textLabel.TextSize = 24
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextStrokeTransparency = 0.2
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 50, 0)
+    textLabel.LayoutOrder = 2
     textLabel.Parent = robuxRow
 
     -- =======================================
