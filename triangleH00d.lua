@@ -358,49 +358,6 @@ local function CrearEfectoRobux(char)
     -- Contenedor Principal Flotante
     local bb = Instance.new("BillboardGui")
     bb.Size = UDim2.new(0, 200, 0, 60)
-    bb.StudsOffset =¡Entendido! He realizado los ajustes con mucha precisión. 
-
-Para que los números puedan vibrar sin que el `UIListLayout` bloquee su movimiento, **envolví el `TextLabel` en un `Frame` transparente (`TextWrapper`)**. De esta forma, el texto puede moverse libremente por dentro de su propio contenedor. Además, eliminé por completo el logo de fondo (`bgIcon`) y dejé el logo `R$` estático (sin vibración).
-
-Aquí tienes el código actualizado:
-
-```lua
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-
--- ==========================================
--- FUNCIONES DE TRANSFORMACIÓN Y ROBUX
--- ==========================================
-
-local function FormatearRobux(numero)
-    if numero >= 1000000000 then
-        return string.format("%.1fB", numero / 1000000000):gsub("%.0B", "B")
-    elseif numero >= 1000000 then
-        return string.format("%.1fM", numero / 1000000):gsub("%.0M", "M")
-    elseif numero >= 1000 then
-        return string.format("%.1fK", numero / 1000):gsub("%.0K", "K")
-    else
-        return tostring(math.floor(numero))
-    end
-end
-
-local function CrearEfectoRobux(char)
-    local head = char:WaitForChild("Head", 5)
-    if not head then return end
-    
-    local player = Players:GetPlayerFromCharacter(char)
-    local displayName = player and player.DisplayName or char.Name
-
-    local oldAura = char:FindFirstChild("RobuxAura")
-    if oldAura then oldAura:Destroy() end
-
-    local folder = Instance.new("Folder")
-    folder.Name = "RobuxAura"
-    folder.Parent = char
-
-    -- Contenedor Principal Flotante
-    local bb = Instance.new("BillboardGui")
-    bb.Size = UDim2.new(0, 200, 0, 60)
     bb.StudsOffset = Vector3.new(0, 2.8, 0)
     bb.AlwaysOnTop = true
     bb.Parent = folder
@@ -419,7 +376,7 @@ local function CrearEfectoRobux(char)
     mainLayout.Padding = UDim.new(0, 2)
 
     -- =======================================
-    -- FILA 1: NOMBRE + VERIFICADO (TAMAÑO ORIGINAL)
+    -- FILA 1: NOMBRE + VERIFICADO
     -- =======================================
     local topRow = Instance.new("Frame")
     topRow.Name = "TopRow"
@@ -459,7 +416,7 @@ local function CrearEfectoRobux(char)
     verifiedIcon.Parent = topRow
 
     -- =======================================
-    -- FILA 2: DINERO (NÚMEROS VIBRANDO, LOGO ESTÁTICO)
+    -- FILA 2: DINERO (NÚMEROS VIBRANDO, LOGO R$ ESTÁTICO)
     -- =======================================
     local robuxRow = Instance.new("Frame")
     robuxRow.Name = "RobuxRow"
@@ -485,7 +442,7 @@ local function CrearEfectoRobux(char)
     robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     robuxLayout.Padding = UDim.new(0, 5)
 
-    -- 🎨 LOGO R$ CUSTOM (Se queda estático, tamaño 20x20)
+    -- 🎨 LOGO R$ CUSTOM (Se queda estático y se eliminó el primer logo)
     local iconWrapper = Instance.new("Frame")
     iconWrapper.Name = "CustomRobuxLogo"
     iconWrapper.Size = UDim2.new(0, 20, 0, 20)
