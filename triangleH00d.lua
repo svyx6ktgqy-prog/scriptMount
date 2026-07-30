@@ -376,7 +376,7 @@ local function CrearEfectoRobux(char)
     mainLayout.Padding = UDim.new(0, 2)
 
     -- =======================================
-    -- FILA 1: NOMBRE + VERIFICADO
+    -- FILA 1: NOMBRE + VERIFICADO (TAMAÑO ORIGINAL)
     -- =======================================
     local topRow = Instance.new("Frame")
     topRow.Name = "TopRow"
@@ -416,7 +416,7 @@ local function CrearEfectoRobux(char)
     verifiedIcon.Parent = topRow
 
     -- =======================================
-    -- FILA 2: DINERO (NÚMEROS VIBRANDO, LOGO R$ ESTÁTICO)
+    -- FILA 2: DINERO (ESTÁTICO CON VIBRACIÓN AISLADA)
     -- =======================================
     local robuxRow = Instance.new("Frame")
     robuxRow.Name = "RobuxRow"
@@ -442,7 +442,26 @@ local function CrearEfectoRobux(char)
     robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     robuxLayout.Padding = UDim.new(0, 5)
 
-    -- 🎨 LOGO R$ CUSTOM (Se queda estático y se eliminó el primer logo)
+    -- 🖼️ LOGO SECUNDARIO DE FONDO (Intacto y totalmente estático)
+    local bgIconWrapper = Instance.new("Frame")
+    bgIconWrapper.Name = "BackgroundLogoWrapper"
+    bgIconWrapper.BackgroundTransparency = 1
+    bgIconWrapper.Size = UDim2.new(0, 34, 0, 34)
+    bgIconWrapper.LayoutOrder = 0
+    bgIconWrapper.Parent = counterWrapper
+
+    local bgIcon = Instance.new("ImageLabel")
+    bgIcon.Name = "BackgroundLogo"
+    bgIcon.BackgroundTransparency = 1
+    bgIcon.Size = UDim2.new(1, 0, 1, 0)
+    bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+    bgIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    bgIcon.Image = "rbxassetid://11560341824"
+    bgIcon.ImageTransparency = 0.25
+    bgIcon.ZIndex = 1
+    bgIcon.Parent = bgIconWrapper
+
+    -- 🎨 LOGO R$ CUSTOM (Mantiene escala de 20x20px y vibrará)
     local iconWrapper = Instance.new("Frame")
     iconWrapper.Name = "CustomRobuxLogo"
     iconWrapper.Size = UDim2.new(0, 20, 0, 20)
@@ -487,10 +506,10 @@ local function CrearEfectoRobux(char)
     rbxText.ZIndex = 4
     rbxText.Parent = iconMain
 
-    -- 🔢 WRAPPER PARA LOS NÚMEROS (Permite que el texto vibre sin romper el layout)
+    -- 🔢 NÚMEROS DEL CONTADOR (Ahora protegido con Wrapper para vibrar libre de errores de layout)
     local textWrapper = Instance.new("Frame")
     textWrapper.Name = "TextWrapper"
-    textWrapper.Size = UDim2.new(0, 70, 1, 0) -- Tamaño estático
+    textWrapper.Size = UDim2.new(0, 70, 1, 0) -- Mantiene el tamaño estático original
     textWrapper.BackgroundTransparency = 1
     textWrapper.LayoutOrder = 2
     textWrapper.Parent = counterWrapper
@@ -529,7 +548,7 @@ local function CrearEfectoRobux(char)
         while char and char.Parent and folder.Parent do
             countValue.Value = 0
             
-            -- Activar la animación de vibración SOLO en los números
+            -- Activar la animación de vibración en el R$ y los Números
             local isCounting = true
             task.spawn(function()
                 while isCounting and char and char.Parent do
@@ -537,12 +556,20 @@ local function CrearEfectoRobux(char)
                     local shakeY = math.random(-2, 2)
                     local rotShake = math.random(-4, 4)
 
+                    -- Vibración en el R$
+                    iconMain.Position = UDim2.new(0, shakeX, 0, shakeY)
+                    iconMain.Rotation = rotShake
+
+                    -- Vibración en los números (el Wrapper los protege del UIListLayout)
                     textLabel.Position = UDim2.new(0, shakeX, 0, shakeY)
                     textLabel.Rotation = rotShake
 
                     task.wait(0.04)
                 end
-                -- Resetear posición y rotación a su estado estático
+                
+                -- Resetear posiciones y rotación a su estado estático
+                iconMain.Position = UDim2.new(0, 0, 0, 0)
+                iconMain.Rotation = 0
                 textLabel.Position = UDim2.new(0, 0, 0, 0)
                 textLabel.Rotation = 0
             end)
@@ -552,8 +579,10 @@ local function CrearEfectoRobux(char)
             tween:Play()
             tween.Completed:Wait()
             
-            -- Desactivar vibración cuando el conteo se completa
+            -- Desactivar vibración cuando el conteo se completa de forma segura
             isCounting = false
+            iconMain.Position = UDim2.new(0, 0, 0, 0)
+            iconMain.Rotation = 0
             textLabel.Position = UDim2.new(0, 0, 0, 0)
             textLabel.Rotation = 0
 
