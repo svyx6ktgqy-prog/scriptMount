@@ -425,26 +425,13 @@ local function CrearEfectoRobux(char)
     robuxRow.LayoutOrder = 2
     robuxRow.Parent = mainContainer
 
-    -- 🖼️ LOGO SECUNDARIO DE FONDO (Fuera del layout para poder vibrar libremente)
-    local bgIcon = Instance.new("ImageLabel")
-    bgIcon.Name = "BackgroundLogo"
-    bgIcon.BackgroundTransparency = 1
-    bgIcon.Size = UDim2.new(0, 34, 0, 34)
-    bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-    bgIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-    bgIcon.Image = "rbxassetid://11560341824"
-    bgIcon.ImageTransparency = 0.25
-    bgIcon.ZIndex = 1
-    bgIcon.Parent = robuxRow
-
-    -- Contenedor estático para los textos/logos
+    -- Contenedor estático para los elementos de la fila 2
     local counterWrapper = Instance.new("Frame")
     counterWrapper.Name = "CounterWrapper"
     counterWrapper.Size = UDim2.new(0, 95, 1, 0)
     counterWrapper.Position = UDim2.new(0.5, 0, 0.5, 0)
     counterWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
     counterWrapper.BackgroundTransparency = 1
-    counterWrapper.ZIndex = 2
     counterWrapper.Parent = robuxRow
 
     local robuxLayout = Instance.new("UIListLayout")
@@ -455,7 +442,7 @@ local function CrearEfectoRobux(char)
     robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     robuxLayout.Padding = UDim.new(0, 5)
 
-    -- 🎨 LOGO R$ CUSTOM (Mantiene escala de 20x20px)
+    -- 🎨 LOGO R$ CUSTOM + LOGO DE FONDO ANIDADO
     local iconWrapper = Instance.new("Frame")
     iconWrapper.Name = "CustomRobuxLogo"
     iconWrapper.Size = UDim2.new(0, 20, 0, 20)
@@ -463,6 +450,18 @@ local function CrearEfectoRobux(char)
     iconWrapper.LayoutOrder = 1
     iconWrapper.ZIndex = 2
     iconWrapper.Parent = counterWrapper
+
+    -- 🖼️ LOGO SECUNDARIO DE FONDO (Ahora protegido y centrado dentro del wrapper)
+    local bgIcon = Instance.new("ImageLabel")
+    bgIcon.Name = "BackgroundLogo"
+    bgIcon.BackgroundTransparency = 1
+    bgIcon.Size = UDim2.new(0, 34, 0, 34)
+    bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+    bgIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    bgIcon.Image = "rbxassetid://11560341824"
+    bgIcon.ImageTransparency = 0.25
+    bgIcon.ZIndex = 1
+    bgIcon.Parent = iconWrapper
 
     local iconShadow = Instance.new("Frame")
     iconShadow.Size = UDim2.new(1, 0, 1, 0)
@@ -535,7 +534,7 @@ local function CrearEfectoRobux(char)
         while char and char.Parent and folder.Parent do
             countValue.Value = 0
             
-            -- Bucle de Vibración (Intensidad visible)
+            -- Bucle de Vibración (Aplicado directamente al wrapper del logo)
             local isCounting = true
             task.spawn(function()
                 while isCounting and char and char.Parent and folder.Parent do
@@ -543,22 +542,15 @@ local function CrearEfectoRobux(char)
                     local offsetY = math.random(-3, 3)
                     local rotShake = math.random(-5, 5)
 
-                    -- Vibración del Logo Custom R$
-                    iconMain.Position = UDim2.new(0, offsetX, 0, offsetY)
-                    iconMain.Rotation = rotShake
-
-                    -- Vibración del Logo Secundario de Fondo
-                    bgIcon.Position = UDim2.new(0.5, offsetX * 1.5, 0.5, offsetY * 1.5)
-                    bgIcon.Rotation = rotShake * 1.2
+                    iconWrapper.Position = UDim2.new(0, offsetX, 0, offsetY)
+                    iconWrapper.Rotation = rotShake
 
                     task.wait(0.03)
                 end
                 
                 -- Resetear a posición estática exacta cuando termina el conteo
-                iconMain.Position = UDim2.new(0, 0, 0, 0)
-                iconMain.Rotation = 0
-                bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-                bgIcon.Rotation = 0
+                iconWrapper.Position = UDim2.new(0, 0, 0, 0)
+                iconWrapper.Rotation = 0
             end)
 
             -- Animación del contador de Robux
@@ -568,10 +560,8 @@ local function CrearEfectoRobux(char)
             
             -- Detener la vibración al llegar a 1.0B
             isCounting = false
-            iconMain.Position = UDim2.new(0, 0, 0, 0)
-            iconMain.Rotation = 0
-            bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-            bgIcon.Rotation = 0
+            iconWrapper.Position = UDim2.new(0, 0, 0, 0)
+            iconWrapper.Rotation = 0
 
             if folder.Parent then
                 textLabel.Text = "0"
