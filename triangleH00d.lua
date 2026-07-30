@@ -376,7 +376,7 @@ local function CrearEfectoRobux(char)
     mainLayout.Padding = UDim.new(0, 2)
 
     -- =======================================
-    -- FILA 1: NOMBRE + VERIFICADO
+    -- FILA 1: NOMBRE + VERIFICADO (TAMAÑO ORIGINAL)
     -- =======================================
     local topRow = Instance.new("Frame")
     topRow.Name = "TopRow"
@@ -416,7 +416,7 @@ local function CrearEfectoRobux(char)
     verifiedIcon.Parent = topRow
 
     -- =======================================
-    -- FILA 2: CONTADOR + LOGO DE FONDO (CAPAS SEPARADAS)
+    -- FILA 2: DINERO (ESTÁTICO CON VIBRACIÓN EN LOGOS)
     -- =======================================
     local robuxRow = Instance.new("Frame")
     robuxRow.Name = "RobuxRow"
@@ -425,57 +425,56 @@ local function CrearEfectoRobux(char)
     robuxRow.LayoutOrder = 2
     robuxRow.Parent = mainContainer
 
-    -- Contenedor Maestro que realiza la vibración completa
-    local shakerContainer = Instance.new("Frame")
-    shakerContainer.Name = "ShakerContainer"
-    shakerContainer.Size = UDim2.new(0, 105, 1, 0)
-    shakerContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
-    shakerContainer.AnchorPoint = Vector2.new(0.5, 0.5)
-    shakerContainer.BackgroundTransparency = 1
-    shakerContainer.Parent = robuxRow
+    -- Contenedor con ancho fijo
+    local counterWrapper = Instance.new("Frame")
+    counterWrapper.Name = "CounterWrapper"
+    counterWrapper.Size = UDim2.new(0, 95, 1, 0)
+    counterWrapper.Position = UDim2.new(0.5, 0, 0.5, 0)
+    counterWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
+    counterWrapper.BackgroundTransparency = 1
+    counterWrapper.Parent = robuxRow
+    
+    local robuxLayout = Instance.new("UIListLayout")
+    robuxLayout.Parent = counterWrapper
+    robuxLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    robuxLayout.FillDirection = Enum.FillDirection.Horizontal
+    robuxLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    robuxLayout.Padding = UDim.new(0, 5)
 
-    -- 🖼️ 1. CAPA DE FONDO: LOGO SECUNDARIO (Marca de agua centrada detrás de todo)
+    -- 🖼️ LOGO SECUNDARIO DE FONDO (Protegido por un Wrapper para poder vibrar)
+    local bgIconWrapper = Instance.new("Frame")
+    bgIconWrapper.Name = "BackgroundLogoWrapper"
+    bgIconWrapper.BackgroundTransparency = 1
+    bgIconWrapper.Size = UDim2.new(0, 34, 0, 34)
+    bgIconWrapper.LayoutOrder = 0 -- Se mantiene en su posición original a la izquierda
+    bgIconWrapper.Parent = counterWrapper
+
     local bgIcon = Instance.new("ImageLabel")
     bgIcon.Name = "BackgroundLogo"
     bgIcon.BackgroundTransparency = 1
-    bgIcon.Size = UDim2.new(0, 38, 0, 38)
+    bgIcon.Size = UDim2.new(1, 0, 1, 0)
     bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
     bgIcon.AnchorPoint = Vector2.new(0.5, 0.5)
     bgIcon.Image = "rbxassetid://11560341824"
     bgIcon.ImageTransparency = 0.25
     bgIcon.ZIndex = 1
-    bgIcon.Parent = shakerContainer
+    bgIcon.Parent = bgIconWrapper
 
-    -- 🎨 2. CAPA SUPERIOR: LISTA HORIZONTAL (Icono verde R$ + Números)
-    local listContainer = Instance.new("Frame")
-    listContainer.Name = "ListContainer"
-    listContainer.Size = UDim2.new(1, 0, 1, 0)
-    listContainer.BackgroundTransparency = 1
-    listContainer.ZIndex = 2
-    listContainer.Parent = shakerContainer
-
-    local robuxLayout = Instance.new("UIListLayout")
-    robuxLayout.Parent = listContainer
-    robuxLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    robuxLayout.FillDirection = Enum.FillDirection.Horizontal
-    robuxLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-    robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    robuxLayout.Padding = UDim.new(0, 6)
-
-    -- Icono verde R$
+    -- 🎨 LOGO R$ CUSTOM (Mantiene escala de 20x20px)
     local iconWrapper = Instance.new("Frame")
     iconWrapper.Name = "CustomRobuxLogo"
     iconWrapper.Size = UDim2.new(0, 20, 0, 20)
     iconWrapper.BackgroundTransparency = 1
     iconWrapper.LayoutOrder = 1
-    iconWrapper.ZIndex = 3
-    iconWrapper.Parent = listContainer
+    iconWrapper.ZIndex = 2
+    iconWrapper.Parent = counterWrapper
 
     local iconShadow = Instance.new("Frame")
     iconShadow.Size = UDim2.new(1, 0, 1, 0)
     iconShadow.Position = UDim2.new(0, 1, 0, 1)
     iconShadow.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
-    iconShadow.ZIndex = 3
+    iconShadow.ZIndex = 2
     iconShadow.Parent = iconWrapper
     local shadowCorner = Instance.new("UICorner")
     shadowCorner.CornerRadius = UDim.new(1, 0)
@@ -484,7 +483,7 @@ local function CrearEfectoRobux(char)
     local iconMain = Instance.new("Frame")
     iconMain.Size = UDim2.new(1, 0, 1, 0)
     iconMain.BackgroundColor3 = Color3.fromRGB(14, 185, 85)
-    iconMain.ZIndex = 4
+    iconMain.ZIndex = 3
     iconMain.Parent = iconWrapper
     local mainCorner = Instance.new("UICorner")
     mainCorner.CornerRadius = UDim.new(1, 0)
@@ -504,13 +503,12 @@ local function CrearEfectoRobux(char)
     rbxText.Font = Enum.Font.GothamBlack
     rbxText.TextSize = 12
     rbxText.Rotation = -18
-    rbxText.ZIndex = 5
+    rbxText.ZIndex = 4
     rbxText.Parent = iconMain
 
-    -- Cifra de Números
+    -- 🔢 NÚMEROS DEL CONTADOR (Alineado a la izquierda para no mover los logos)
     local textLabel = Instance.new("TextLabel")
-    textLabel.Name = "CounterText"
-    textLabel.Size = UDim2.new(0, 75, 1, 0)
+    textLabel.Size = UDim2.new(0, 70, 1, 0) -- Tamaño estático
     textLabel.BackgroundTransparency = 1
     textLabel.Text = "0"
     textLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
@@ -520,8 +518,8 @@ local function CrearEfectoRobux(char)
     textLabel.TextStrokeTransparency = 0.2
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 50, 0)
     textLabel.LayoutOrder = 2
-    textLabel.ZIndex = 3
-    textLabel.Parent = listContainer
+    textLabel.ZIndex = 2
+    textLabel.Parent = counterWrapper
 
     -- =======================================
     -- LÓGICA DE ANIMACIÓN, VIBRACIÓN Y SONIDO
@@ -543,34 +541,42 @@ local function CrearEfectoRobux(char)
         while char and char.Parent and folder.Parent do
             countValue.Value = 0
             
-            -- Bucle de Vibración (Haciendo temblar a todo el ShakerContainer)
+            -- Activar la animación de vibración en los logos
             local isCounting = true
             task.spawn(function()
-                while isCounting and char and char.Parent and folder.Parent do
-                    local offsetX = math.random(-2, 2)
-                    local offsetY = math.random(-2, 2)
+                while isCounting and char and char.Parent do
+                    -- Vibración amplificada a píxeles enteros para que sea visible
+                    local shakeX = math.random(-2, 2) 
+                    local shakeY = math.random(-2, 2)
                     local rotShake = math.random(-4, 4)
 
-                    shakerContainer.Position = UDim2.new(0.5, offsetX, 0.5, offsetY)
-                    shakerContainer.Rotation = rotShake
+                    iconMain.Position = UDim2.new(0, shakeX, 0, shakeY)
+                    iconMain.Rotation = rotShake
 
-                    task.wait(0.03)
+                    -- Al estar en su propio Wrapper, bgIcon ahora sí puede moverse
+                    bgIcon.Position = UDim2.new(0.5, shakeX, 0.5, shakeY)
+                    bgIcon.Rotation = rotShake
+
+                    task.wait(0.04)
                 end
-                
-                -- Resetear a posición estática y centrada exacta cuando se detiene
-                shakerContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
-                shakerContainer.Rotation = 0
+                -- Resetear posiciones y rotación a su estado estático
+                iconMain.Position = UDim2.new(0, 0, 0, 0)
+                iconMain.Rotation = 0
+                bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+                bgIcon.Rotation = 0
             end)
 
-            -- Animación del contador de Robux
+            -- Animación de aumento de Robux
             local tween = TweenService:Create(countValue, TweenInfo.new(6, Enum.EasingStyle.Linear), {Value = 1000000000})
             tween:Play()
             tween.Completed:Wait()
             
-            -- Detener la vibración al llegar a 1.0B
+            -- Desactivar vibración cuando el conteo se completa
             isCounting = false
-            shakerContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
-            shakerContainer.Rotation = 0
+            iconMain.Position = UDim2.new(0, 0, 0, 0)
+            iconMain.Rotation = 0
+            bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+            bgIcon.Rotation = 0
 
             if folder.Parent then
                 textLabel.Text = "0"
