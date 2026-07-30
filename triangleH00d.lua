@@ -367,7 +367,7 @@ local function CrearEfectoRobux(char)
     icon.Size = UDim2.new(0, 40, 0, 40)
     icon.Position = UDim2.new(0, 0, 0.5, -20)
     icon.BackgroundTransparency = 1
-    icon.Image = "rbxassetid://11522821414"
+    icon.Image = "rbxassetid://11560341824"
     icon.Parent = frame
 
     local textLabel = Instance.new("TextLabel")
