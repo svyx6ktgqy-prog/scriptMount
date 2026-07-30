@@ -446,7 +446,7 @@ local function CrearEfectoRobux(char)
     miniLogo.Name = "MiniLogo"
     miniLogo.BackgroundTransparency = 1
     miniLogo.Size = UDim2.new(0, 18, 0, 18) 
-    miniLogo.Image = "rbxassetid://253018938"
+    miniLogo.Image = "rbxassetid://183868616"
     miniLogo.LayoutOrder = 2
     miniLogo.Parent = bottomRow
 
