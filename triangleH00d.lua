@@ -291,7 +291,7 @@ local function createPlayerESP(player)
 end
 
 local NombresPersonajes = {
-    "Tr$xsh", "Alien", "Everlasting", "TrashGang", "Goat", "Monster", "Reaper", "OnlyJdottt888", "SpyEffect", "DemonSuite",
+    "Tr$xsh", "Alien", "IndigestGreen", "stilect", "halloV", "hacklord", "admin", "b3hemoop", "monsterV9", "shouldermane", "legomane", "necromancer", "girlGotic", "miniGirl", "4ktre", "gucciCat", "batman", "evil6", "%1", "freefire", "santa", "pim", "Everlasting", "TrashGang", "Goat", "Monster", "Reaper", "OnlyJdottt888", "SpyEffect", "DemonSuite",
     "BearBlack", "KingV1", "KingV2", "Ninjaco80", "CJ", "MeKing",
     "JasonX", "PandiMan", "AppleJuice", "Tr$xshV2", "SuiteWhiteFF",
     "Otaku", "Halloween", "Zombie", "Blood", "HalloweenV4", "Anime",
@@ -303,7 +303,7 @@ local NombresPersonajes = {
 }
 
 local IDsPersonajes = {
-    ["Tr$xsh"] = "12543836003", ["Alien"] = "11839952466", ["Everlasting"] = "95946418542389", ["TrashGang"] = "5339731779", ["Goat"] = "2415658611", ["Monster"] = "906155708", ["Reaper"] = "89659421394995", ["OnlyJdottt888"] = "16694425947",
+    ["Tr$xsh"] = "12543836003", ["Alien"] = "11839952466", ["IndigestGreen"] = "1015035577", ["stilect"] = "924573788", ["halloV"] = "109572673499730", ["hacklord"] = "93542102611556", ["admin"] = "16989454582", ["b3hemoop"] = "4494148131", ["monsterV9"] = "420826307", ["shouldermane"] = "13481686732", ["legomane"] = "11451916092", ["necromancer"] = "5343724548", ["girlGotic"] = "14590012921", ["miniGirl"] = "85977847606610", ["4ktre"] = "14664678443", ["gucciCat"] = "9721010943", ["batman"] = "9377859627", ["evil6"] = "9902678384", ["%1"] = "4829776460", ["freefire"] = "17036729720", ["santa"] = "11764050424", ["pim"] = "4805457705", ["Everlasting"] = "95946418542389", ["TrashGang"] = "5339731779", ["Goat"] = "2415658611", ["Monster"] = "906155708", ["Reaper"] = "89659421394995", ["OnlyJdottt888"] = "16694425947",
     ["SpyEffect"] = "2614544836", ["DemonSuite"] = "14288252360", ["BearBlack"] = "10059678189",
     ["KingV1"] = "1502622602", ["KingV2"] = "10332438725", ["Ninjaco80"] = "10926342089",
     ["CJ"] = "110223007877573", ["MeKing"] = "49618066", ["JasonX"] = "17462621551",
