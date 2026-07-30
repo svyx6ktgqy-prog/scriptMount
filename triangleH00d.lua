@@ -416,7 +416,7 @@ local function CrearEfectoRobux(char)
     verifiedIcon.Parent = topRow
 
     -- =======================================
-    -- FILA 2: DINERO Y LOGOS CON VIBRACIÓN
+    -- FILA 2: DINERO Y LOGOS CON VIBRACIÓN INDEPENDIENTE
     -- =======================================
     local robuxRow = Instance.new("Frame")
     robuxRow.Name = "RobuxRow"
@@ -425,7 +425,7 @@ local function CrearEfectoRobux(char)
     robuxRow.LayoutOrder = 2
     robuxRow.Parent = mainContainer
 
-    -- Contenedor estático para los elementos de la fila 2
+    -- Contenedor estático de la fila 2
     local counterWrapper = Instance.new("Frame")
     counterWrapper.Name = "CounterWrapper"
     counterWrapper.Size = UDim2.new(0, 95, 1, 0)
@@ -442,33 +442,28 @@ local function CrearEfectoRobux(char)
     robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     robuxLayout.Padding = UDim.new(0, 5)
 
-    -- 🎨 LOGO R$ CUSTOM + LOGO DE FONDO ANIDADO
+    -- 🎨 1. LOGO R$ CUSTOM (Con sub-contenedor animable)
     local iconWrapper = Instance.new("Frame")
-    iconWrapper.Name = "CustomRobuxLogo"
+    iconWrapper.Name = "CustomRobuxLogoWrapper"
     iconWrapper.Size = UDim2.new(0, 20, 0, 20)
     iconWrapper.BackgroundTransparency = 1
     iconWrapper.LayoutOrder = 1
     iconWrapper.ZIndex = 2
     iconWrapper.Parent = counterWrapper
 
-    -- 🖼️ LOGO SECUNDARIO DE FONDO (Ahora protegido y centrado dentro del wrapper)
-    local bgIcon = Instance.new("ImageLabel")
-    bgIcon.Name = "BackgroundLogo"
-    bgIcon.BackgroundTransparency = 1
-    bgIcon.Size = UDim2.new(0, 34, 0, 34)
-    bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-    bgIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-    bgIcon.Image = "rbxassetid://11560341824"
-    bgIcon.ImageTransparency = 0.25
-    bgIcon.ZIndex = 1
-    bgIcon.Parent = iconWrapper
+    -- Marco interno que SI responderá a la animación de vibración
+    local animIcon = Instance.new("Frame")
+    animIcon.Name = "AnimIcon"
+    animIcon.Size = UDim2.new(1, 0, 1, 0)
+    animIcon.BackgroundTransparency = 1
+    animIcon.Parent = iconWrapper
 
     local iconShadow = Instance.new("Frame")
     iconShadow.Size = UDim2.new(1, 0, 1, 0)
     iconShadow.Position = UDim2.new(0, 1, 0, 1)
     iconShadow.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
     iconShadow.ZIndex = 2
-    iconShadow.Parent = iconWrapper
+    iconShadow.Parent = animIcon
     local shadowCorner = Instance.new("UICorner")
     shadowCorner.CornerRadius = UDim.new(1, 0)
     shadowCorner.Parent = iconShadow
@@ -477,7 +472,7 @@ local function CrearEfectoRobux(char)
     iconMain.Size = UDim2.new(1, 0, 1, 0)
     iconMain.BackgroundColor3 = Color3.fromRGB(14, 185, 85)
     iconMain.ZIndex = 3
-    iconMain.Parent = iconWrapper
+    iconMain.Parent = animIcon
     local mainCorner = Instance.new("UICorner")
     mainCorner.CornerRadius = UDim.new(1, 0)
     mainCorner.Parent = iconMain
@@ -499,9 +494,29 @@ local function CrearEfectoRobux(char)
     rbxText.ZIndex = 4
     rbxText.Parent = iconMain
 
-    -- 🔢 NÚMEROS DEL CONTADOR
+    -- 🔢 2. NÚMEROS DEL CONTADOR + LOGO DE FONDO DEL MONTO
+    local textContainer = Instance.new("Frame")
+    textContainer.Name = "TextContainer"
+    textContainer.Size = UDim2.new(0, 70, 1, 0)
+    textContainer.BackgroundTransparency = 1
+    textContainer.LayoutOrder = 2
+    textContainer.ZIndex = 2
+    textContainer.Parent = counterWrapper
+
+    -- 🖼️ LOGO SECUNDARIO DE FONDO (Ubicado correctamente detrás de los números)
+    local bgIcon = Instance.new("ImageLabel")
+    bgIcon.Name = "BackgroundLogo"
+    bgIcon.BackgroundTransparency = 1
+    bgIcon.Size = UDim2.new(0, 34, 0, 34)
+    bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+    bgIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    bgIcon.Image = "rbxassetid://11560341824"
+    bgIcon.ImageTransparency = 0.25
+    bgIcon.ZIndex = 1
+    bgIcon.Parent = textContainer
+
     local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(0, 70, 1, 0)
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = "0"
     textLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
@@ -510,9 +525,8 @@ local function CrearEfectoRobux(char)
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextStrokeTransparency = 0.2
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 50, 0)
-    textLabel.LayoutOrder = 2
     textLabel.ZIndex = 2
-    textLabel.Parent = counterWrapper
+    textLabel.Parent = textContainer
 
     -- =======================================
     -- LÓGICA DE ANIMACIÓN, VIBRACIÓN Y SONIDO
@@ -534,23 +548,30 @@ local function CrearEfectoRobux(char)
         while char and char.Parent and folder.Parent do
             countValue.Value = 0
             
-            -- Bucle de Vibración (Aplicado directamente al wrapper del logo)
+            -- Bucle de Vibración (Aplica directamente a animIcon y bgIcon)
             local isCounting = true
             task.spawn(function()
                 while isCounting and char and char.Parent and folder.Parent do
                     local offsetX = math.random(-3, 3)
                     local offsetY = math.random(-3, 3)
-                    local rotShake = math.random(-5, 5)
+                    local rotShake = math.random(-6, 6)
 
-                    iconWrapper.Position = UDim2.new(0, offsetX, 0, offsetY)
-                    iconWrapper.Rotation = rotShake
+                    -- Vibración del Logo Custom R$
+                    animIcon.Position = UDim2.new(0, offsetX, 0, offsetY)
+                    animIcon.Rotation = rotShake
+
+                    -- Vibración del Logo de fondo de los números
+                    bgIcon.Position = UDim2.new(0.5, offsetX * 1.2, 0.5, offsetY * 1.2)
+                    bgIcon.Rotation = rotShake
 
                     task.wait(0.03)
                 end
                 
-                -- Resetear a posición estática exacta cuando termina el conteo
-                iconWrapper.Position = UDim2.new(0, 0, 0, 0)
-                iconWrapper.Rotation = 0
+                -- Resetear a posición estática cuando se completa el conteo
+                animIcon.Position = UDim2.new(0, 0, 0, 0)
+                animIcon.Rotation = 0
+                bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+                bgIcon.Rotation = 0
             end)
 
             -- Animación del contador de Robux
@@ -558,10 +579,12 @@ local function CrearEfectoRobux(char)
             tween:Play()
             tween.Completed:Wait()
             
-            -- Detener la vibración al llegar a 1.0B
+            -- Detener vibración al llegar a 1.0B
             isCounting = false
-            iconWrapper.Position = UDim2.new(0, 0, 0, 0)
-            iconWrapper.Rotation = 0
+            animIcon.Position = UDim2.new(0, 0, 0, 0)
+            animIcon.Rotation = 0
+            bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+            bgIcon.Rotation = 0
 
             if folder.Parent then
                 textLabel.Text = "0"
