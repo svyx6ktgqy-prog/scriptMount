@@ -358,6 +358,49 @@ local function CrearEfectoRobux(char)
     -- Contenedor Principal Flotante
     local bb = Instance.new("BillboardGui")
     bb.Size = UDim2.new(0, 200, 0, 60)
+    bb.StudsOffset =¡Entendido! He realizado los ajustes con mucha precisión. 
+
+Para que los números puedan vibrar sin que el `UIListLayout` bloquee su movimiento, **envolví el `TextLabel` en un `Frame` transparente (`TextWrapper`)**. De esta forma, el texto puede moverse libremente por dentro de su propio contenedor. Además, eliminé por completo el logo de fondo (`bgIcon`) y dejé el logo `R$` estático (sin vibración).
+
+Aquí tienes el código actualizado:
+
+```lua
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+-- ==========================================
+-- FUNCIONES DE TRANSFORMACIÓN Y ROBUX
+-- ==========================================
+
+local function FormatearRobux(numero)
+    if numero >= 1000000000 then
+        return string.format("%.1fB", numero / 1000000000):gsub("%.0B", "B")
+    elseif numero >= 1000000 then
+        return string.format("%.1fM", numero / 1000000):gsub("%.0M", "M")
+    elseif numero >= 1000 then
+        return string.format("%.1fK", numero / 1000):gsub("%.0K", "K")
+    else
+        return tostring(math.floor(numero))
+    end
+end
+
+local function CrearEfectoRobux(char)
+    local head = char:WaitForChild("Head", 5)
+    if not head then return end
+    
+    local player = Players:GetPlayerFromCharacter(char)
+    local displayName = player and player.DisplayName or char.Name
+
+    local oldAura = char:FindFirstChild("RobuxAura")
+    if oldAura then oldAura:Destroy() end
+
+    local folder = Instance.new("Folder")
+    folder.Name = "RobuxAura"
+    folder.Parent = char
+
+    -- Contenedor Principal Flotante
+    local bb = Instance.new("BillboardGui")
+    bb.Size = UDim2.new(0, 200, 0, 60)
     bb.StudsOffset = Vector3.new(0, 2.8, 0)
     bb.AlwaysOnTop = true
     bb.Parent = folder
@@ -416,7 +459,7 @@ local function CrearEfectoRobux(char)
     verifiedIcon.Parent = topRow
 
     -- =======================================
-    -- FILA 2: DINERO (ESTÁTICO CON VIBRACIÓN EN LOGOS)
+    -- FILA 2: DINERO (NÚMEROS VIBRANDO, LOGO ESTÁTICO)
     -- =======================================
     local robuxRow = Instance.new("Frame")
     robuxRow.Name = "RobuxRow"
@@ -442,26 +485,7 @@ local function CrearEfectoRobux(char)
     robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     robuxLayout.Padding = UDim.new(0, 5)
 
-    -- 🖼️ LOGO SECUNDARIO DE FONDO (Protegido por un Wrapper para poder vibrar)
-    local bgIconWrapper = Instance.new("Frame")
-    bgIconWrapper.Name = "BackgroundLogoWrapper"
-    bgIconWrapper.BackgroundTransparency = 1
-    bgIconWrapper.Size = UDim2.new(0, 34, 0, 34)
-    bgIconWrapper.LayoutOrder = 0 -- Se mantiene en su posición original a la izquierda
-    bgIconWrapper.Parent = counterWrapper
-
-    local bgIcon = Instance.new("ImageLabel")
-    bgIcon.Name = "BackgroundLogo"
-    bgIcon.BackgroundTransparency = 1
-    bgIcon.Size = UDim2.new(1, 0, 1, 0)
-    bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-    bgIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-    bgIcon.Image = "rbxassetid://11560341824"
-    bgIcon.ImageTransparency = 0.25
-    bgIcon.ZIndex = 1
-    bgIcon.Parent = bgIconWrapper
-
-    -- 🎨 LOGO R$ CUSTOM (Mantiene escala de 20x20px)
+    -- 🎨 LOGO R$ CUSTOM (Se queda estático, tamaño 20x20)
     local iconWrapper = Instance.new("Frame")
     iconWrapper.Name = "CustomRobuxLogo"
     iconWrapper.Size = UDim2.new(0, 20, 0, 20)
@@ -506,9 +530,17 @@ local function CrearEfectoRobux(char)
     rbxText.ZIndex = 4
     rbxText.Parent = iconMain
 
-    -- 🔢 NÚMEROS DEL CONTADOR (Alineado a la izquierda para no mover los logos)
+    -- 🔢 WRAPPER PARA LOS NÚMEROS (Permite que el texto vibre sin romper el layout)
+    local textWrapper = Instance.new("Frame")
+    textWrapper.Name = "TextWrapper"
+    textWrapper.Size = UDim2.new(0, 70, 1, 0) -- Tamaño estático
+    textWrapper.BackgroundTransparency = 1
+    textWrapper.LayoutOrder = 2
+    textWrapper.Parent = counterWrapper
+
     local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(0, 70, 1, 0) -- Tamaño estático
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
     textLabel.BackgroundTransparency = 1
     textLabel.Text = "0"
     textLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
@@ -517,9 +549,8 @@ local function CrearEfectoRobux(char)
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextStrokeTransparency = 0.2
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 50, 0)
-    textLabel.LayoutOrder = 2
     textLabel.ZIndex = 2
-    textLabel.Parent = counterWrapper
+    textLabel.Parent = textWrapper
 
     -- =======================================
     -- LÓGICA DE ANIMACIÓN, VIBRACIÓN Y SONIDO
@@ -541,29 +572,22 @@ local function CrearEfectoRobux(char)
         while char and char.Parent and folder.Parent do
             countValue.Value = 0
             
-            -- Activar la animación de vibración en los logos
+            -- Activar la animación de vibración SOLO en los números
             local isCounting = true
             task.spawn(function()
                 while isCounting and char and char.Parent do
-                    -- Vibración amplificada a píxeles enteros para que sea visible
                     local shakeX = math.random(-2, 2) 
                     local shakeY = math.random(-2, 2)
                     local rotShake = math.random(-4, 4)
 
-                    iconMain.Position = UDim2.new(0, shakeX, 0, shakeY)
-                    iconMain.Rotation = rotShake
-
-                    -- Al estar en su propio Wrapper, bgIcon ahora sí puede moverse
-                    bgIcon.Position = UDim2.new(0.5, shakeX, 0.5, shakeY)
-                    bgIcon.Rotation = rotShake
+                    textLabel.Position = UDim2.new(0, shakeX, 0, shakeY)
+                    textLabel.Rotation = rotShake
 
                     task.wait(0.04)
                 end
-                -- Resetear posiciones y rotación a su estado estático
-                iconMain.Position = UDim2.new(0, 0, 0, 0)
-                iconMain.Rotation = 0
-                bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-                bgIcon.Rotation = 0
+                -- Resetear posición y rotación a su estado estático
+                textLabel.Position = UDim2.new(0, 0, 0, 0)
+                textLabel.Rotation = 0
             end)
 
             -- Animación de aumento de Robux
@@ -573,10 +597,8 @@ local function CrearEfectoRobux(char)
             
             -- Desactivar vibración cuando el conteo se completa
             isCounting = false
-            iconMain.Position = UDim2.new(0, 0, 0, 0)
-            iconMain.Rotation = 0
-            bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
-            bgIcon.Rotation = 0
+            textLabel.Position = UDim2.new(0, 0, 0, 0)
+            textLabel.Rotation = 0
 
             if folder.Parent then
                 textLabel.Text = "0"
