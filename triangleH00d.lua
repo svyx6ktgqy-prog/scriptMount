@@ -401,7 +401,7 @@ local function CrearEfectoRobux(char)
     nameLabel.Text = displayName
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextSize = 16 -- Restaurado a 16px
+    nameLabel.TextSize = 16
     nameLabel.TextStrokeTransparency = 0.2
     nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
     nameLabel.LayoutOrder = 1
@@ -410,13 +410,13 @@ local function CrearEfectoRobux(char)
     local verifiedIcon = Instance.new("ImageLabel")
     verifiedIcon.Name = "VerifiedLogo"
     verifiedIcon.BackgroundTransparency = 1
-    verifiedIcon.Size = UDim2.new(0, 18, 0, 18) -- Restaurado a 18x18px
+    verifiedIcon.Size = UDim2.new(0, 18, 0, 18)
     verifiedIcon.Image = "rbxassetid://11478378840"
     verifiedIcon.LayoutOrder = 2
     verifiedIcon.Parent = topRow
 
     -- =======================================
-    -- FILA 2: DINERO (ANCLADO Y CENTRADO DINÁMICAMENTE)
+    -- FILA 2: DINERO (ESTÁTICO CON VIBRACIÓN EN LOGOS)
     -- =======================================
     local robuxRow = Instance.new("Frame")
     robuxRow.Name = "RobuxRow"
@@ -425,17 +425,16 @@ local function CrearEfectoRobux(char)
     robuxRow.LayoutOrder = 2
     robuxRow.Parent = mainContainer
 
-    -- Contenedor dinámico centrado
+    -- Contenedor con ancho fijo (evita saltos/expansión al cambiar cifras)
     local counterWrapper = Instance.new("Frame")
     counterWrapper.Name = "CounterWrapper"
-    counterWrapper.AutomaticSize = Enum.AutomaticSize.X
-    counterWrapper.Size = UDim2.new(0, 0, 1, 0)
+    counterWrapper.Size = UDim2.new(0, 95, 1, 0)
     counterWrapper.Position = UDim2.new(0.5, 0, 0.5, 0)
-    counterWrapper.AnchorPoint = Vector2.new(0.5, 0.5) -- Evita saltos visuales al crecer el texto
+    counterWrapper.AnchorPoint = Vector2.new(0.5, 0.5)
     counterWrapper.BackgroundTransparency = 1
     counterWrapper.Parent = robuxRow
 
-    -- 🖼️ LOGO SECUNDARIO DE FONDO (Sigue a la cifra en todo momento)
+    -- 🖼️ LOGO SECUNDARIO DE FONDO
     local bgIcon = Instance.new("ImageLabel")
     bgIcon.Name = "BackgroundLogo"
     bgIcon.BackgroundTransparency = 1
@@ -451,7 +450,7 @@ local function CrearEfectoRobux(char)
     robuxLayout.Parent = counterWrapper
     robuxLayout.SortOrder = Enum.SortOrder.LayoutOrder
     robuxLayout.FillDirection = Enum.FillDirection.Horizontal
-    robuxLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    robuxLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     robuxLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     robuxLayout.Padding = UDim.new(0, 5)
 
@@ -500,15 +499,15 @@ local function CrearEfectoRobux(char)
     rbxText.ZIndex = 4
     rbxText.Parent = iconMain
 
-    -- 🔢 NÚMEROS DEL CONTADOR (Conservado en 18px)
+    -- 🔢 NÚMEROS DEL CONTADOR (Alineado a la izquierda para no mover los logos)
     local textLabel = Instance.new("TextLabel")
-    textLabel.AutomaticSize = Enum.AutomaticSize.X
-    textLabel.Size = UDim2.new(0, 0, 1, 0)
+    textLabel.Size = UDim2.new(0, 70, 1, 0) -- Tamaño estático
     textLabel.BackgroundTransparency = 1
     textLabel.Text = "0"
     textLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
     textLabel.Font = Enum.Font.GothamBlack
     textLabel.TextSize = 18
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextStrokeTransparency = 0.2
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 50, 0)
     textLabel.LayoutOrder = 2
@@ -516,7 +515,7 @@ local function CrearEfectoRobux(char)
     textLabel.Parent = counterWrapper
 
     -- =======================================
-    -- LÓGICA DE ANIMACIÓN Y SONIDO
+    -- LÓGICA DE ANIMACIÓN, VIBRACIÓN Y SONIDO
     -- =======================================
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxassetid://1210852193"
@@ -534,10 +533,32 @@ local function CrearEfectoRobux(char)
     task.spawn(function()
         while char and char.Parent and folder.Parent do
             countValue.Value = 0
+            
+            -- Activar la animación de vibración en los logos
+            local isCounting = true
+            task.spawn(function()
+                while isCounting and char and char.Parent do
+                    local shakeX = (math.random() - 0.5) * 1.8 -- Micro-vibración suave
+                    local shakeY = (math.random() - 0.5) * 1.8
+                    iconMain.Position = UDim2.new(0, shakeX, 0, shakeY)
+                    bgIcon.Position = UDim2.new(0.5, shakeX, 0.5, shakeY)
+                    task.wait(0.04)
+                end
+                -- Resetear posiciones a su estado estático cuando termina la vibración
+                iconMain.Position = UDim2.new(0, 0, 0, 0)
+                bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+            end)
+
+            -- Animación de aumento de Robux
             local tween = TweenService:Create(countValue, TweenInfo.new(6, Enum.EasingStyle.Linear), {Value = 1000000000})
             tween:Play()
             tween.Completed:Wait()
             
+            -- Desactivar vibración cuando el conteo se completa / resetea a 0
+            isCounting = false
+            iconMain.Position = UDim2.new(0, 0, 0, 0)
+            bgIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+
             if folder.Parent then
                 textLabel.Text = "0"
                 sound:Play()
