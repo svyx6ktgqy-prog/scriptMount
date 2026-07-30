@@ -321,10 +321,12 @@ local IDsPersonajes = {
     ["angelBlack"] = "979928372"
 }
 
-local PersonajeSeleccionadoID = IDsPersonajes["Tr$xsh"]
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local PersonajeSeleccionadoID = IDsPersonajes["Tr$xsh"] -- Asumo que esto lo tienes definido arriba
 
 -- ==========================================
--- FUNCIONES DE TRANSFORMACIÓN Y ROBUX (NUEVAS)
+-- FUNCIONES DE TRANSFORMACIÓN Y ROBUX (CORREGIDO)
 -- ==========================================
 
 local function FormatearRobux(numero)
@@ -342,6 +344,41 @@ end
 local function CrearEfectoRobux(char)
     local head = char:WaitForChild("Head", 5)
     if not head then return end
+    
+    -- Obtener el jugador real basado en el personaje (para que no todos tengan tu nombre)
+    local player = Players:GetPlayerFromCharacter(char)
+    local displayName = player and player.DisplayName or char.Name
+
+    -- Prevenir duplicados
+    local oldAura = char:FindFirstChild("RobuxAura")
+    if oldAura then oldAura:Destroy() end
+
+    local folder = Instance.new("Folder")
+    folder.Name = "RobuxAura"
+    folder.Parent = char
+
+    -- =======================================
+    -- BILLBOARD GUI (Contenedor Principal)
+    -- =======================================
+    local bb = Instance.new("BillboardGui")
+    bb.Size = UDim2.new(0, 200, 0, 70) -- Lo hacemos más alto para que quepa el nombre y los robux
+    bb.StudsOffset = Vector3.new(0, 3, 0) -- Un poco más alto para no tapar la cara
+    bb.AlwaysOnTop = true
+    bb.Parent = folder
+    bb.Adornee = head
+
+    -- Contenedor vertical para apilar el Nombre arriba y los Robux abajo
+    local mainContainer = Instance.new("Frame")
+    mainContainer.Size = UDim2.new(1, 0, 1, 0)
+    mainContainer.BackgroundTransparency = 1
+    mainContainer.Parent = bb
+    
+    local mainLayout = Instance.new("UIListLayout")
+    mainLayout.Parent = mainContainer
+    mainLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    mainLayout.FillDirection = Enum.FillDirection.Vertical
+    mainLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    mainLayout.Padding = UDim.new(0, 5)
 
     -- =======================================
     -- FILA 1: NOMBRE + ESPACIO + VERIFICADO
@@ -351,7 +388,7 @@ local function CrearEfectoRobux(char)
     topRow.Size = UDim2.new(1, 0, 0, 20)
     topRow.BackgroundTransparency = 1
     topRow.LayoutOrder = 1
-    topRow.Parent = mainFrame
+    topRow.Parent = mainContainer -- ¡Ahora es hijo del BillboardGui!
     
     local topLayout = Instance.new("UIListLayout")
     topLayout.Parent = topRow
@@ -359,14 +396,14 @@ local function CrearEfectoRobux(char)
     topLayout.FillDirection = Enum.FillDirection.Horizontal
     topLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     topLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    topLayout.Padding = UDim.new(0, 5) -- Un pequeño espacio para separar
+    topLayout.Padding = UDim.new(0, 5)
 
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Name = "PlayerName"
     nameLabel.BackgroundTransparency = 1
-    nameLabel.AutomaticSize = Enum.AutomaticSize.X -- Ajusta el tamaño al texto
+    nameLabel.AutomaticSize = Enum.AutomaticSize.X
     nameLabel.Size = UDim2.new(0, 0, 1, 0)
-    nameLabel.Text = LocalPlayer.DisplayName or LocalPlayer.Name
+    nameLabel.Text = displayName
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.TextSize = 16
@@ -378,37 +415,26 @@ local function CrearEfectoRobux(char)
     local verifiedIcon = Instance.new("ImageLabel")
     verifiedIcon.Name = "VerifiedLogo"
     verifiedIcon.BackgroundTransparency = 1
-    verifiedIcon.Size = UDim2.new(0, 18, 0, 18) -- Tamaño verificado auténtico (16-20px aprox)
+    verifiedIcon.Size = UDim2.new(0, 18, 0, 18)
     verifiedIcon.Image = "rbxassetid://11478378840"
     verifiedIcon.LayoutOrder = 2
     verifiedIcon.Parent = topRow
 
-    -- Prevenir duplicados
-    local oldAura = char:FindFirstChild("RobuxAura")
-    if oldAura then oldAura:Destroy() end
-
-    local folder = Instance.new("Folder")
-    folder.Name = "RobuxAura"
-    folder.Parent = char
-
-    local bb = Instance.new("BillboardGui")
-    bb.Size = UDim2.new(0, 160, 0, 45)
-    bb.StudsOffset = Vector3.new(0, 2.5, 0)
-    bb.AlwaysOnTop = true
-    bb.Parent = folder
-    bb.Adornee = head
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundTransparency = 1
-    frame.Parent = bb
+    -- =======================================
+    -- FILA 2: ICONO DE ROBUX + CONTADOR
+    -- =======================================
+    local robuxRow = Instance.new("Frame")
+    robuxRow.Size = UDim2.new(0, 160, 0, 40)
+    robuxRow.BackgroundTransparency = 1
+    robuxRow.LayoutOrder = 2
+    robuxRow.Parent = mainContainer
     
     local icon = Instance.new("ImageLabel")
     icon.Size = UDim2.new(0, 40, 0, 40)
-    icon.Position = UDim2.new(0, 0, 0.5, -20)
+    icon.Position = UDim2.new(0, 0, 0, 0)
     icon.BackgroundTransparency = 1
     icon.Image = "rbxassetid://11560341824"
-    icon.Parent = frame
+    icon.Parent = robuxRow
 
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(1, -45, 1, 0)
@@ -421,8 +447,11 @@ local function CrearEfectoRobux(char)
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextStrokeTransparency = 0.2
     textLabel.TextStrokeColor3 = Color3.fromRGB(0, 50, 0)
-    textLabel.Parent = frame
+    textLabel.Parent = robuxRow
 
+    -- =======================================
+    -- LÓGICA DE ANIMACIÓN Y SONIDO
+    -- =======================================
     local sound = Instance.new("Sound")
     sound.SoundId = "rbxassetid://1210852193"
     sound.Volume = 1.5
@@ -439,7 +468,6 @@ local function CrearEfectoRobux(char)
     task.spawn(function()
         while char and char.Parent and folder.Parent do
             countValue.Value = 0
-            -- La duración (6 segundos) se puede ajustar
             local tween = TweenService:Create(countValue, TweenInfo.new(6, Enum.EasingStyle.Linear), {Value = 1000000000})
             tween:Play()
             tween.Completed:Wait()
