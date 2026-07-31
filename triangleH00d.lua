@@ -2625,13 +2625,17 @@ CloneTab:CreateButton({
 
 --#WORLD CUP
 
-local Tab = Window:CreateTab("Festejo", 4483362458)
-local player = game.Players.LocalPlayer
+---------------------------------------------------------
+-- INICIO APARTADO: FESTEJO (100% Adaptable a Clones/Morphs)
+---------------------------------------------------------
+local Tab = Window:CreateTab("Festejo")
+
+local player = game:GetService("Players").LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 local isCelebrating = false
 local celebrationAssets = {}
 
--- IDs
+-- IDs de Assets
 local CUP_MODEL_ID = "rbxassetid://118466807930342"
 local FIREWORK_SOUNDS = {
     "rbxassetid://90779381422678", 
@@ -2642,7 +2646,7 @@ local FIREWORK_SOUNDS = {
 local FESTEJO_PARTICLES_ID = "rbxassetid://79124632949757"
 
 ---------------------------------------------------------
--- FUNCIONES DE CONFETI (2D DENSO Y 3D CILÍNDRICO)
+-- FUNCIONES DE EFECTOS
 ---------------------------------------------------------
 local function createDenseConfetti(parent)
     local emitter = Instance.new("ParticleEmitter")
@@ -2707,9 +2711,6 @@ local function spawn3DCylinderConfetti(root)
     end
 end
 
----------------------------------------------------------
--- FUEGOS ARTIFICIALES MASIVOS
----------------------------------------------------------
 local function spawnFirework(char)
     if not isCelebrating then return end
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -2770,9 +2771,13 @@ local function spawnFirework(char)
 end
 
 ---------------------------------------------------------
--- BOTÓN FLOTANTE: DESLIZAMIENTO CON RASTRO Y COPA ATRÁS
+-- BOTÓN DE DESLIZAMIENTO (100% Adaptable)
 ---------------------------------------------------------
 local function createSlideButton()
+    if PlayerGui:FindFirstChild("SoccerSlideGUI") then
+        PlayerGui.SoccerSlideGUI:Destroy()
+    end
+
     local gui = Instance.new("ScreenGui", PlayerGui)
     gui.Name = "SoccerSlideGUI"
     gui.ResetOnSpawn = false
@@ -2802,7 +2807,6 @@ local function createSlideButton()
         isSliding = true
         hum.PlatformStand = true
 
-        -- CREAR RASTROS (Trail + Polvo)
         local trailA0 = Instance.new("Attachment", root)
         trailA0.Position = Vector3.new(-1, -1.5, 0)
         local trailA1 = Instance.new("Attachment", root)
@@ -2816,16 +2820,15 @@ local function createSlideButton()
         slideTrail.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1)})
 
         local dustEmitter = Instance.new("ParticleEmitter", root)
-        dustEmitter.Texture = "rbxassetid://243662281" -- Textura de humo/polvo
+        dustEmitter.Texture = "rbxassetid://243662281"
         dustEmitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 4)})
         dustEmitter.Color = ColorSequence.new(Color3.fromRGB(200, 200, 200))
         dustEmitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1)})
         dustEmitter.Speed = NumberRange.new(5, 10)
         dustEmitter.VelocitySpread = 45
-        dustEmitter.EmissionDirection = Enum.NormalId.Back -- Sale hacia atrás
+        dustEmitter.EmissionDirection = Enum.NormalId.Back
         dustEmitter.Rate = 50
 
-        -- INCLINACIÓN Y VELOCIDAD
         local bg = Instance.new("BodyGyro", root)
         bg.MaxTorque = Vector3.new(400000, 400000, 400000)
         bg.CFrame = CFrame.new(root.Position, root.Position + root.CFrame.LookVector) * CFrame.Angles(math.rad(-80), 0, 0)
@@ -2835,38 +2838,31 @@ local function createSlideButton()
         bv.MaxForce = Vector3.new(100000, 0, 100000)
         bv.Velocity = root.CFrame.LookVector * initialSpeed 
 
-        -- MOVER BRAZOS Y LA COPA HACIA LA ESPALDA
-        local rightJoint, leftJoint
+        -- Búsqueda universal de brazos para adaptarse a cualquier clon/morph
+        local rightJoint = char:FindFirstChild("RightShoulder", true) or char:FindFirstChild("Right Shoulder", true)
+        local leftJoint = char:FindFirstChild("LeftShoulder", true) or char:FindFirstChild("Left Shoulder", true)
         local rOriginalC0, lOriginalC0
         local cupWeld
+        local head = char:FindFirstChild("Head")
         
         pcall(function()
-            if hum.RigType == Enum.HumanoidRigType.R15 then
-                rightJoint = char.RightUpperArm.RightShoulder
-                leftJoint = char.LeftUpperArm.LeftShoulder
-            else
-                rightJoint = char.Torso["Right Shoulder"]
-                leftJoint = char.Torso["Left Shoulder"]
-            end
-            rOriginalC0 = rightJoint.C0
-            lOriginalC0 = leftJoint.C0
-            
-            -- Brazos para atrás
-            rightJoint.C0 = rightJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(20))
-            leftJoint.C0 = leftJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(-20))
+            if rightJoint then rOriginalC0 = rightJoint.C0 rightJoint.C0 = rightJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(20)) end
+            if leftJoint then lOriginalC0 = leftJoint.C0 leftJoint.C0 = leftJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(-20)) end
 
-            -- Copa detrás de la espalda (Z = 2.5 mueve la copa hacia atrás relativo al Root)
             local cup = char:FindFirstChild("WorldCup_Gemini")
             if cup then
                 cupWeld = cup:FindFirstChild("CupWeld_Gemini")
                 if cupWeld then
-                    -- Posición: 0.5 arriba, 2.5 studs hacia atrás, rotada para que apunte bien
-                    cupWeld.C0 = CFrame.new(0, 0.5, 2.5) * CFrame.Angles(math.rad(90), 0, 0)
+                    -- Ajusta dinámicamente la posición al deslizarse
+                    if head then
+                        cupWeld.C0 = CFrame.new(0, (head.Size.Y / 2) + 0.5, 2.5) * CFrame.Angles(math.rad(90), 0, 0)
+                    else
+                        cupWeld.C0 = CFrame.new(0, 0.5, 2.5) * CFrame.Angles(math.rad(90), 0, 0)
+                    end
                 end
             end
         end)
 
-        -- Bucle de Desaceleración
         for i = initialSpeed, 0, -3 do
             if bv and bv.Parent then
                 bv.Velocity = root.CFrame.LookVector * i
@@ -2874,9 +2870,8 @@ local function createSlideButton()
             task.wait(0.1)
         end
 
-        task.wait(0.3) -- Pausa corta en el césped
+        task.wait(0.3) 
 
-        -- RESTAURACIÓN
         if bg then bg:Destroy() end
         if bv then bv:Destroy() end
         
@@ -2890,9 +2885,12 @@ local function createSlideButton()
             if rightJoint and rOriginalC0 then rightJoint.C0 = rOriginalC0 end
             if leftJoint and lOriginalC0 then leftJoint.C0 = lOriginalC0 end
             
-            -- Volver la copa arriba
             if cupWeld then
-                cupWeld.C0 = CFrame.new(0, 3.5, -1)
+                if head then
+                    cupWeld.C0 = CFrame.new(0, (head.Size.Y / 2) + 1.5, -0.5)
+                else
+                    cupWeld.C0 = CFrame.new(0, 3.5, -1)
+                end
             end
         end)
 
@@ -2901,114 +2899,158 @@ local function createSlideButton()
         task.wait(1) 
         isSliding = false
     end)
+    
+    return gui
 end
 
-createSlideButton()
+---------------------------------------------------------
+-- LÓGICA PRINCIPAL: SETUP DINÁMICO
+---------------------------------------------------------
+local function cleanupCelebration()
+    for _, asset in pairs(celebrationAssets) do
+        if asset and asset.Parent then asset:Destroy() end
+    end
+    celebrationAssets = {}
+    
+    local orphanedGui = PlayerGui:FindFirstChild("SoccerSlideGUI")
+    if orphanedGui then orphanedGui:Destroy() end
+end
+
+local function applyCelebrationToCharacter(char)
+    if not isCelebrating or not char then return end
+    
+    local humanoid = char:WaitForChild("Humanoid", 3)
+    local root = char:WaitForChild("HumanoidRootPart", 3)
+    local head = char:WaitForChild("Head", 3)
+    if not (humanoid and root) then return end
+
+    cleanupCelebration()
+
+    -- 1. Crear el botón de deslizarse
+    local slideGui = createSlideButton()
+    table.insert(celebrationAssets, slideGui)
+
+    -- 2. Entregar la copa (Altura adaptable mediante la cabeza)
+    pcall(function()
+        local cupObjects = game:GetObjects(CUP_MODEL_ID)
+        local cup = cupObjects[1]
+        if cup then
+            cup.Parent = char
+            cup.Name = "WorldCup_Gemini" 
+            
+            for _, p in pairs(cup:GetDescendants()) do
+                if p:IsA("BasePart") then p.CanCollide = false end
+            end
+            if cup:IsA("BasePart") then cup.CanCollide = false end
+            
+            local weld = Instance.new("Weld", cup)
+            weld.Name = "CupWeld_Gemini"
+            
+            if head then
+                weld.Part0 = head
+                weld.Part1 = cup:IsA("Model") and cup.PrimaryPart or cup
+                weld.C0 = CFrame.new(0, (head.Size.Y / 2) + 1.5, -0.5) 
+            else
+                weld.Part0 = root
+                weld.Part1 = cup:IsA("Model") and cup.PrimaryPart or cup
+                weld.C0 = CFrame.new(0, 3.5, -1) 
+            end
+            
+            table.insert(celebrationAssets, cup)
+        end
+    end)
+
+    -- 3. Crear Attachments y Confeti
+    local chaosAttachment = Instance.new("Attachment", root)
+    table.insert(celebrationAssets, chaosAttachment)
+    
+    table.insert(celebrationAssets, createDenseConfetti(root))
+    table.insert(celebrationAssets, createRibbons(root))
+    
+    local festejoEmitter = Instance.new("ParticleEmitter", chaosAttachment)
+    festejoEmitter.Texture = FESTEJO_PARTICLES_ID
+    festejoEmitter.Rate = 100
+    festejoEmitter.Size = NumberSequence.new(3)
+    table.insert(celebrationAssets, festejoEmitter)
+
+    -- 4. Levantar los brazos de forma universal
+    pcall(function()
+        local rightJoint = char:FindFirstChild("RightShoulder", true) or char:FindFirstChild("Right Shoulder", true)
+        local leftJoint = char:FindFirstChild("LeftShoulder", true) or char:FindFirstChild("Left Shoulder", true)
+        
+        if rightJoint then rightJoint.C0 = rightJoint.C0 * CFrame.Angles(math.rad(150), 0, math.rad(-20)) end
+        if leftJoint then leftJoint.C0 = leftJoint.C0 * CFrame.Angles(math.rad(150), 0, math.rad(20)) end
+    end)
+end
 
 ---------------------------------------------------------
--- LÓGICA PRINCIPAL (Levantar Copa)
+-- CONTROL DEL TOGGLE CON REAPLICACIÓN AUTOMÁTICA
 ---------------------------------------------------------
 Tab:CreateToggle({
     Name = "🏆 Levantar la Copa (Celebración Épica)",
     CurrentValue = false,
-    Flag = "CupToggle",
     Callback = function(Value)
         isCelebrating = Value
-        local char = player.Character or player.CharacterAdded:Wait()
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local root = char:FindFirstChild("HumanoidRootPart")
 
         if isCelebrating then
-            -- 1. CARGAR LA COPA (Con Colisiones Desactivadas para no arruinar las físicas)
-            pcall(function()
-                local cupObjects = game:GetObjects(CUP_MODEL_ID)
-                local cup = cupObjects[1]
-                if cup then
-                    cup.Parent = char
-                    cup.Name = "WorldCup_Gemini" 
-                    
-                    -- Desactivar colisiones para evitar fallos físicos al deslizarse
-                    for _, p in pairs(cup:GetDescendants()) do
-                        if p:IsA("BasePart") then p.CanCollide = false end
-                    end
-                    if cup:IsA("BasePart") then cup.CanCollide = false end
-                    
-                    local weld = Instance.new("Weld", cup)
-                    weld.Name = "CupWeld_Gemini"
-                    weld.Part0 = root
-                    weld.Part1 = cup:IsA("Model") and cup.PrimaryPart or cup
-                    weld.C0 = CFrame.new(0, 3.5, -1) 
-                    
-                    table.insert(celebrationAssets, cup)
-                end
-            end)
+            -- Aplica al instante
+            applyCelebrationToCharacter(player.Character)
 
-            -- 2. CARGAR TODOS LOS CONFETIS (2D y Adicionales)
-            local chaosAttachment = Instance.new("Attachment", root)
-            table.insert(celebrationAssets, chaosAttachment)
-            
-            table.insert(celebrationAssets, createDenseConfetti(root))
-            table.insert(celebrationAssets, createRibbons(root))
-            
-            local festejoEmitter = Instance.new("ParticleEmitter", chaosAttachment)
-            festejoEmitter.Texture = FESTEJO_PARTICLES_ID
-            festejoEmitter.Rate = 100
-            festejoEmitter.Size = NumberSequence.new(3)
-            table.insert(celebrationAssets, festejoEmitter)
-
-            -- 3. BUCLE PRINCIPAL (Saltos, Terremoto y Confeti 3D)
+            -- Bucle Maestro: Mantiene la cámara vibrando, lanza fuegos artificiales 
+            -- y RE-APLICA los efectos si te clonas o mueres con el toggle prendido.
             task.spawn(function()
                 local cam = workspace.CurrentCamera
-                while isCelebrating and char and root and humanoid.Health > 0 do
-                    if not humanoid.PlatformStand then 
-                        humanoid.Jump = true
-                    end
+                local lastCharacter = player.Character
 
-                    -- Confeti físico 3D
-                    spawn3DCylinderConfetti(root)
-
-                    cam.CFrame = cam.CFrame * CFrame.new(
-                        math.random(-15, 15)/15, 
-                        math.random(-30, 30)/15, 
-                        math.random(-15, 15)/15
-                    )
+                while isCelebrating do
+                    local currentChar = player.Character
                     
-                    if math.random(1, 4) == 1 then
-                        spawnFirework(char)
+                    -- Si detecta que cambiaste de avatar, te clonaste o reviviste:
+                    if currentChar and currentChar ~= lastCharacter then
+                        lastCharacter = currentChar
+                        task.wait(0.5) -- Pausa breve para que el clon cargue completo
+                        if isCelebrating then
+                            applyCelebrationToCharacter(currentChar)
+                        end
                     end
+                    
+                    -- Lógica constante de la celebración
+                    if currentChar then
+                        local root = currentChar:FindFirstChild("HumanoidRootPart")
+                        local humanoid = currentChar:FindFirstChildOfClass("Humanoid")
+                        
+                        if root and humanoid and humanoid.Health > 0 then
+                            if not humanoid.PlatformStand then 
+                                humanoid.Jump = true
+                            end
+                            spawn3DCylinderConfetti(root)
+                            
+                            cam.CFrame = cam.CFrame * CFrame.new(
+                                math.random(-15, 15)/15, 
+                                math.random(-30, 30)/15, 
+                                math.random(-15, 15)/15
+                            )
+                            
+                            if math.random(1, 4) == 1 then
+                                spawnFirework(currentChar)
+                            end
+                        end
+                    end
+                    
                     task.wait(0.1)
                 end
             end)
-            
-            -- 4. BRAZOS ARRIBA
-            pcall(function()
-                if humanoid.RigType == Enum.HumanoidRigType.R15 then
-                    char.RightUpperArm.RightShoulder.C0 = char.RightUpperArm.RightShoulder.C0 * CFrame.Angles(math.rad(150), 0, math.rad(-20))
-                    char.LeftUpperArm.LeftShoulder.C0 = char.LeftUpperArm.LeftShoulder.C0 * CFrame.Angles(math.rad(150), 0, math.rad(20))
-                else
-                    char.Torso["Right Shoulder"].C0 = char.Torso["Right Shoulder"].C0 * CFrame.Angles(math.rad(150), 0, math.rad(-20))
-                    char.Torso["Left Shoulder"].C0 = char.Torso["Left Shoulder"].C0 * CFrame.Angles(math.rad(150), 0, math.rad(20))
-                end
-            end)
-
         else
-            -- APAGAR TODO
+            -- APAGADO: Limpia todo y te reinicia
             isCelebrating = false
-            for _, asset in pairs(celebrationAssets) do
-                if asset and asset.Parent then asset:Destroy() end
-            end
-            celebrationAssets = {}
+            cleanupCelebration()
             
-            -- Restaurar brazos
-            pcall(function()
-                if humanoid.RigType == Enum.HumanoidRigType.R15 then
-                    char.RightUpperArm.RightShoulder.C0 = CFrame.new(1, 0.5, 0) * CFrame.Angles(0, math.rad(90), 0)
-                    char.LeftUpperArm.LeftShoulder.C0 = CFrame.new(-1, 0.5, 0) * CFrame.Angles(0, math.rad(-90), 0)
-                else
-                    char.Torso["Right Shoulder"].C0 = CFrame.new(1, 0.5, 0) * CFrame.Angles(0, math.rad(90), 0)
-                    char.Torso["Left Shoulder"].C0 = CFrame.new(-1, 0.5, 0) * CFrame.Angles(0, math.rad(-90), 0)
+            if player.Character then
+                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.Health = 0
                 end
-            end)
+            end
         end
     end,
 })
