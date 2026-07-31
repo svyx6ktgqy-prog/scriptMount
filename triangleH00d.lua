@@ -2626,7 +2626,7 @@ CloneTab:CreateButton({
 --#WORLD CUP
 
 ---------------------------------------------------------
--- INICIO APARTADO: FESTEJO (100% Adaptable a Clones/Morphs)
+-- INICIO APARTADO: FESTEJO (Limpieza de Efectos Mejorada)
 ---------------------------------------------------------
 local Tab = Window:CreateTab("Festejo")
 
@@ -2634,6 +2634,8 @@ local player = game:GetService("Players").LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 local isCelebrating = false
 local celebrationAssets = {}
+local activeEffects = {} -- Rastreará fuegos artificiales y sonidos en curso
+local originalJoints = {} -- Guardará la posición original de los brazos
 
 -- IDs de Assets
 local CUP_MODEL_ID = "rbxassetid://118466807930342"
@@ -2646,8 +2648,32 @@ local FIREWORK_SOUNDS = {
 local FESTEJO_PARTICLES_ID = "rbxassetid://79124632949757"
 
 ---------------------------------------------------------
--- FUNCIONES DE EFECTOS
+-- FUNCIONES DE EFECTOS Y LIMPIEZA
 ---------------------------------------------------------
+local function cleanupCelebration()
+    -- Destruir assets fijos (Copa, UI, Attachments)
+    for _, asset in pairs(celebrationAssets) do
+        if asset and asset.Parent then asset:Destroy() end
+    end
+    celebrationAssets = {}
+    
+    -- Destruir efectos dinámicos en vuelo (Fuegos artificiales, sonidos)
+    for _, effect in pairs(activeEffects) do
+        if effect and effect.Parent then effect:Destroy() end
+    end
+    activeEffects = {}
+
+    -- Limpiar GUI por si acaso
+    local orphanedGui = PlayerGui:FindFirstChild("SoccerSlideGUI")
+    if orphanedGui then orphanedGui:Destroy() end
+
+    -- Restaurar brazos a su posición original
+    for joint, origC0 in pairs(originalJoints) do
+        pcall(function() joint.C0 = origC0 end)
+    end
+    originalJoints = {}
+end
+
 local function createDenseConfetti(parent)
     local emitter = Instance.new("ParticleEmitter")
     emitter.Name = "ConfettiDenso"
@@ -2707,6 +2733,7 @@ local function spawn3DCylinderConfetti(root)
         rot.AngularVelocity = Vector3.new(math.random(-30,30), math.random(-30,30), math.random(-30,30))
         
         cylinder.Parent = workspace
+        table.insert(activeEffects, cylinder)
         task.delay(4, function() if cylinder then cylinder:Destroy() end end)
     end
 end
@@ -2723,6 +2750,7 @@ local function spawnFirework(char)
     firework.Material = Enum.Material.Neon
     firework.CanCollide = false
     firework.Parent = workspace
+    table.insert(activeEffects, firework)
 
     local isDud = math.random(1, 100) <= 15
     local bv = Instance.new("BodyVelocity", firework)
@@ -2740,6 +2768,9 @@ local function spawnFirework(char)
     launchSound:Play()
 
     task.delay(isDud and 1.2 or 3, function()
+        -- FRENO: Si el switch se apagó mientras el cohete volaba, no explotes
+        if not isCelebrating then return end 
+
         if firework.Parent then
             local exp = Instance.new("Explosion", workspace)
             exp.Position = firework.Position
@@ -2749,10 +2780,13 @@ local function spawnFirework(char)
             bang.SoundId = FIREWORK_SOUNDS[math.random(1, #FIREWORK_SOUNDS)]
             bang.Volume = 6
             bang.PlayOnRemove = true
+            table.insert(activeEffects, bang)
             bang:Destroy()
 
             local attachment = Instance.new("Attachment", workspace.Terrain)
             attachment.WorldPosition = firework.Position
+            table.insert(activeEffects, attachment)
+
             local sparks = Instance.new("ParticleEmitter", attachment)
             sparks.Texture = "rbxassetid://7369527715"
             sparks.Color = ColorSequence.new(Color3.fromHSV(math.random(), 1, 1))
@@ -2763,7 +2797,7 @@ local function spawnFirework(char)
             sparks.Lifetime = NumberRange.new(1.5, 3)
             sparks.LightEmission = 1
             sparks:Emit(300)
-            task.delay(4, function() attachment:Destroy() end)
+            task.delay(4, function() if attachment then attachment:Destroy() end end)
             
             firework:Destroy()
         end
@@ -2771,7 +2805,7 @@ local function spawnFirework(char)
 end
 
 ---------------------------------------------------------
--- BOTÓN DE DESLIZAMIENTO (100% Adaptable)
+-- BOTÓN DE DESLIZAMIENTO
 ---------------------------------------------------------
 local function createSlideButton()
     if PlayerGui:FindFirstChild("SoccerSlideGUI") then
@@ -2838,22 +2872,20 @@ local function createSlideButton()
         bv.MaxForce = Vector3.new(100000, 0, 100000)
         bv.Velocity = root.CFrame.LookVector * initialSpeed 
 
-        -- Búsqueda universal de brazos para adaptarse a cualquier clon/morph
         local rightJoint = char:FindFirstChild("RightShoulder", true) or char:FindFirstChild("Right Shoulder", true)
         local leftJoint = char:FindFirstChild("LeftShoulder", true) or char:FindFirstChild("Left Shoulder", true)
-        local rOriginalC0, lOriginalC0
+        local rOriginalSlideC0, lOriginalSlideC0
         local cupWeld
         local head = char:FindFirstChild("Head")
         
         pcall(function()
-            if rightJoint then rOriginalC0 = rightJoint.C0 rightJoint.C0 = rightJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(20)) end
-            if leftJoint then lOriginalC0 = leftJoint.C0 leftJoint.C0 = leftJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(-20)) end
+            if rightJoint then rOriginalSlideC0 = rightJoint.C0 rightJoint.C0 = rightJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(20)) end
+            if leftJoint then lOriginalSlideC0 = leftJoint.C0 leftJoint.C0 = leftJoint.C0 * CFrame.Angles(math.rad(-110), 0, math.rad(-20)) end
 
             local cup = char:FindFirstChild("WorldCup_Gemini")
             if cup then
                 cupWeld = cup:FindFirstChild("CupWeld_Gemini")
                 if cupWeld then
-                    -- Ajusta dinámicamente la posición al deslizarse
                     if head then
                         cupWeld.C0 = CFrame.new(0, (head.Size.Y / 2) + 0.5, 2.5) * CFrame.Angles(math.rad(90), 0, 0)
                     else
@@ -2882,8 +2914,8 @@ local function createSlideButton()
         game.Debris:AddItem(trailA1, 1)
         
         pcall(function()
-            if rightJoint and rOriginalC0 then rightJoint.C0 = rOriginalC0 end
-            if leftJoint and lOriginalC0 then leftJoint.C0 = lOriginalC0 end
+            if rightJoint and rOriginalSlideC0 then rightJoint.C0 = rOriginalSlideC0 end
+            if leftJoint and lOriginalSlideC0 then leftJoint.C0 = lOriginalSlideC0 end
             
             if cupWeld then
                 if head then
@@ -2906,16 +2938,6 @@ end
 ---------------------------------------------------------
 -- LÓGICA PRINCIPAL: SETUP DINÁMICO
 ---------------------------------------------------------
-local function cleanupCelebration()
-    for _, asset in pairs(celebrationAssets) do
-        if asset and asset.Parent then asset:Destroy() end
-    end
-    celebrationAssets = {}
-    
-    local orphanedGui = PlayerGui:FindFirstChild("SoccerSlideGUI")
-    if orphanedGui then orphanedGui:Destroy() end
-end
-
 local function applyCelebrationToCharacter(char)
     if not isCelebrating or not char then return end
     
@@ -2926,11 +2948,9 @@ local function applyCelebrationToCharacter(char)
 
     cleanupCelebration()
 
-    -- 1. Crear el botón de deslizarse
     local slideGui = createSlideButton()
     table.insert(celebrationAssets, slideGui)
 
-    -- 2. Entregar la copa (Altura adaptable mediante la cabeza)
     pcall(function()
         local cupObjects = game:GetObjects(CUP_MODEL_ID)
         local cup = cupObjects[1]
@@ -2960,7 +2980,6 @@ local function applyCelebrationToCharacter(char)
         end
     end)
 
-    -- 3. Crear Attachments y Confeti
     local chaosAttachment = Instance.new("Attachment", root)
     table.insert(celebrationAssets, chaosAttachment)
     
@@ -2973,11 +2992,14 @@ local function applyCelebrationToCharacter(char)
     festejoEmitter.Size = NumberSequence.new(3)
     table.insert(celebrationAssets, festejoEmitter)
 
-    -- 4. Levantar los brazos de forma universal
     pcall(function()
         local rightJoint = char:FindFirstChild("RightShoulder", true) or char:FindFirstChild("Right Shoulder", true)
         local leftJoint = char:FindFirstChild("LeftShoulder", true) or char:FindFirstChild("Left Shoulder", true)
         
+        -- Guardar la pose original para restaurarla limpia al apagar
+        if rightJoint and not originalJoints[rightJoint] then originalJoints[rightJoint] = rightJoint.C0 end
+        if leftJoint and not originalJoints[leftJoint] then originalJoints[leftJoint] = leftJoint.C0 end
+
         if rightJoint then rightJoint.C0 = rightJoint.C0 * CFrame.Angles(math.rad(150), 0, math.rad(-20)) end
         if leftJoint then leftJoint.C0 = leftJoint.C0 * CFrame.Angles(math.rad(150), 0, math.rad(20)) end
     end)
@@ -2993,11 +3015,8 @@ Tab:CreateToggle({
         isCelebrating = Value
 
         if isCelebrating then
-            -- Aplica al instante
             applyCelebrationToCharacter(player.Character)
 
-            -- Bucle Maestro: Mantiene la cámara vibrando, lanza fuegos artificiales 
-            -- y RE-APLICA los efectos si te clonas o mueres con el toggle prendido.
             task.spawn(function()
                 local cam = workspace.CurrentCamera
                 local lastCharacter = player.Character
@@ -3005,16 +3024,14 @@ Tab:CreateToggle({
                 while isCelebrating do
                     local currentChar = player.Character
                     
-                    -- Si detecta que cambiaste de avatar, te clonaste o reviviste:
                     if currentChar and currentChar ~= lastCharacter then
                         lastCharacter = currentChar
-                        task.wait(0.5) -- Pausa breve para que el clon cargue completo
+                        task.wait(0.5) 
                         if isCelebrating then
                             applyCelebrationToCharacter(currentChar)
                         end
                     end
                     
-                    -- Lógica constante de la celebración
                     if currentChar then
                         local root = currentChar:FindFirstChild("HumanoidRootPart")
                         local humanoid = currentChar:FindFirstChildOfClass("Humanoid")
@@ -3041,16 +3058,9 @@ Tab:CreateToggle({
                 end
             end)
         else
-            -- APAGADO: Limpia todo y te reinicia
+            -- APAGADO: Limpia copa, brazos y efectos instantáneamente sin matarte
             isCelebrating = false
             cleanupCelebration()
-            
-            if player.Character then
-                local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    humanoid.Health = 0
-                end
-            end
         end
     end,
 })
