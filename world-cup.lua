@@ -203,7 +203,7 @@ local function createSlideButton()
         dustEmitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 2), NumberSequenceKeypoint.new(1, 4)})
         dustEmitter.Color = ColorSequence.new(Color3.fromRGB(200, 200, 200))
         dustEmitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1)})
-        dustেম্বর.Speed = NumberRange.new(5, 10)
+        dustEmitter.Speed = NumberRange.new(5, 10)
         dustEmitter.VelocitySpread = 45
         dustEmitter.EmissionDirection = Enum.NormalId.Back -- Sale hacia atrás
         dustEmitter.Rate = 50
