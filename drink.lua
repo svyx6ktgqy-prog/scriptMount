@@ -285,7 +285,7 @@ local function updateAnimations()
             if animScript and animScript:IsA("LocalScript") then animScript.Disabled = true end
         end
 
-        -- Solo controlamos manualmente las animaciones de los clones (o del original si no lo controlamos)
+        -- Solo controlamos manualmente las animaciones de los clones
         if body ~= originalCharacter or (body == originalCharacter and body ~= LocalPlayer.Character) then
             if not customAnimators[body] then setupAnimations(body) end
 
@@ -294,21 +294,25 @@ local function updateAnimations()
             local hum = body:FindFirstChild("Humanoid")
             
             if root and hum and animData then
-                -- Usamos AssemblyLinearVelocity (más preciso) con fallback a Velocity
                 local velocity = root.AssemblyLinearVelocity or root.Velocity
                 local flatVel = Vector3.new(velocity.X, 0, velocity.Z)
                 local speed = flatVel.Magnitude
                 
                 local isRotating = body:GetAttribute("IsRotating") or false
-                -- Detectar si el humanoide está INTENTANDO moverse, no solo la velocidad física
                 local isTryingToMove = hum.MoveDirection.Magnitude > 0.05
 
                 local targetState = "idle"
                 
-                -- Lógica de transición de estados: Umbrales más sensibles
+                -- Lógica con memoria (Anti-Tartamudeo / Anti-Glitch)
                 if speed > 11 then
                     targetState = "run"
-                elseif speed > 0.1 or isRotating or isTryingToMove then
+                    animData.lastMoveTime = tick()
+                elseif speed > 0.2 or isRotating or isTryingToMove then
+                    targetState = "walk"
+                    animData.lastMoveTime = tick()
+                elseif animData.lastMoveTime and (tick() - animData.lastMoveTime < 0.25) then
+                    -- Si se detuvo hace menos de 0.25 seg, asume que es una micro-parada.
+                    -- Evita que la animación se reinicie frenéticamente (el glitch).
                     targetState = "walk"
                 end
                 
@@ -323,25 +327,24 @@ local function updateAnimations()
                 -- Aplicar cambio de estado de animación
                 if animData.currentState ~= targetState then
                     if animData.currentState ~= "none" and animData.tracks[animData.currentState] then
-                        animData.tracks[animData.currentState]:Stop(0.15) -- Transición más rápida
+                        animData.tracks[animData.currentState]:Stop(0.25) -- Transición suave
                     end
                     if targetState ~= "none" and animData.tracks[targetState] then
-                        animData.tracks[targetState]:Play(0.15)
+                        animData.tracks[targetState]:Play(0.25) -- Fundido suave
                     end
                     animData.currentState = targetState
                 end
                 
-                -- ANTI-ARRASTRE DE PIES: Ajuste de velocidad
+                -- Suavizado de velocidad para que no parezca que arrancan de golpe
                 if targetState == "walk" or targetState == "run" then
                     local track = animData.tracks[targetState]
                     if track then
-                        local playbackSpeed = 1.0
-                        if speed > 0.1 then
-                            playbackSpeed = speed / 14
-                        end
-                        -- El truco principal: Limitamos el mínimo a 0.95 en lugar de 0.5. 
-                        -- Así siempre mueven las piernas aunque el paso sea corto.
-                        track:AdjustSpeed(math.clamp(playbackSpeed, 0.95, 1.8))
+                        local baseSpeed = (speed > 1) and (speed / 14) or 0.8
+                        if isRotating and speed < 1 then baseSpeed = 0.8 end
+                        
+                        -- Usamos 0.6 como mínimo. Evita que patinen en cámara lenta, 
+                        -- pero no genera espasmos rápidos.
+                        track:AdjustSpeed(math.clamp(baseSpeed, 0.6, 1.5))
                     end
                 end
             end
