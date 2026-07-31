@@ -294,16 +294,21 @@ local function updateAnimations()
             local hum = body:FindFirstChild("Humanoid")
             
             if root and hum and animData then
-                local flatVel = Vector3.new(root.Velocity.X, 0, root.Velocity.Z)
+                -- Usamos AssemblyLinearVelocity (más preciso) con fallback a Velocity
+                local velocity = root.AssemblyLinearVelocity or root.Velocity
+                local flatVel = Vector3.new(velocity.X, 0, velocity.Z)
                 local speed = flatVel.Magnitude
+                
                 local isRotating = body:GetAttribute("IsRotating") or false
+                -- Detectar si el humanoide está INTENTANDO moverse, no solo la velocidad física
+                local isTryingToMove = hum.MoveDirection.Magnitude > 0.05
 
                 local targetState = "idle"
                 
-                -- Lógica de transición de estados
+                -- Lógica de transición de estados: Umbrales más sensibles
                 if speed > 11 then
                     targetState = "run"
-                elseif speed > 0.5 or isRotating then
+                elseif speed > 0.1 or isRotating or isTryingToMove then
                     targetState = "walk"
                 end
                 
@@ -315,24 +320,28 @@ local function updateAnimations()
                     targetState = "fall"
                 end
 
-                -- Aplicar cambio de estado
+                -- Aplicar cambio de estado de animación
                 if animData.currentState ~= targetState then
                     if animData.currentState ~= "none" and animData.tracks[animData.currentState] then
-                        animData.tracks[animData.currentState]:Stop(0.2)
+                        animData.tracks[animData.currentState]:Stop(0.15) -- Transición más rápida
                     end
                     if targetState ~= "none" and animData.tracks[targetState] then
-                        animData.tracks[targetState]:Play(0.2)
+                        animData.tracks[targetState]:Play(0.15)
                     end
                     animData.currentState = targetState
                 end
                 
-                -- Ajustar velocidad de caminar/correr de manera realista
+                -- ANTI-ARRASTRE DE PIES: Ajuste de velocidad
                 if targetState == "walk" or targetState == "run" then
                     local track = animData.tracks[targetState]
                     if track then
-                        -- Si está rotando pero quieto, le damos una velocidad base para la animación
-                        local playbackSpeed = (speed > 0.5) and (speed / 16) or 0.8
-                        track:AdjustSpeed(math.clamp(playbackSpeed, 0.5, 1.8))
+                        local playbackSpeed = 1.0
+                        if speed > 0.1 then
+                            playbackSpeed = speed / 14
+                        end
+                        -- El truco principal: Limitamos el mínimo a 0.95 en lugar de 0.5. 
+                        -- Así siempre mueven las piernas aunque el paso sea corto.
+                        track:AdjustSpeed(math.clamp(playbackSpeed, 0.95, 1.8))
                     end
                 end
             end
