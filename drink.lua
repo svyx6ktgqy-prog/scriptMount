@@ -285,7 +285,6 @@ local function updateAnimations()
             if animScript and animScript:IsA("LocalScript") then animScript.Disabled = true end
         end
 
-        -- Solo controlamos manualmente las animaciones de los clones
         if body ~= originalCharacter or (body == originalCharacter and body ~= LocalPlayer.Character) then
             if not customAnimators[body] then setupAnimations(body) end
 
@@ -299,57 +298,64 @@ local function updateAnimations()
                 local speed = flatVel.Magnitude
                 
                 local isRotating = body:GetAttribute("IsRotating") or false
-                local isTryingToMove = hum.MoveDirection.Magnitude > 0.05
+                local isMovingToTarget = body:GetAttribute("IsMovingToTarget") or false
+                local isTryingToMove = hum.MoveDirection.Magnitude > 0.01
 
-                local targetState = "idle"
+                local targetState = animData.currentState
                 
-                -- Lógica con memoria (Anti-Tartamudeo / Anti-Glitch)
-                if speed > 11 then
-                    targetState = "run"
-                    animData.lastMoveTime = tick()
-                elseif speed > 0.2 or isRotating or isTryingToMove then
-                    targetState = "walk"
-                    animData.lastMoveTime = tick()
-                elseif animData.lastMoveTime and (tick() - animData.lastMoveTime < 0.25) then
-                    -- Si se detuvo hace menos de 0.25 seg, asume que es una micro-parada.
-                    -- Evita que la animación se reinicie frenéticamente (el glitch).
-                    targetState = "walk"
-                end
-                
-                -- Detectar saltos o caídas
+                -- Lógica principal de estados
                 local humState = hum:GetState()
                 if humState == Enum.HumanoidStateType.Jumping then
                     targetState = "jump"
                 elseif humState == Enum.HumanoidStateType.Freefall then
                     targetState = "fall"
+                else
+                    -- Si hay CUALQUIER intención de moverse o rotar
+                    if speed > 0.1 or isRotating or isTryingToMove or isMovingToTarget then
+                        animData.lastMoveTime = tick()
+                        if speed > 11 then
+                            targetState = "run"
+                        else
+                            targetState = "walk"
+                        end
+                    else
+                        -- Memoria de 0.4 segundos: Evita el glitch de reseteo si hacen una micro-parada
+                        if animData.lastMoveTime and (tick() - animData.lastMoveTime < 0.4) then
+                            targetState = (animData.currentState == "run") and "run" or "walk"
+                        else
+                            targetState = "idle"
+                        end
+                    end
                 end
 
-                -- Aplicar cambio de estado de animación
+                -- Transición fluida entre animaciones (0.3 segundos de fundido)
                 if animData.currentState ~= targetState then
                     if animData.currentState ~= "none" and animData.tracks[animData.currentState] then
-                        animData.tracks[animData.currentState]:Stop(0.25) -- Transición suave
+                        animData.tracks[animData.currentState]:Stop(0.3)
                     end
                     if targetState ~= "none" and animData.tracks[targetState] then
-                        animData.tracks[targetState]:Play(0.25) -- Fundido suave
+                        animData.tracks[targetState]:Play(0.3)
                     end
                     animData.currentState = targetState
                 end
                 
-                -- Suavizado de velocidad para que no parezca que arrancan de golpe
+                -- Velocidad de las piernas suavizada
                 if targetState == "walk" or targetState == "run" then
                     local track = animData.tracks[targetState]
                     if track then
-                        local baseSpeed = (speed > 1) and (speed / 14) or 0.8
-                        if isRotating and speed < 1 then baseSpeed = 0.8 end
-                        
-                        -- Usamos 0.6 como mínimo. Evita que patinen en cámara lenta, 
-                        -- pero no genera espasmos rápidos.
-                        track:AdjustSpeed(math.clamp(baseSpeed, 0.6, 1.5))
+                        local playbackSpeed = 1
+                        if speed > 1 then
+                            playbackSpeed = speed / 14
+                        elseif isRotating then
+                            playbackSpeed = 0.85
+                        end
+                        -- Rango conservador para que nunca se vea muy rápido ni muy lento
+                        track:AdjustSpeed(math.clamp(playbackSpeed, 0.75, 1.4))
                     end
                 end
             end
         else
-            -- Si es el jugador actual original, aseguramos que su script nativo corra
+            -- Jugador original
             local animScript = body:FindFirstChild("Animate")
             if animScript and animScript:IsA("LocalScript") and animScript.Disabled then
                 animScript.Disabled = false
@@ -396,7 +402,7 @@ btnNext.MouseButton1Click:Connect(function() switchCharacter(activeIndex + 1) en
 btnOrig.MouseButton1Click:Connect(function() switchCharacter(1) end) 
 
 -- ==========================================
--- LÓGICA DEL ENJAMBRE 
+-- LÓGICA DEL ENJAMBRE (Con Histéresis Anti-Glitch)
 -- ==========================================
 local MIN_SPACING = 3.5                
 local GOLDEN_ANGLE = 2.3999632297286533 
@@ -461,9 +467,7 @@ RunService.Heartbeat:Connect(function()
             
             if isSwarmJumping then
                 local now = tick()
-                if not cloneJumpDelays[body] then
-                    cloneJumpDelays[body] = now + (math.random(0, 40) / 100)
-                end
+                if not cloneJumpDelays[body] then cloneJumpDelays[body] = now + (math.random(0, 40) / 100) end
                 if now >= cloneJumpDelays[body] then
                     hum.Jump = true
                     cloneJumpDelays[body] = now + (math.random(50, 90) / 100)
@@ -472,40 +476,53 @@ RunService.Heartbeat:Connect(function()
                 cloneJumpDelays[body] = nil
             end
 
-            -- Movimiento y Lógica de Rotación Realista
-            if distToTarget2D > 1.5 then
+            -- SISTEMA DE HISTÉRESIS (Evita la vibración en la distancia)
+            local isMovingToTarget = body:GetAttribute("IsMovingToTarget") or false
+            if distToTarget2D > 2.0 then
+                isMovingToTarget = true
+            elseif distToTarget2D < 1.0 then -- Búfer enorme de 1 stud
+                isMovingToTarget = false
+            end
+            body:SetAttribute("IsMovingToTarget", isMovingToTarget)
+
+            -- Movimiento y Lógica
+            if isMovingToTarget then
                 hum.AutoRotate = true
                 hum:MoveTo(targetPosition)
-                body:SetAttribute("IsRotating", false) -- Se mueve, la animación lo cubre
+                body:SetAttribute("IsRotating", false)
                 
                 local lookVector = root.CFrame.LookVector
                 local rayOrigin = root.Position + Vector3.new(0, -0.5, 0) 
                 local rayDirection = lookVector * 3.5 
-                
                 local rayParams = RaycastParams.new()
                 rayParams.FilterType = Enum.RaycastFilterType.Exclude
                 rayParams.FilterDescendantsInstances = bodies
                 
                 local hit = workspace:Raycast(rayOrigin, rayDirection, rayParams)
-                if hit and hit.Instance and hit.Instance.CanCollide then
-                    hum.Jump = true
-                end
+                if hit and hit.Instance and hit.Instance.CanCollide then hum.Jump = true end
             else
                 if not isPlayerMoving then
                     hum.AutoRotate = false
                     local lookAtPos = Vector3.new(activePos.X, root.Position.Y, activePos.Z)
                     
-                    -- Detectar si necesita rotar para mirarte
                     local currentDir = root.CFrame.LookVector
                     local targetDir = (lookAtPos - root.Position).Unit
                     local dot = math.clamp(currentDir:Dot(targetDir), -1, 1)
                     local rotAngle = math.acos(dot)
                     
-                    if rotAngle > 0.08 then -- Si el ángulo es suficientemente grande para rotar
+                    -- SISTEMA DE HISTÉRESIS (Evita vibración en rotación)
+                    local wasRotating = body:GetAttribute("IsRotating") or false
+                    
+                    if rotAngle > 0.15 then 
+                        body:SetAttribute("IsRotating", true)
                         root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, lookAtPos), 0.15)
-                        body:SetAttribute("IsRotating", true) -- Activa la animación de caminar
-                    else
+                    elseif rotAngle < 0.05 then
                         body:SetAttribute("IsRotating", false)
+                    else
+                        -- Si estaba rotando, termina de acomodarse suavemente
+                        if wasRotating then
+                            root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, lookAtPos), 0.15)
+                        end
                     end
                 else
                     hum.AutoRotate = true
@@ -515,7 +532,6 @@ RunService.Heartbeat:Connect(function()
         end
     end
     
-    -- Llamamos a la actualización de animaciones al final de cada frame
     updateAnimations()
 end)
 
