@@ -235,17 +235,23 @@ btnNext.MouseButton1Click:Connect(function() switchCharacter(activeIndex + 1) en
 btnOrig.MouseButton1Click:Connect(function() switchCharacter(1) end) 
 
 -- ==========================================
--- LÓGICA DEL ENJAMBRE (Formación Orgánica + Detección de Cercanía)
+-- LÓGICA DEL ENJAMBRE (Formación Orgánica + Mirada al detenerse)
 -- ==========================================
-local MIN_SPACING = 3.5                -- Distancia mínima de separación entre clones (en studs)
-local GOLDEN_ANGLE = 2.3999632297286533 -- Ángulo áureo para distribución natural sin superposición
+local MIN_SPACING = 3.5                -- Distancia mínima de separación entre clones
+local GOLDEN_ANGLE = 2.3999632297286533 -- Ángulo áureo
 
 RunService.Heartbeat:Connect(function()
     if not followingEnabled then return end
     local activeChar = LocalPlayer.Character
     if not activeChar or not activeChar:FindFirstChild("HumanoidRootPart") then return end
 
+    local activeHum = activeChar:FindFirstChild("Humanoid")
+    if not activeHum then return end
+
     local activePos = activeChar.HumanoidRootPart.Position
+    -- Detectamos si el jugador principal está en movimiento
+    local isPlayerMoving = activeHum.MoveDirection.Magnitude > 0
+
     local bodies = getAllBodies()
     
     -- Filtrar solo los clones que deben moverse
@@ -271,7 +277,6 @@ RunService.Heartbeat:Connect(function()
         local root = body.HumanoidRootPart
         
         -- 1. DISTRIBUCIÓN INTERIOR CAÓTICA Y ORGÁNICA
-        -- Llena el centro y el interior del círculo usando distribución de Fermat/Áurea
         local rFraction = math.sqrt(i / cloneCount) 
         local radius = rFraction * maxRadius
         local angle = i * GOLDEN_ANGLE
@@ -287,7 +292,6 @@ RunService.Heartbeat:Connect(function()
                 local otherPos = otherBody.HumanoidRootPart.Position
                 local dist = (root.Position - otherPos).Magnitude
 
-                -- Si están más cerca que la distancia mínima, se repelen dinámicamente
                 if dist < MIN_SPACING and dist > 0.001 then
                     local pushDir = (root.Position - otherPos).Unit
                     local pushForce = (MIN_SPACING - dist)
@@ -296,17 +300,28 @@ RunService.Heartbeat:Connect(function()
             end
         end
 
-        -- Ajustar el objetivo final agregando el vector de separación
         targetPosition = targetPosition + separationVector
-        
         local distToTarget = (root.Position - targetPosition).Magnitude
         
-        -- Movimiento inteligente
+        -- 3. MOVIMIENTO Y ROTACIÓN INTELIGENTE (MIRAR AL JUGADOR)
         if distToTarget > 1.5 then
+            hum.AutoRotate = true
             hum:MoveTo(targetPosition)
+        else
+            -- El clon ya llegó a su lugar en la manada
+            if not isPlayerMoving then
+                -- Si el líder se detiene, clavan la mirada en él
+                hum.AutoRotate = false
+                local lookAtPos = Vector3.new(activePos.X, root.Position.Y, activePos.Z)
+                -- Rotación suave frame a frame para no ser instantánea robótica
+                root.CFrame = root.CFrame:Lerp(CFrame.lookAt(root.Position, lookAtPos), 0.15)
+            else
+                -- Si el líder sigue corriendo, que sigan su rumbo natural
+                hum.AutoRotate = true
+            end
         end
         
-        -- PROXIMITY JUMP (Auto-salto con Raycast)
+        -- 4. PROXIMITY JUMP (Auto-salto INDIVIDUAL con Raycast)
         local lookVector = root.CFrame.LookVector
         local rayOrigin = root.Position + Vector3.new(0, -1.5, 0) 
         local rayDirection = lookVector * 3.5 
