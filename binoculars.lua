@@ -68,7 +68,7 @@ Tab:CreateButton({
            crosshair.Size = UDim2.new(1, 0, 1, 0)
            crosshair.Position = UDim2.new(0, 0, 0, 0)
            crosshair.BackgroundTransparency = 1
-           crosshair.Image = "rbxassetid://135303495630668"
+           crosshair.Image = "rbxassetid://9036711587"
            crosshair.ScaleType = Enum.ScaleType.Stretch
            crosshair.Visible = false
            crosshair.Parent = mainGui
