@@ -3192,7 +3192,7 @@ BinoTab:CreateButton({
            local crosshair = Instance.new("ImageLabel")
            crosshair.Size = UDim2.new(0, 100, 0, 100) 
            -- Y en 0.47 para subirlo un poco del centro absoluto
-           crosshair.Position = UDim2.new(0.5, 0, 0.45, 0) 
+           crosshair.Position = UDim2.new(0.5, 0, 0.43, 0) 
            crosshair.AnchorPoint = Vector2.new(0.5, 0.5) 
            crosshair.BackgroundTransparency = 1
            crosshair.Image = "rbxassetid://18420284001"
