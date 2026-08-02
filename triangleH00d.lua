@@ -3192,7 +3192,7 @@ BinoTab:CreateButton({
            local crosshair = Instance.new("ImageLabel")
            crosshair.Size = UDim2.new(0, 100, 0, 100) 
            -- Y en 0.47 para subirlo un poco del centro absoluto
-           crosshair.Position = UDim2.new(0.5, 0, 0.43, 0) 
+           crosshair.Position = UDim2.new(0.5, 0, 0.42, 0) 
            crosshair.AnchorPoint = Vector2.new(0.5, 0.5) 
            crosshair.BackgroundTransparency = 1
            crosshair.Image = "rbxassetid://18420284001"
@@ -3265,7 +3265,7 @@ BinoTab:CreateButton({
            -- SLIDER SENSIBILIDAD (RESTAURADO)
            local sliderSensBg = Instance.new("TextButton")
            sliderSensBg.Size = UDim2.new(0.3, 0, 0, 40)
-           sliderSensBg.Position = UDim2.new(0.65, -20, 0.05, 0)
+           sliderSensBg.Position = UDim2.new(0.65, -20, 0.01, 0)
            sliderSensBg.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
            sliderSensBg.BackgroundTransparency = 0.4
            sliderSensBg.Text = "PRECISION x1"
