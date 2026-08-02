@@ -3066,7 +3066,7 @@ Tab:CreateToggle({
 })
 
 -- ==========================================
--- 🔭 APARTADO: BINOCULARES TÁCTICOS + ESCÁNER ADV.
+-- 🔭 APARTADO: BINOCULARES TÁCTICOS + ESCÁNER ADV. (V2)
 -- ==========================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -3149,7 +3149,7 @@ end
 -- LÓGICA PRINCIPAL
 -- ==========================================
 BinoTab:CreateButton({
-   Name = "Equipar Binoculares [SCANNER]",
+   Name = "Equipar Binoculares [SCANNER + SENS]",
    Callback = function()
        local success, errorMessage = pcall(function()
            local character = Player.Character or Player.CharacterAdded:Wait()
@@ -3188,11 +3188,12 @@ BinoTab:CreateButton({
            aimButton.Visible = false
            aimButton.Parent = mainGui
 
-           -- NUEVA MIRA CENTRAL PERFECTA
+           -- MIRA CENTRAL (LIGERAMENTE MÁS ARRIBA)
            local crosshair = Instance.new("ImageLabel")
-           crosshair.Size = UDim2.new(0, 100, 0, 100) -- Tamaño ajustable para que no se estire
-           crosshair.Position = UDim2.new(0.5, 0, 0.5, 0) -- Centrado perfecto X y Y
-           crosshair.AnchorPoint = Vector2.new(0.5, 0.5) -- Punto de anclaje exacto en el medio
+           crosshair.Size = UDim2.new(0, 100, 0, 100) 
+           -- Y en 0.47 para subirlo un poco del centro absoluto
+           crosshair.Position = UDim2.new(0.5, 0, 0.47, 0) 
+           crosshair.AnchorPoint = Vector2.new(0.5, 0.5) 
            crosshair.BackgroundTransparency = 1
            crosshair.Image = "rbxassetid://18420284001"
            crosshair.Visible = false
@@ -3222,8 +3223,9 @@ BinoTab:CreateButton({
 
            -- EFECTOS VISUALES DEL ESCÁNER
            local scannerHighlight = Instance.new("Highlight")
-           scannerHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-           scannerHighlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+           -- Mismo color azul de la línea de escaneo
+           scannerHighlight.FillColor = Color3.fromRGB(0, 150, 255) 
+           scannerHighlight.OutlineColor = Color3.fromRGB(0, 150, 255)
            scannerHighlight.FillTransparency = 0.4
            scannerHighlight.OutlineTransparency = 0
            scannerHighlight.Enabled = false
@@ -3240,7 +3242,7 @@ BinoTab:CreateButton({
            scanLine.CastShadow = false
            scanLine.Parent = workspace
 
-           -- SLIDERS
+           -- SLIDER ZOOM
            local sliderZoomBg = Instance.new("TextButton")
            sliderZoomBg.Size = UDim2.new(0, 50, 0.6, 0)
            sliderZoomBg.Position = UDim2.new(1, -90, 0.2, 0)
@@ -3260,6 +3262,29 @@ BinoTab:CreateButton({
            sliderZoomKnob.Parent = sliderZoomBg
            Instance.new("UICorner", sliderZoomKnob)
 
+           -- SLIDER SENSIBILIDAD (RESTAURADO)
+           local sliderSensBg = Instance.new("TextButton")
+           sliderSensBg.Size = UDim2.new(0.3, 0, 0, 40)
+           sliderSensBg.Position = UDim2.new(0.65, -20, 0.05, 0)
+           sliderSensBg.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+           sliderSensBg.BackgroundTransparency = 0.4
+           sliderSensBg.Text = "PRECISION x1"
+           sliderSensBg.TextColor3 = Color3.fromRGB(255, 255, 255)
+           sliderSensBg.Font = Enum.Font.GothamBold
+           sliderSensBg.TextSize = 14
+           sliderSensBg.AutoButtonColor = false
+           sliderSensBg.Visible = false
+           sliderSensBg.Parent = mainGui
+           Instance.new("UICorner", sliderSensBg)
+
+           local sliderSensKnob = Instance.new("Frame")
+           sliderSensKnob.Size = UDim2.new(0, 35, 1, 0)
+           sliderSensKnob.Position = UDim2.new(0, 0, 0, 0)
+           sliderSensKnob.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+           sliderSensKnob.Active = false 
+           sliderSensKnob.Parent = sliderSensBg
+           Instance.new("UICorner", sliderSensKnob)
+
            -- SYSTEM VARIABLES
            local isAiming = false
            local defaultFOV = 70
@@ -3271,6 +3296,12 @@ BinoTab:CreateButton({
            local targetZoomSliderY = 0
            local actualZoomSliderY = 0
            local draggingZoom = false
+
+           -- SENSITIVITY VARIABLES
+           local targetSensPercentage = 0.1 
+           local actualSensPercentage = 0.1 
+           local precisionLevel = 1 
+           local draggingSens = false
            
            local targetCamRotation = Vector2.new(0, 0)
            local currentCamRotation = Vector2.new(0, 0)
@@ -3295,6 +3326,19 @@ BinoTab:CreateButton({
                targetZoomLevel = minZoomLevel + ((maxZoomLevel - minZoomLevel) * (1 - percentage))
            end
 
+           local function updateSensSlider(inputPos)
+               local maxX = sliderSensBg.AbsoluteSize.X - sliderSensKnob.AbsoluteSize.X
+               if maxX <= 0 then return end
+               
+               local relativeX = math.clamp(inputPos.X - sliderSensBg.AbsolutePosition.X, 0, maxX)
+               local rawPercentage = relativeX / maxX
+               
+               precisionLevel = math.floor(rawPercentage * 10 + 0.5) 
+               targetSensPercentage = precisionLevel / 10 
+               
+               sliderSensBg.Text = "PRECISION x" .. precisionLevel
+           end
+
            sliderZoomBg.InputBegan:Connect(function(input)
                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                    draggingZoom = true
@@ -3302,22 +3346,41 @@ BinoTab:CreateButton({
                end
            end)
 
+           sliderSensBg.InputBegan:Connect(function(input)
+               if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                   draggingSens = true
+                   updateSensSlider(input.Position)
+               end
+           end)
+
            UserInputService.InputEnded:Connect(function(input)
                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                    draggingZoom = false
+                   draggingSens = false
                end
            end)
            
            UserInputService.InputChanged:Connect(function(input)
                if draggingZoom and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                    updateZoomSlider(input.Position)
+               elseif draggingSens and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                   updateSensSlider(input.Position)
                end
 
-               if isAiming and not draggingZoom then
+               -- LOGICA DE CÁMARA + SENS CÁLCULOS
+               if isAiming and not draggingZoom and not draggingSens then
                    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
                        local delta = input.Delta
                        local fovRatio = currentFOV / defaultFOV
-                       local finalMultiplier = (0.005 * fovRatio)
+                       
+                       local baseTurnSpeed = 0.005 
+                       local finalMultiplier
+                       
+                       if precisionLevel == 0 then
+                           finalMultiplier = baseTurnSpeed
+                       else
+                           finalMultiplier = (baseTurnSpeed * fovRatio) / precisionLevel
+                       end
                        
                        targetCamRotation -= Vector2.new(delta.Y * finalMultiplier, delta.X * finalMultiplier)
                        targetCamRotation = Vector2.new(math.clamp(targetCamRotation.X, -math.rad(80), math.rad(80)), targetCamRotation.Y)
@@ -3340,6 +3403,7 @@ BinoTab:CreateButton({
                if isAiming then
                    crosshair.Visible = true
                    sliderZoomBg.Visible = true
+                   sliderSensBg.Visible = true
                    
                    local maxY = sliderZoomBg.AbsoluteSize.Y - sliderZoomKnob.AbsoluteSize.Y
                    targetZoomSliderY = maxY
@@ -3376,6 +3440,7 @@ BinoTab:CreateButton({
                else
                    crosshair.Visible = false
                    sliderZoomBg.Visible = false
+                   sliderSensBg.Visible = false
                    clearScanner()
                    
                    if Lighting:FindFirstChild("UltraDOF") then Lighting.UltraDOF:Destroy() end
@@ -3424,6 +3489,12 @@ BinoTab:CreateButton({
                    if isAiming then
                        actualZoomSliderY = lerp(actualZoomSliderY, targetZoomSliderY, smoothSpeed)
                        sliderZoomKnob.Position = UDim2.new(0, 0, 0, actualZoomSliderY)
+
+                       actualSensPercentage = lerp(actualSensPercentage, targetSensPercentage, smoothSpeed)
+                       local maxSensX = sliderSensBg.AbsoluteSize.X - sliderSensKnob.AbsoluteSize.X
+                       if maxSensX > 0 then
+                           sliderSensKnob.Position = UDim2.new(0, actualSensPercentage * maxSensX, 0, 0)
+                       end
                        
                        local camSmoothSpeed = math.clamp(20 * deltaTime, 0, 1)
                        currentCamRotation = currentCamRotation:Lerp(targetCamRotation, camSmoothSpeed)
@@ -3442,7 +3513,6 @@ BinoTab:CreateButton({
                        -- ==========================================
                        -- SISTEMA DE ESCANEO AVANZADO
                        -- ==========================================
-                       -- Solo escanea si se ha aplicado zoom (desactivado si el zoom está al máximo alejamiento)
                        if targetZoomLevel > (minZoomLevel + 0.5) then
                            local rayParams = RaycastParams.new()
                            rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -3456,7 +3526,7 @@ BinoTab:CreateButton({
                                local targetPlayer = model and Players:GetPlayerFromCharacter(model)
 
                                if targetPlayer then
-                                   -- ESP ROJO EN LA PARTE EXACTA
+                                   -- ESP EN LA PARTE EXACTA
                                    scannerHighlight.Adornee = hitPart
                                    scannerHighlight.Enabled = true
 
@@ -3500,7 +3570,7 @@ BinoTab:CreateButton({
                                clearScanner()
                            end
                        else
-                           clearScanner() -- Se desactiva el escáner si alejas la cámara al máximo
+                           clearScanner() 
                        end
                    end
 
@@ -3540,13 +3610,13 @@ BinoTab:CreateButton({
                if isAiming then toggleAim() end
                if renderConnection then renderConnection:Disconnect() renderConnection = nil end
                if viewModel then viewModel:Destroy() viewModel = nil end
-               if scanLine then scanLine:Destroy() end -- Destruir escáner físico por seguridad
+               if scanLine then scanLine:Destroy() end 
                Camera.FieldOfView = defaultFOV
            end)
 
            tool.Parent = Player.Backpack
            if typeof(Rayfield) ~= "nil" then
-               Rayfield:Notify({Title = "SISTEMA INSTALADO", Content = "Binoculares con Escáner Térmico Integrado listos.", Duration = 4})
+               Rayfield:Notify({Title = "SISTEMA INSTALADO", Content = "Binoculares con Escáner y Sensibilidad listos.", Duration = 4})
            end
        end)
 
