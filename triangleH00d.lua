@@ -3628,3 +3628,79 @@ BinoTab:CreateButton({
        end
    end,
 })
+
+-- =========================================================================
+-- 📦 MODULE: BLOXFRUIT GAME 
+-- Copy and paste this section at the bottom of your existing Rayfield script
+-- (Make sure your main window is named 'Window')
+-- =========================================================================
+
+-- 1. Create the new Tab
+local BloxFruitTab = Window:CreateTab("BloxFruit GAME", 4483362458) 
+
+-- 2. Create the Toggle (Switch) with the New Loadstring
+local Toggle = BloxFruitTab:CreateToggle({
+   Name = "Load / Clean Gift Fruit",
+   CurrentValue = false,
+   Flag = "BloxFruitToggle", 
+   Callback = function(Value)
+      if Value then
+         -- [ STATE: ON ]
+         -- Executes the new giftFruit script
+         loadstring(game:HttpGet("https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/giftFruit.lua"))()
+         
+         Rayfield:Notify({
+            Title = "Script Loaded",
+            Content = "Gift Fruit script re-executed successfully.",
+            Duration = 3,
+            Image = 4483362458
+         })
+      else
+         -- [ STATE: OFF ]
+         -- Attempts cleanup if the script supports it
+         if _G.MyRunningScript and type(_G.MyRunningScript.DestroyAll) == "function" then
+            _G.MyRunningScript:DestroyAll()
+            _G.MyRunningScript = nil
+         end
+
+         Rayfield:Notify({
+            Title = "Deactivated",
+            Content = "Toggle switched off. Turn ON again to restart.",
+            Duration = 3,
+            Image = 4483362458
+         })
+      end
+   end,
+})
+
+-- 3. Create the Button below the Switch to handle the Game Link
+local GameLinkButton = BloxFruitTab:CreateButton({
+   Name = "Copy Blox Fruits Game Link",
+   Callback = function()
+      -- Copies the share link directly to the user's clipboard
+      local gameLink = "https://www.roblox.com/share?code=69ee58035c3c5f4c8ae3e88ea6a80996&type=ExperienceDetails&stamp=1785797536648"
+      
+      if setclipboard then
+         setclipboard(gameLink)
+         
+         Rayfield:Notify({
+            Title = "Link Copied!",
+            Content = "Game link copied to clipboard. Paste it in your browser to play.",
+            Duration = 4,
+            Image = 4483362458
+         })
+      else
+         -- Fallback if the executor doesn't support setclipboard
+         Rayfield:Notify({
+            Title = "Error",
+            Content = "Your executor does not support clipboard copying.",
+            Duration = 4,
+            Image = 4483362458
+         })
+      end
+   end,
+})
+
+-- =========================================================================
+-- END OF MODULE
+-- =========================================================================
