@@ -163,6 +163,22 @@ FarmTab:CreateButton({
    end,
 })
 
+FarmTab:CreateButton({
+   Name = "🛡️ Desactivar Anti-Cheat/TP del Endpoint",
+   Callback = function()
+      local coinPart = getCoinPart()
+      if coinPart then
+         -- Busca scripts locales dentro del endpoint y los desactiva
+         for _, v in pairs(coinPart:GetDescendants()) do
+            if v:IsA("LocalScript") then
+               v.Disabled = true
+               print("Script de teletransporte desactivado: " .. v.Name)
+            end
+         end
+      end
+   end,
+})
+
 -- Botón 2: Touch Interest Falso
 FarmTab:CreateButton({
    Name = "👻 Ghost Touch Único (1-Shot sin Moverse)",
