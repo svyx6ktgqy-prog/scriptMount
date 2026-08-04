@@ -86,7 +86,7 @@ FarmTab:CreateToggle({
                   -- 4. Descanso de 12 segundos en el mapa inicial
                   if smartFarmActive then
                      -- Bucle de 12 segundos comprobando cada 1 segundo.
-                     for i = 1, 5 do
+                     for i = 1, 10 do
                         if not smartFarmActive then break end
                         task.wait(1)
                      end
