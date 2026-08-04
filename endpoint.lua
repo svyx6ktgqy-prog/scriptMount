@@ -122,23 +122,34 @@ FarmTab:CreateToggle({
    end,
 })
 
--- Switch Ghost Touch (Bucle sin mover al personaje)
 FarmTab:CreateToggle({
-   Name = "👻 Ghost Switch (Reclamo en Bucle sin TP)",
+   Name = "👻 Ghost Free-Roam (Camina Libremente)",
    CurrentValue = false,
-   Flag = "ToggleGhost",
+   Flag = "ToggleGhostFree",
    Callback = function(Value)
       ghostFarmActive = Value
+      
       if ghostFarmActive then
          task.spawn(function()
             while ghostFarmActive do
-               task.wait(0.05)
+               task.wait(0.05) -- Frecuencia del reclamo
                local coinPart = getCoinPart()
                local hrp = getHRP()
+               
                if coinPart and hrp and firetouchinterest then
+                  -- 1. Guardamos la posición por donde estás caminando
+                  local posBeforeTouch = hrp.CFrame
+                  
+                  -- 2. Simulamos el toque (sin anclar el personaje)
                   firetouchinterest(hrp, coinPart, 0)
                   task.wait()
                   firetouchinterest(hrp, coinPart, 1)
+                  
+                  -- 3. Si el servidor te teletransportó abajo (caída brusca en la altura Y)
+                  -- Sabiendo que el endpoint está en Y = 482, si caes por debajo de 400, actuamos.
+                  if hrp.Position.Y < 400 then 
+                     hrp.CFrame = posBeforeTouch -- Te devolvemos a tu caminata instantáneamente
+                  end
                end
             end
          end)
