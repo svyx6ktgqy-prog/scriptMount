@@ -3643,7 +3643,27 @@ BinoTab:CreateButton({
 -- 1. Create the new Tab
 local BloxFruitTab = Window:CreateTab("BloxFruit GAME", 4483362458) 
 
--- 2. Create the Toggle (Switch) with the New Loadstring
+-- Variable para guardar el monto de robux (Default: 1880000)
+local currentRobux = 1880000
+
+-- 2. Create the Input para el monto de Robux
+local RobuxInput = BloxFruitTab:CreateInput({
+   Name = "Mount ROBUX 💉",
+   PlaceholderText = "Default: 1880000",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      -- Validar que el texto ingresado sea un número
+      local amount = tonumber(Text)
+      if amount then
+         currentRobux = amount
+      else
+         -- Si el input está vacío o no es un número, se restaura el valor por defecto
+         currentRobux = 1880000
+      end
+   end,
+})
+
+-- 3. Create the Toggle (Switch) with the New Loadstring
 local Toggle = BloxFruitTab:CreateToggle({
    Name = "Load / Clean Gift Fruit",
    CurrentValue = false,
@@ -3651,12 +3671,15 @@ local Toggle = BloxFruitTab:CreateToggle({
    Callback = function(Value)
       if Value then
          -- [ STATE: ON ]
+         -- Aplica la variable al entorno global (getgenv) ANTES de ejecutar el loadstring
+         getgenv().robux = currentRobux
+         
          -- Executes the new giftFruit script
          loadstring(game:HttpGet("https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/gifterMax.lua"))()
          
          Rayfield:Notify({
             Title = "Script Loaded",
-            Content = "Gift Fruit script re-executed successfully.",
+            Content = "Script re-executed successfully with " .. tostring(currentRobux) .. " Robux.",
             Duration = 3,
             Image = 4483362458
          })
@@ -3678,7 +3701,7 @@ local Toggle = BloxFruitTab:CreateToggle({
    end,
 })
 
--- 3. Create the Button below the Switch to handle the Game Link
+-- 4. Create the Button below the Switch to handle the Game Link
 local GameLinkButton = BloxFruitTab:CreateButton({
    Name = "Copy Blox Fruits Game Link",
    Callback = function()
