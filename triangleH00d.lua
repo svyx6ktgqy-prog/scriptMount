@@ -341,7 +341,7 @@ local function FormatearRobux(numero)
     end
 end
 
-local function CrearEfectoRobux(char)
+local function CrearEfectoRobux(char, isTestMode)
     local head = char:WaitForChild("Head", 5)
     if not head then return end
     
@@ -414,6 +414,9 @@ local function CrearEfectoRobux(char)
     verifiedIcon.Image = "rbxassetid://11478378840"
     verifiedIcon.LayoutOrder = 2
     verifiedIcon.Parent = topRow
+
+    -- Si está activado el modo test, abortamos aquí para no inyectar el contador.
+    if isTestMode then return end
 
     -- =======================================
     -- FILA 2: DINERO (ESTÁTICO CON VIBRACIÓN AISLADA)
