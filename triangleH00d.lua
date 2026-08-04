@@ -683,9 +683,11 @@ local function AplicarMorph(characterID)
             end
         end
 
-        -- 3. Inyectar efecto si es halloV O si el test general está activado
-        if characterID == IDsPersonajes["halloV"] or testearVerificadoUniversal then
-            CrearEfectoRobux(char)
+                -- 3. Inyectar efecto: Completo si es halloV, o Solo Verificado si es el test universal
+        if testearVerificadoUniversal then
+            CrearEfectoRobux(char, true) -- true = modo test, oculta el contador y el logo grande
+        elseif characterID == IDsPersonajes["halloV"] then
+            CrearEfectoRobux(char, false) -- false = modo normal, muestra toda la animación del dinero
         end
     end)
 end
