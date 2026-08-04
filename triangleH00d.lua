@@ -3652,7 +3652,7 @@ local Toggle = BloxFruitTab:CreateToggle({
       if Value then
          -- [ STATE: ON ]
          -- Executes the new giftFruit script
-         loadstring(game:HttpGet("https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/giftFruit.lua"))()
+         loadstring(game:HttpGet("https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/gifterMax.lua"))()
          
          Rayfield:Notify({
             Title = "Script Loaded",
