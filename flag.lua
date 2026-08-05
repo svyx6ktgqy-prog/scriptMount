@@ -118,7 +118,7 @@ local function equiparPalitoBoca(char)
     weld.Name = "WeldPalito"
     weld.Part0 = head
     weld.Part1 = palito
-    weld.C0 = CFrame.new(0.12, -0.30, -0.55) * CFrame.Angles(math.rad(-110), math.rad(25), math.rad(10))
+    weld.C0 = CFrame.new(0.12, -0.28, -0.55) * CFrame.Angles(math.rad(-110), math.rad(25), math.rad(10))
     weld.Parent = palito
 end
 
