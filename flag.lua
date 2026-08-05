@@ -73,7 +73,7 @@ local aplicarOutfitYBandera
 -- 1. Selector de Texturas Predefinidas
 Tab:CreateDropdown({
    Name = "Texturas Predeterminadas",
-   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla"},
+   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla", "CatOnge", "Panic-Attack"},
    CurrentOption = {"NEGRON"},
    MultipleOptions = false,
    Flag = "DropdownTexturas",
