@@ -149,7 +149,7 @@ aplicarOutfitYBandera = function(Value)
         customHatModel = Instance.new("Model")
         customHatModel.Name = "GorroCustomSoldado"
         
-        local elevacionGorro = 0.05
+        local elevacionGorro = 0.06
 
         local function crearLoseta(nombre, tamano, alturaY)
             local bloque = Instance.new("Part")
