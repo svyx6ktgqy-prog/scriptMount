@@ -8,7 +8,10 @@ local texturePresets = {
     ["Darkwole"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8090.jpeg",
     ["Camufla"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8091.jpeg",
     ["CatOnge"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8094.jpeg",
-    ["Panic-Attack"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8071.jpeg"
+    ["Panic-Attack"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8071.jpeg",
+    ["3-Ladys"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8101.jpeg",
+    ["GirlGENTAI"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8104.jpeg",
+    ["BobJHOD"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8105.jpeg"
 }
 
 -- Colores dominantes precalculados para detección automática
@@ -19,7 +22,10 @@ local presetColors = {
     ["Darkwole"] = Color3.fromRGB(30, 30, 45),        
     ["Camufla"] = Color3.fromRGB(85, 107, 47),        
     ["CatOnge"] = Color3.fromRGB(255, 140, 0),        
-    ["Panic-Attack"] = Color3.fromRGB(178, 34, 34)    
+    ["Panic-Attack"] = Color3.fromRGB(178, 34, 34),
+    ["3-Ladys"] = Color3.fromRGB(178, 34, 34),
+    ["GirlGENTAI"] = Color3.fromRGB(178, 34, 34),
+    ["BobJHOD"] = Color3.fromRGB(178, 34, 34)    
 }
 
 local currentTextureUrl = texturePresets["NEGRON"]
@@ -89,7 +95,7 @@ local aplicarOutfitYBandera
 -- =========================================================
 Tab:CreateDropdown({
    Name = "Texturas Predeterminadas",
-   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla", "CatOnge", "Panic-Attack"},
+   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla", "CatOnge", "Panic-Attack", "3-Ladys", "GirlGENTAI", "BobJHOD"},
    CurrentOption = {"NEGRON"},
    MultipleOptions = false,
    Flag = "DropdownTexturas",
