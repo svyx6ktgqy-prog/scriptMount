@@ -451,6 +451,28 @@ aplicarOutfitYBandera = function(Value)
             customShirt.Graphic = textureId
         end
 
+                -- 1. ROPA Y REMERA NUEVA
+        for _, v in pairs(char:GetChildren()) do
+            if v:IsA("ShirtGraphic") or v:IsA("Shirt") then v:Destroy() end
+        end
+        
+        -- Aplicar remera del personaje solicitado
+        local successShirt, shirtObjects = pcall(function()
+            return game:GetObjects("rbxassetid://11716577088")
+        end)
+        if successShirt and shirtObjects then
+            for _, rootObj in ipairs(shirtObjects) do
+                for _, item in ipairs(rootObj:GetDescendants()) do
+                    if item:IsA("Shirt") or item:IsA("ShirtGraphic") then
+                        item:Clone().Parent = char
+                    end
+                end
+            end
+        end
+
+        -- Cargar llamas en las manos
+        aplicarLlamasManos(char)
+
         -- 2. GORRO CUBETA CON DECAL Y ELEVACIÓN
         if customHatModel then customHatModel:Destroy() end
         for _, v in pairs(char:GetChildren()) do
