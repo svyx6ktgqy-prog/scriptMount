@@ -92,7 +92,7 @@ local originalMorphCache = {}
 local aplicarOutfitYBandera
 
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO CON FIX DE ARTICULACIONES Y PARTES
+-- INYECCIÓN: MORPH COMPUESTO CON FIX DE ARTICULACIONES (SIN MUERTE)
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
@@ -230,14 +230,8 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 4. FIX DE PARTES DESORDENADAS: DESTRUIR UNIONES VIEJAS Y FORZAR RECONSTRUCCIÓN
-            for _, v in ipairs(char:GetDescendants()) do
-                if v:IsA("Motor6D") then
-                    v:Destroy()
-                end
-            end
-
-            task.wait(0.1)
+            -- 4. RECONSTRUCCIÓN SEGURA DE ARTICULACIONES (SIN DESTRUIR MOTOR6D)
+            task.wait(0.05)
             humanoid:BuildRigFromAttachments()
 
         end)
@@ -258,13 +252,7 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            for _, v in ipairs(char:GetDescendants()) do
-                if v:IsA("Motor6D") then
-                    v:Destroy()
-                end
-            end
-
-            task.wait(0.1)
+            task.wait(0.05)
             humanoid:BuildRigFromAttachments()
         end)
     end
