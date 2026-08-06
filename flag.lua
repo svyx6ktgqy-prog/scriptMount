@@ -92,11 +92,9 @@ local aplicarOutfitYBandera
 local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
----- =========================================================
--- INYECCIÓN: MORPH COMPUESTO V6 (SOLUCIÓN RADICAL DE BRAZOS)
 -- =========================================================
-local originalMorphCache = originalMorphCache or {}
-
+-- INYECCIÓN: MORPH COMPUESTO V5 (FIX ANATOMÍA R15 Y JOINTS)
+-- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
@@ -118,14 +116,19 @@ local function ToggleMorphCompuesto(encendido)
                                 UsePartColor = v.UsePartColor
                             }
                         end)
-                        if props then
-                            table.insert(originalMorphCache, props)
-                        end
+                        if props then table.insert(originalMorphCache, props) end
                     end
                 end
             end
 
-            -- 1. LIMPIEZA TOTAL DE ACCESORIOS Y CABEZA
+            -- 1. NORMALIZAR ESCALAS DEL HUMANOIDE (CRÍTICO PARA BRAZOS)
+            for _, obj in ipairs(humanoid:GetChildren()) do
+                if obj:IsA("NumberValue") and obj.Name:match("Scale") then
+                    obj.Value = 1
+                end
+            end
+
+            -- 2. LIMPIEZA TOTAL
             for _, v in ipairs(char:GetChildren()) do
                 if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
                     v:Destroy()
@@ -139,41 +142,64 @@ local function ToggleMorphCompuesto(encendido)
                         sub:Destroy()
                     end
                 end
-                if myHead:IsA("MeshPart") then
-                    pcall(function() myHead.TextureID = "" end)
-                end
+                if myHead:IsA("MeshPart") then pcall(function() myHead.TextureID = "" end) end
             end
 
-            -- 2. CARGAR PAQUETE BASE (TORSO Y EXTREMIDADES)
-            local success, objects = pcall(function()
-                return game:GetObjects("rbxassetid://11058199848")
-            end)
-            
-            if success and objects then
+            -- FUNCIÓN AUXILIAR REFACTORIZADA
+            local function aplicarPaquete(assetId, soloPiernas)
+                local success, objects = pcall(function() return game:GetObjects("rbxassetid://" .. tostring(assetId)) end)
+                if not success or not objects then return end
+
                 for _, rootObj in ipairs(objects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
                         if item:IsA("MeshPart") then
-                            local targetPart = char:FindFirstChild(item.Name)
-                            if targetPart and targetPart:IsA("MeshPart") then
-                                pcall(function()
-                                    targetPart.MeshId = item.MeshId
-                                    targetPart.TextureID = item.TextureID
-                                    targetPart.Size = item.Size
-                                    
-                                    local lowerName = item.Name:lower()
-                                    if lowerName == "head" then
-                                        targetPart.TextureID = ""
-                                    elseif lowerName == "uppertorso" or lowerName == "lowertorso" then
-                                        targetPart.TextureID = ""
-                                        targetPart.Color = Color3.fromRGB(20, 20, 20)
-                                        targetPart.UsePartColor = true 
-                                    end
-                                    
-                                    local origSize = targetPart:FindFirstChild("OriginalSize")
-                                    if origSize and origSize:IsA("Vector3Value") then
-                                        origSize.Value = item.Size
-                                    end
-                                end)
+                            local lowerName = item.Name:lower()
+                            local esPierna = lowerName:find("leg") or lowerName:find("foot")
+
+                            if (soloPiernas and esPierna) or (not soloPiernas and not esPierna) then
+                                local targetPart = char:FindFirstChild(item.Name)
+                                if targetPart and targetPart:IsA("MeshPart") then
+                                    pcall(function()
+                                        -- A. Actualizar Attachments PRIMERO para evitar snap de Motor6D
+                                        for _, sourceAtt in ipairs(item:GetChildren()) do
+                                            if sourceAtt:IsA("Attachment") then
+                                                local targetAtt = targetPart:FindFirstChild(sourceAtt.Name)
+                                                if targetAtt and targetAtt:IsA("Attachment") then
+                                                    targetAtt.Position = sourceAtt.Position
+                                                    targetAtt.Orientation = sourceAtt.Orientation
+                                                    local srcOrigPos = sourceAtt:FindFirstChild("OriginalPosition")
+                                                    local tgtOrigPos = targetAtt:FindFirstChild("OriginalPosition")
+                                                    if srcOrigPos and tgtOrigPos then tgtOrigPos.Value = srcOrigPos.Value end
+                                                end
+                                            end
+                                        end
+
+                                        -- B. Actualizar Mesh y Size DESPUÉS de los anclajes
+                                        targetPart.MeshId = item.MeshId
+                                        targetPart.Size = item.Size
+                                        
+                                        local origSize = targetPart:FindFirstChild("OriginalSize")
+                                        if origSize then origSize.Value = item.Size end
+
+                                        -- C. Lógica de texturas
+                                        if lowerName == "head" then
+                                            targetPart.TextureID = ""
+                                        elseif lowerName == "uppertorso" or lowerName == "lowertorso" then
+                                            targetPart.TextureID = ""
+                                            targetPart.Color = Color3.fromRGB(20, 20, 20)
+                                            targetPart.UsePartColor = true 
+                                        else
+                                            targetPart.TextureID = item.TextureID
+                                        end
+                                    end)
+                                end
+                            end
+                        end
+
+                        if item:IsA("CharacterMesh") then
+                            local esPiernaR6 = (item.BodyPart == Enum.BodyPart.LeftLeg or item.BodyPart == Enum.BodyPart.RightLeg)
+                            if (soloPiernas and esPiernaR6) or (not soloPiernas and not esPiernaR6) then
+                                item:Clone().Parent = char
                             end
                         end
 
@@ -186,62 +212,22 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 3. CARGAR PANTALONES
-            local successPants, pantalonesObjects = pcall(function()
-                return game:GetObjects("rbxassetid://6196345139")
-            end)
+            -- 3. CARGAR BASE Y PIERNAS
+            aplicarPaquete(11058199848, false)
+            aplicarPaquete(120778770632792, true)
+
+            -- 4. CARGAR PANTALONES
+            local successPants, pantalonesObjects = pcall(function() return game:GetObjects("rbxassetid://6196345139") end)
             if successPants and pantalonesObjects then
                 for _, rootObj in ipairs(pantalonesObjects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
-                        if item:IsA("Pants") then
-                            item:Clone().Parent = char
-                        end
+                        if item:IsA("Pants") then item:Clone().Parent = char end
                     end
                 end
             end
 
-            -- [SOLUCIÓN RADICAL]: FORZAR ALINEACIÓN Y SOLDADURA DE BRAZOS Y MANOS
-            task.spawn(function()
-                task.wait(0.1)
-                pcall(function()
-                    local upperTorso = char:FindFirstChild("UpperTorso")
-                    if not upperTorso then return end
-
-                    local partesBrazos = {
-                        "LeftUpperArm", "LeftLowerArm", "LeftHand",
-                        "RightUpperArm", "RightLowerArm", "RightHand",
-                        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
-                        "RightUpperLeg", "RightLowerLeg", "RightFoot"
-                    }
-
-                    for _, nombrePart in ipairs(partesBrazos) do
-                        local part = char:FindFirstChild(nombrePart)
-                        if part then
-                            -- Limpiamos joints viejos defectuosos
-                            for _, child in ipairs(part:GetChildren()) do
-                                if child:IsA("Motor6D") or child:IsA("Weld") then
-                                    child:Destroy()
-                                end
-                            end
-
-                            -- Creamos una unión rígida precisa basada en la posición natural del torso
-                            local attachmentName = nombrePart .. "RigAttachment"
-                            local attTarget = part:FindFirstChild(attachmentName)
-                            local attTorso = upperTorso:FindFirstChild(attachmentName)
-
-                            if attTarget and attTorso then
-                                local weld = Instance.new("Weld")
-                                weld.Name = "FixedWeld_" .. nombrePart
-                                weld.Part0 = upperTorso
-                                weld.Part1 = part
-                                weld.C0 = upperTorso.CFrame:ToObjectSpace(attTorso.WorldCFrame)
-                                weld.C1 = part.CFrame:ToObjectSpace(attTarget.WorldCFrame)
-                                weld.Parent = part
-                            end
-                        end
-                    end
-                end)
-            end)
+            -- 5. RECONSTRUIR PUNTOS DE UNIÓN SÍNCRONAMENTE (SIN WAIT)
+            pcall(function() humanoid:BuildRigFromAttachments() end)
 
         end)
     else
@@ -257,20 +243,10 @@ local function ToggleMorphCompuesto(encendido)
                         if data.UsePartColor ~= nil then data.Part.UsePartColor = data.UsePartColor end
                         
                         local origSize = data.Part:FindFirstChild("OriginalSize")
-                        if origSize and origSize:IsA("Vector3Value") then
-                            origSize.Value = data.Size
-                        end
+                        if origSize then origSize.Value = data.Size end
                     end)
                 end
             end
-            
-            -- Limpiar welds forzados al desactivar
-            for _, v in ipairs(char:GetDescendants()) do
-                if v.Name:sub(1, 10) == "FixedWeld_" then
-                    v:Destroy()
-                end
-            end
-            
             humanoid:BuildRigFromAttachments()
         end)
     end
