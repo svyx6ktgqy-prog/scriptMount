@@ -94,7 +94,7 @@ local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO (CARA LIMPIA Y JOINTS PRECISOS)
+-- INYECCIÓN: MORPH COMPUESTO (CARA LIMPIA, JOINTS EXACTOS Y MUSCULOSA)
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
@@ -110,7 +110,8 @@ local function ToggleMorphCompuesto(encendido)
                         Part = v,
                         MeshId = v.MeshId,
                         TextureID = v.TextureID,
-                        Size = v.Size
+                        Size = v.Size,
+                        Color = v.Color -- Guardamos el color por si acaso
                     })
                 end
             end
@@ -124,7 +125,7 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- LIMPIEZA PROFUNDA DE CABEZA (CERO MANCHAS, CERO CARAS)
+            -- LIMPIEZA PROFUNDA DE CABEZA
             local myHead = char:FindFirstChild("Head")
             if myHead then
                 for _, sub in ipairs(myHead:GetDescendants()) do
@@ -133,7 +134,7 @@ local function ToggleMorphCompuesto(encendido)
                     end
                 end
                 if myHead:IsA("MeshPart") then
-                    myHead.TextureID = "" -- Elimina la mancha negra incrustada en la textura original
+                    myHead.TextureID = "" 
                 end
             end
 
@@ -147,7 +148,6 @@ local function ToggleMorphCompuesto(encendido)
                             continue
                         end
 
-                        -- IGNORAR CUALQUIER CARA O TEXTURA QUE VENGA DEL PAQUETE NUEVO
                         if item:IsA("Decal") or item:IsA("SurfaceAppearance") or item:IsA("FaceControls") then
                             continue
                         end
@@ -159,41 +159,42 @@ local function ToggleMorphCompuesto(encendido)
                             if (soloPiernas and esPierna) or (not soloPiernas and not esPierna) then
                                 local targetPart = char:FindFirstChild(item.Name)
                                 if targetPart and targetPart:IsA("MeshPart") then
+                                    
+                                    -- APLICAR MALLA
                                     targetPart.MeshId = item.MeshId
                                     
-                                    -- Si es la cabeza, forzamos que no tenga textura. Si es cuerpo, la copiamos.
+                                    -- FIX: CABEZA LIMPIA Y PECHO NEGRO (MUSCULOSA)
                                     if lowerName == "head" then
                                         targetPart.TextureID = ""
+                                    elseif lowerName == "uppertorso" or lowerName == "lowertorso" then
+                                        targetPart.TextureID = ""
+                                        targetPart.Color = Color3.fromRGB(25, 25, 25) -- Negro carbon para la musculosa
                                     else
                                         targetPart.TextureID = item.TextureID
                                     end
                                     
+                                    -- APLICAR ESCALA
                                     targetPart.Size = item.Size
-                                    
                                     local origSize = targetPart:FindFirstChild("OriginalSize")
                                     if origSize and origSize:IsA("Vector3Value") then
                                         origSize.Value = item.Size
                                     end
                                     
-                                    -- FIX PRECISO DE ARTICULACIONES: Actualizar CFrame y OriginalPosition sin destruir
-                                    for _, att in ipairs(item:GetChildren()) do
-                                        if att:IsA("Attachment") then
-                                            local targetAtt = targetPart:FindFirstChild(att.Name)
-                                            if targetAtt and targetAtt:IsA("Attachment") then
-                                                targetAtt.CFrame = att.CFrame
-                                                
-                                                -- Copiar OriginalPosition si existe (crucial para evitar huecos en los hombros)
-                                                local origPos = targetAtt:FindFirstChild("OriginalPosition")
-                                                local newOrigPos = att:FindFirstChild("OriginalPosition")
-                                                if origPos and newOrigPos and origPos:IsA("Vector3Value") then
-                                                    origPos.Value = newOrigPos.Value
-                                                end
-                                            else
-                                                -- Si el attachment no existía en el jugador, lo clonamos como último recurso
-                                                att:Clone().Parent = targetPart
-                                            end
+                                    -- FIX: BRAZOS PERFECTOS - Reemplazo total de Attachments
+                                    -- Eliminamos los attachments viejos que causan la separación
+                                    for _, oldObj in ipairs(targetPart:GetChildren()) do
+                                        if oldObj:IsA("Attachment") then
+                                            oldObj:Destroy()
                                         end
                                     end
+                                    
+                                    -- Insertamos los nuevos attachments exactos del modelo descargado
+                                    for _, newAtt in ipairs(item:GetChildren()) do
+                                        if newAtt:IsA("Attachment") then
+                                            newAtt:Clone().Parent = targetPart
+                                        end
+                                    end
+
                                 end
                             end
                         end
@@ -243,6 +244,7 @@ local function ToggleMorphCompuesto(encendido)
                     data.Part.MeshId = data.MeshId
                     data.Part.TextureID = data.TextureID
                     data.Part.Size = data.Size
+                    if data.Color then data.Part.Color = data.Color end
                     
                     local origSize = data.Part:FindFirstChild("OriginalSize")
                     if origSize and origSize:IsA("Vector3Value") then
