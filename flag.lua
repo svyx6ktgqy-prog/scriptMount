@@ -94,7 +94,7 @@ local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO (CARA LIMPIA, JOINTS EXACTOS Y MUSCULOSA)
+-- INYECCIÓN: MORPH COMPUESTO V4 (PECHO NEGRO FORZADO Y ARTICULACIONES INTACTAS)
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
@@ -111,14 +111,15 @@ local function ToggleMorphCompuesto(encendido)
                         MeshId = v.MeshId,
                         TextureID = v.TextureID,
                         Size = v.Size,
-                        Color = v.Color -- Guardamos el color por si acaso
+                        Color = v.Color,
+                        UsePartColor = v.UsePartColor -- Guardamos esta propiedad clave
                     })
                 end
             end
         end
 
         pcall(function()
-            -- 1. LIMPIEZA TOTAL DE ACCESORIOS Y ROPA
+            -- 1. LIMPIEZA TOTAL
             for _, v in ipairs(char:GetChildren()) do
                 if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
                     v:Destroy()
@@ -144,11 +145,7 @@ local function ToggleMorphCompuesto(encendido)
                 for _, rootObj in ipairs(objects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
                         
-                        if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("Accessory") or item:IsA("Hat") then
-                            continue
-                        end
-
-                        if item:IsA("Decal") or item:IsA("SurfaceAppearance") or item:IsA("FaceControls") then
+                        if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("Accessory") or item:IsA("Hat") or item:IsA("Decal") or item:IsA("SurfaceAppearance") or item:IsA("FaceControls") then
                             continue
                         end
 
@@ -163,12 +160,13 @@ local function ToggleMorphCompuesto(encendido)
                                     -- APLICAR MALLA
                                     targetPart.MeshId = item.MeshId
                                     
-                                    -- FIX: CABEZA LIMPIA Y PECHO NEGRO (MUSCULOSA)
+                                    -- FIX MUSCULOSA: Forzar UsePartColor para que el color negro aplique
                                     if lowerName == "head" then
                                         targetPart.TextureID = ""
                                     elseif lowerName == "uppertorso" or lowerName == "lowertorso" then
                                         targetPart.TextureID = ""
-                                        targetPart.Color = Color3.fromRGB(25, 25, 25) -- Negro carbon para la musculosa
+                                        targetPart.Color = Color3.fromRGB(20, 20, 20)
+                                        targetPart.UsePartColor = true -- ¡CLAVE PARA QUE SE VEA NEGRO!
                                     else
                                         targetPart.TextureID = item.TextureID
                                     end
@@ -180,18 +178,22 @@ local function ToggleMorphCompuesto(encendido)
                                         origSize.Value = item.Size
                                     end
                                     
-                                    -- FIX: BRAZOS PERFECTOS - Reemplazo total de Attachments
-                                    -- Eliminamos los attachments viejos que causan la separación
-                                    for _, oldObj in ipairs(targetPart:GetChildren()) do
-                                        if oldObj:IsA("Attachment") then
-                                            oldObj:Destroy()
-                                        end
-                                    end
-                                    
-                                    -- Insertamos los nuevos attachments exactos del modelo descargado
-                                    for _, newAtt in ipairs(item:GetChildren()) do
-                                        if newAtt:IsA("Attachment") then
-                                            newAtt:Clone().Parent = targetPart
+                                    -- FIX BRAZOS: Sincronizar Attachments SIN destruirlos para proteger los Motor6D
+                                    for _, sourceAtt in ipairs(item:GetChildren()) do
+                                        if sourceAtt:IsA("Attachment") then
+                                            local targetAtt = targetPart:FindFirstChild(sourceAtt.Name)
+                                            if targetAtt and targetAtt:IsA("Attachment") then
+                                                -- Solo copiamos las posiciones exactas del nuevo modelo
+                                                targetAtt.Position = sourceAtt.Position
+                                                targetAtt.Orientation = sourceAtt.Orientation
+                                                
+                                                -- Sincronizamos la posición original para evitar el espacio en blanco
+                                                local srcOrigPos = sourceAtt:FindFirstChild("OriginalPosition")
+                                                local tgtOrigPos = targetAtt:FindFirstChild("OriginalPosition")
+                                                if srcOrigPos and tgtOrigPos and srcOrigPos:IsA("Vector3Value") then
+                                                    tgtOrigPos.Value = srcOrigPos.Value
+                                                end
+                                            end
                                         end
                                     end
 
@@ -245,6 +247,7 @@ local function ToggleMorphCompuesto(encendido)
                     data.Part.TextureID = data.TextureID
                     data.Part.Size = data.Size
                     if data.Color then data.Part.Color = data.Color end
+                    if data.UsePartColor ~= nil then data.Part.UsePartColor = data.UsePartColor end
                     
                     local origSize = data.Part:FindFirstChild("OriginalSize")
                     if origSize and origSize:IsA("Vector3Value") then
