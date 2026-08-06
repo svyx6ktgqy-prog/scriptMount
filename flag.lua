@@ -94,7 +94,7 @@ local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO CON PROTECCIÓN CONTRA MUERTE
+-- INYECCIÓN: MORPH COMPUESTO CON RECONSTRUCCIÓN DE ARTICULACIONES
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
@@ -102,9 +102,6 @@ local function ToggleMorphCompuesto(encendido)
     if not char or not humanoid then return end
 
     if encendido then
-        -- DESACTIVAR ESTADO DE MUERTE TEMPORALMENTE PARA PREVENIR LA MUERTE INSTANTÁNEA
-        humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-
         -- 0. GUARDAR ESTADO ORIGINAL
         if #originalMorphCache == 0 then
             for _, v in ipairs(char:GetChildren()) do
@@ -113,44 +110,35 @@ local function ToggleMorphCompuesto(encendido)
                         Part = v,
                         MeshId = v.MeshId,
                         TextureID = v.TextureID,
-                        Size = v.Size,
-                        OriginalSize = v:FindFirstChild("OriginalSize") and v.OriginalSize.Value or v.Size,
-                        Transparency = v.Transparency
+                        Size = v.Size
                     })
                 end
             end
         end
 
         pcall(function()
-            -- 1. LIMPIEZA DE ACCESORIOS Y ROPA
+            -- 1. LIMPIEZA TOTAL DE ACCESORIOS Y ROPA
             for _, v in ipairs(char:GetChildren()) do
                 if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
                     v:Destroy()
                 end
             end
 
-            -- REPARACIÓN DE PROPIEDADES EN LAS PARTES DEL CUERPO
-            for _, v in ipairs(char:GetChildren()) do
-                if v:IsA("MeshPart") or v:IsA("BasePart") then
-                    v.Transparency = 0
-                    v.Material = Enum.Material.SmoothPlastic
-                    v.CanCollide = false
-                    v.Anchored = false
-                end
-            end
-
-            -- LIMPIEZA DE CABEZA
+            -- LIMPIEZA PROFUNDA DE CABEZA Y CARA ANTERIOR (Solución a imagen 1 y 2)
             local myHead = char:FindFirstChild("Head")
             if myHead then
-                myHead.Transparency = 0
                 for _, sub in ipairs(myHead:GetDescendants()) do
-                    if sub:IsA("Decal") or sub:IsA("Texture") or sub:IsA("FaceControls") or sub.Name == "face" or sub:IsA("SurfaceAppearance") or sub:IsA("WrapLayer") or sub:IsA("WrapTarget") then
+                    -- FIX: Se añade SurfaceAppearance y SpecialMesh para evitar bugs visuales y caras dobles
+                    if sub:IsA("Decal") or sub:IsA("Texture") or sub:IsA("FaceControls") or sub:IsA("SurfaceAppearance") or sub:IsA("SpecialMesh") or sub.Name == "face" then
                         sub:Destroy()
                     end
                 end
+                if myHead:IsA("MeshPart") then
+                    myHead.TextureID = ""
+                end
             end
 
-            -- FUNCIÓN AUXILIAR DE TRANSFERENCIA DE MALLAS Y ATTACHMENTS
+            -- FUNCIÓN AUXILIAR CON TRANSFERENCIA DE ATTACHMENTS
             local function aplicarPaquete(assetId, soloPiernas)
                 local objects = game:GetObjects("rbxassetid://" .. tostring(assetId))
                 for _, rootObj in ipairs(objects) do
@@ -160,6 +148,7 @@ local function ToggleMorphCompuesto(encendido)
                             continue
                         end
 
+                        -- R15: Transferir Malla y arreglar desmembramiento (Solución a imagen 3)
                         if item:IsA("MeshPart") then
                             local lowerName = item.Name:lower()
                             local esPierna = lowerName:find("leg") or lowerName:find("foot")
@@ -170,29 +159,23 @@ local function ToggleMorphCompuesto(encendido)
                                     targetPart.MeshId = item.MeshId
                                     targetPart.TextureID = item.TextureID
                                     targetPart.Size = item.Size
-                                    targetPart.Transparency = 0
-                                    targetPart.Material = Enum.Material.SmoothPlastic
                                     
-                                    -- Actualizar el valor de escalado interno
+                                    -- FIX: Actualizar OriginalSize para que Roblox calcule bien las uniones
                                     local origSize = targetPart:FindFirstChild("OriginalSize")
                                     if origSize and origSize:IsA("Vector3Value") then
                                         origSize.Value = item.Size
                                     end
                                     
-                                    -- Eliminar SurfaceAppearance si existe
-                                    for _, sub in ipairs(targetPart:GetChildren()) do
-                                        if sub:IsA("SurfaceAppearance") then sub:Destroy() end
+                                    -- FIX: Destruir TODO attachment viejo y usar exclusivamente los del nuevo paquete
+                                    for _, oldAtt in ipairs(targetPart:GetChildren()) do
+                                        if oldAtt:IsA("Attachment") then
+                                            oldAtt:Destroy()
+                                        end
                                     end
 
-                                    -- Copiar exactamente la posición de los Attachments
                                     for _, att in ipairs(item:GetChildren()) do
                                         if att:IsA("Attachment") then
-                                            local targetAtt = targetPart:FindFirstChild(att.Name)
-                                            if targetAtt and targetAtt:IsA("Attachment") then
-                                                targetAtt.CFrame = att.CFrame
-                                            else
-                                                att:Clone().Parent = targetPart
-                                            end
+                                            att:Clone().Parent = targetPart
                                         end
                                     end
                                 end
@@ -212,20 +195,36 @@ local function ToggleMorphCompuesto(encendido)
                             item:Clone().Parent = char
                         end
 
-                        if myHead and item:IsA("Decal") and (item.Name == "face" or item.Name == "Face") then
-                            local newFace = item:Clone()
-                            newFace.Name = "face"
-                            newFace.Parent = myHead
+                        -- Extraer e Inyectar la Cara Nueva limpiamente
+                        if myHead then
+                            -- FIX: Asegurar que copiamos solo el decal de la cara y lo forzamos al frente
+                            if item:IsA("Decal") and (item.Name:lower() == "face" or item.Name:lower() == "cara") then
+                                -- Limpieza extra por si el paquete inyecta varias capas
+                                for _, v in ipairs(myHead:GetChildren()) do
+                                    if v:IsA("Decal") then v:Destroy() end
+                                end
+                                local newFace = item:Clone()
+                                newFace.Name = "face"
+                                newFace.Face = Enum.NormalId.Front
+                                newFace.Parent = myHead
+                            end
+                            
+                            -- FIX: Si el paquete usa texturizado moderno en vez de Decal, transferirlo
+                            if item:IsA("SurfaceAppearance") and item.Parent and item.Parent.Name == "Head" then
+                                item:Clone().Parent = myHead
+                            end
                         end
                     end
                 end
             end
 
-            -- 2. CARGAR BASE Y PIERNAS
+            -- 2. CARGAR BASE DE MUJER (Torso, Brazos, Cabeza y Cara)
             aplicarPaquete(11058199848, false)
+
+            -- 3. CARGAR PIERNAS
             aplicarPaquete(120778770632792, true)
 
-            -- 3. CARGAR PANTALONES
+            -- 4. CARGAR PANTALONES
             local pantalonesObjects = game:GetObjects("rbxassetid://6196345139")
             for _, rootObj in ipairs(pantalonesObjects) do
                 for _, item in ipairs(rootObj:GetDescendants()) do
@@ -235,17 +234,11 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 4. RECONSTRUCCIÓN SEGURA DE ARTICULACIONES
-            task.wait(0.05)
+            -- 5. RECONSTRUIR PUNTOS DE UNIÓN DEL HUMANOIDE
+            task.wait(0.1)
             humanoid:BuildRigFromAttachments()
 
         end)
-
-        -- REACTIVAR ESTADO DE MUERTE DE FORMA SEGURA TRAS EL ENSAMBLAJE
-        task.wait(0.1)
-        if humanoid and humanoid.Parent then
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-        end
     else
         -- RESTAURAR AVATAR ORIGINAL
         pcall(function()
@@ -254,40 +247,18 @@ local function ToggleMorphCompuesto(encendido)
                     data.Part.MeshId = data.MeshId
                     data.Part.TextureID = data.TextureID
                     data.Part.Size = data.Size
-                    data.Part.Transparency = data.Transparency or 0
                     
+                    -- Restaurar también el OriginalSize al desactivar
                     local origSize = data.Part:FindFirstChild("OriginalSize")
-                    if origSize and data.OriginalSize then
-                        origSize.Value = data.OriginalSize
+                    if origSize and origSize:IsA("Vector3Value") then
+                        origSize.Value = data.Size
                     end
                 end
             end
-
-            task.wait(0.05)
             humanoid:BuildRigFromAttachments()
         end)
     end
 end
-
--- =========================================================
--- AUTO-DESACTIVACIÓN DE SWITCHES AL MORIR
--- =========================================================
-local function registrarDetectorMuerte(char)
-    local humanoid = char:WaitForChild("Humanoid")
-    humanoid.Died:Connect(function()
-        if ToggleOutfitRef then ToggleOutfitRef:Set(false) end
-        if ToggleMorphRef then ToggleMorphRef:Set(false) end
-    end)
-end
-
-if game.Players.LocalPlayer.Character then
-    registrarDetectorMuerte(game.Players.LocalPlayer.Character)
-end
-
-game.Players.LocalPlayer.CharacterAdded:Connect(function(newChar)
-    originalMorphCache = {}
-    registrarDetectorMuerte(newChar)
-end)
 
 -- =========================================================
 -- INYECCIÓN QUIRÚRGICA: PALITO EN LA BOCA (DIAGONAL)
