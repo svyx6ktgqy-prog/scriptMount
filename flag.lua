@@ -65,6 +65,49 @@ local function getTextureId()
 end
 
 -- =========================================================
+-- INYECCIÓN: EFECTOS DE FLAMA EN AMBAS MANOS
+-- =========================================================
+local function aplicarLlamasManos(char)
+    -- Limpieza previa si ya existen
+    for _, v in pairs(char:GetChildren()) do
+        if v.Name == "EfectoFlamaManos" then v:Destroy() end
+    end
+
+    local flamaModel = Instance.new("Model")
+    flamaModel.Name = "EfectoFlamaManos"
+    flamaModel.Parent = char
+
+    local manos = {"LeftHand", "RightHand", "Left Arm", "Right Arm"}
+    for _, nombreMano in ipairs(manos) do
+        local manoPart = char:FindFirstChild(nombreMano)
+        if manoPart then
+            local success, assets = pcall(function()
+                return game:GetObjects("rbxassetid://89194108265492")
+            end)
+            
+            if success and assets then
+                for _, asset in ipairs(assets) do
+                    for _, desc in ipairs(asset:GetDescendants()) do
+                        if desc:IsA("ParticleEmitter") or desc:IsA("Fire") or desc:IsA("PointLight") then
+                            desc.Size = desc.Size * 1.8 -- Upscale del efecto
+                            desc.Parent = manoPart
+                        elseif desc:IsA("BasePart") then
+                            desc.Size = desc.Size * 1.5
+                            desc.CFrame = manoPart.CFrame
+                            local weld = Instance.new("WeldConstraint")
+                            weld.Part0 = manoPart
+                            weld.Part1 = desc
+                            weld.Parent = desc
+                            desc.Parent = flamaModel
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- =========================================================
 -- INTERFAZ RAYFIELD
 -- =========================================================
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
