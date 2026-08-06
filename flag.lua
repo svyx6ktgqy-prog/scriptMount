@@ -96,6 +96,10 @@ local ToggleMorphRef = nil
 -- =========================================================
 -- INYECCIÓN: MORPH COMPUESTO V4 (PECHO NEGRO FORZADO Y ARTICULACIONES INTACTAS)
 -- =========================================================
+
+-- IMPORTANTE: Declarar la caché fuera de la función para que persista
+local originalMorphCache = {}
+
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
@@ -103,6 +107,7 @@ local function ToggleMorphCompuesto(encendido)
 
     if encendido then
         -- 0. GUARDAR ESTADO ORIGINAL
+        -- Se ejecuta solo si la caché está vacía para no sobrescribir con el morph ya aplicado
         if #originalMorphCache == 0 then
             for _, v in ipairs(char:GetChildren()) do
                 if v:IsA("MeshPart") then
@@ -141,7 +146,12 @@ local function ToggleMorphCompuesto(encendido)
 
             -- FUNCIÓN AUXILIAR
             local function aplicarPaquete(assetId, soloPiernas)
-                local objects = game:GetObjects("rbxassetid://" .. tostring(assetId))
+                local success, objects = pcall(function()
+                    return game:GetObjects("rbxassetid://" .. tostring(assetId))
+                end)
+                
+                if not success or not objects then return end
+
                 for _, rootObj in ipairs(objects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
                         
@@ -224,11 +234,15 @@ local function ToggleMorphCompuesto(encendido)
             aplicarPaquete(120778770632792, true)
 
             -- 4. CARGAR PANTALONES
-            local pantalonesObjects = game:GetObjects("rbxassetid://6196345139")
-            for _, rootObj in ipairs(pantalonesObjects) do
-                for _, item in ipairs(rootObj:GetDescendants()) do
-                    if item:IsA("Pants") then
-                        item:Clone().Parent = char
+            local successPants, pantalonesObjects = pcall(function()
+                return game:GetObjects("rbxassetid://6196345139")
+            end)
+            if successPants and pantalonesObjects then
+                for _, rootObj in ipairs(pantalonesObjects) do
+                    for _, item in ipairs(rootObj:GetDescendants()) do
+                        if item:IsA("Pants") then
+                            item:Clone().Parent = char
+                        end
                     end
                 end
             end
@@ -255,7 +269,12 @@ local function ToggleMorphCompuesto(encendido)
                     end
                 end
             end
+            
+            -- Opcional: Reconstruir aquí también asegura que las articulaciones vuelvan a su lugar
             humanoid:BuildRigFromAttachments()
+            
+            -- Limpiar la caché si quieres permitir una nueva lectura del estado original más adelante
+            -- originalMorphCache = {} 
         end)
     end
 end
