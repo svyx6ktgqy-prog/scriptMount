@@ -92,7 +92,12 @@ local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
 -- =========================================================
--- INYECCIÓN: MORPH CLONACIÓN Y JOINT SWAP (FIX BRAZOS/BLANCO)
+-- VARIABLES GLOBALES
+-- =========================================================
+local originalMorphCache = {}
+
+-- =========================================================
+-- INYECCIÓN: MORPH MUTACIÓN MATEMÁTICA V7 (SIN MORIR / FIX BRAZOS)
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local player = game:GetService("Players").LocalPlayer
@@ -100,23 +105,73 @@ local function ToggleMorphCompuesto(encendido)
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
     if not char or not humanoid then return end
 
+    -- Función matemática que repara los brazos sin usar el motor de físicas de Roblox
+    local function FixJoints()
+        for _, joint in ipairs(char:GetDescendants()) do
+            if joint:IsA("Motor6D") and joint.Part0 and joint.Part1 then
+                local attName = joint.Name .. "RigAttachment"
+                local att0 = joint.Part0:FindFirstChild(attName)
+                local att1 = joint.Part1:FindFirstChild(attName)
+                if att0 and att1 then
+                    -- Ajuste exacto de los huesos (C0/C1)
+                    joint.C0 = att0.CFrame
+                    joint.C1 = att1.CFrame
+                end
+            end
+        end
+    end
+
     if encendido then
         pcall(function()
-            -- 1. NORMALIZAR ESCALAS DEL HUMANOIDE
+            -- 1. GUARDAR CACHÉ DEL CUERPO ORIGINAL PARA PODER REVERTIR SIN MORIR
+            if #originalMorphCache == 0 then
+                for _, v in ipairs(char:GetChildren()) do
+                    if v:IsA("MeshPart") then
+                        local attachmentsCache = {}
+                        for _, att in ipairs(v:GetChildren()) do
+                            if att:IsA("Attachment") then
+                                attachmentsCache[att.Name] = att.CFrame
+                            end
+                        end
+                        table.insert(originalMorphCache, {
+                            Part = v,
+                            MeshId = v.MeshId,
+                            TextureID = v.TextureID,
+                            Size = v.Size,
+                            Color = v.Color,
+                            UsePartColor = v.UsePartColor,
+                            Attachments = attachmentsCache
+                        })
+                    end
+                end
+            end
+
+            -- 2. NORMALIZAR ESCALAS
             for _, obj in ipairs(humanoid:GetChildren()) do
                 if obj:IsA("NumberValue") and obj.Name:match("Scale") then
                     obj.Value = 1
                 end
             end
 
-            -- FUNCIÓN AUXILIAR: CARGA SEGURA Y CLONACIÓN
-            local function aplicarPaqueteClonado(assetId, soloPiernas)
-                local success, objects = pcall(function() return game:GetObjects("rbxassetid://" .. tostring(assetId)) end)
-                
-                -- Validación crítica: Si falla la descarga, no hacemos nada para evitar el avatar blanco
-                if not success or not objects or #objects == 0 then
-                    return false
+            -- 3. LIMPIEZA DE ROPA
+            for _, v in ipairs(char:GetChildren()) do
+                if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
+                    v:Destroy()
                 end
+            end
+            
+            local myHead = char:FindFirstChild("Head")
+            if myHead then
+                for _, sub in ipairs(myHead:GetDescendants()) do
+                    if sub:IsA("Decal") or sub:IsA("FaceControls") then sub:Destroy() end
+                end
+                pcall(function() myHead.TextureID = "" end)
+            end
+
+            -- 4. FUNCIÓN DE MUTACIÓN (Cambia mallas sin destruir partes)
+            local function aplicarPaquete(assetId, soloPiernas)
+                local success, objects = pcall(function() return game:GetObjects("rbxassetid://" .. tostring(assetId)) end)
+                if not success or not objects then return end
 
                 for _, rootObj in ipairs(objects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
@@ -125,83 +180,92 @@ local function ToggleMorphCompuesto(encendido)
                             local esPierna = lowerName:find("leg") or lowerName:find("foot")
 
                             if (soloPiernas and esPierna) or (not soloPiernas and not esPierna) then
-                                local oldPart = char:FindFirstChild(item.Name)
-                                if oldPart and oldPart:IsA("MeshPart") then
+                                local targetPart = char:FindFirstChild(item.Name)
+                                if targetPart and targetPart:IsA("MeshPart") then
                                     
-                                    -- A. CLONAR LA PARTE DEL PAQUETE
-                                    local newPart = item:Clone()
-                                    newPart.Name = oldPart.Name
-                                    newPart.CFrame = oldPart.CFrame
-                                    
-                                    -- B. FORZAR HERENCIA DE COLOR (EVITA EFECTO BLANCO)
-                                    newPart.Color = oldPart.Color
-                                    newPart.Material = oldPart.Material
-                                    
+                                    -- A. Intercambio de Malla
+                                    targetPart.MeshId = item.MeshId
                                     if lowerName == "head" or lowerName == "uppertorso" or lowerName == "lowertorso" then
-                                        newPart.TextureID = ""
-                                        newPart.UsePartColor = true 
+                                        targetPart.TextureID = ""
+                                        targetPart.UsePartColor = true
                                     else
-                                        if newPart.TextureID == "" then
-                                            newPart.UsePartColor = true
+                                        targetPart.TextureID = item.TextureID
+                                        if targetPart.TextureID == "" then targetPart.UsePartColor = true end
+                                    end
+                                    
+                                    -- B. Escalar la parte
+                                    targetPart.Size = item.Size
+                                    local origSize = targetPart:FindFirstChild("OriginalSize")
+                                    if origSize then origSize.Value = item.Size end
+                                    
+                                    -- C. Reubicar Puntos de Anclaje
+                                    for _, sourceAtt in ipairs(item:GetChildren()) do
+                                        if sourceAtt:IsA("Attachment") then
+                                            local targetAtt = targetPart:FindFirstChild(sourceAtt.Name)
+                                            if targetAtt and targetAtt:IsA("Attachment") then
+                                                targetAtt.CFrame = sourceAtt.CFrame
+                                            end
                                         end
                                     end
-
-                                    -- C. RESCATAR COMPONENTES CRÍTICOS
-                                    for _, child in ipairs(oldPart:GetChildren()) do
-                                        if child:IsA("Motor6D") or child:IsA("Decal") or child:IsA("FaceControls") or child:IsA("Attachment") then
-                                            child.Parent = newPart
-                                        end
-                                    end
-
-                                    -- D. RECONECTAR MOTOR6D (FIX BRAZOS FLOTANTES)
-                                    for _, joint in ipairs(char:GetDescendants()) do
-                                        if joint:IsA("Motor6D") then
-                                            if joint.Part0 == oldPart then joint.Part0 = newPart end
-                                            if joint.Part1 == oldPart then joint.Part1 = newPart end
-                                        end
-                                    end
-
-                                    -- E. REEMPLAZAR EN EL MODELO
-                                    newPart.Parent = char
-                                    oldPart:Destroy()
                                 end
                             end
                         end
                     end
                 end
-                return true
             end
 
-            -- 2. CARGAR PAQUETES
-            local baseCargada = aplicarPaqueteClonado(11058199848, false)
-            local piernasCargadas = aplicarPaqueteClonado(120778770632792, true)
+            -- APLICAR MORPHS
+            aplicarPaquete(11058199848, false)
+            aplicarPaquete(120778770632792, true)
 
-            -- 3. LIMPIAR ROPA SOLO SI LA CARGA FUE EXITOSA
-            if baseCargada or piernasCargadas then
-                for _, v in ipairs(char:GetChildren()) do
-                    if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
-                        v:Destroy()
+            -- CARGAR PANTALONES
+            local successPants, pantalonesObjects = pcall(function() return game:GetObjects("rbxassetid://6196345139") end)
+            if successPants and pantalonesObjects then
+                for _, rootObj in ipairs(pantalonesObjects) do
+                    for _, item in ipairs(rootObj:GetDescendants()) do
+                        if item:IsA("Pants") then item:Clone().Parent = char end
                     end
                 end
+            end
 
-                -- CARGAR PANTALONES NUEVOS
-                local successPants, pantalonesObjects = pcall(function() return game:GetObjects("rbxassetid://6196345139") end)
-                if successPants and pantalonesObjects and #pantalonesObjects > 0 then
-                    for _, rootObj in ipairs(pantalonesObjects) do
-                        for _, item in ipairs(rootObj:GetDescendants()) do
-                            if item:IsA("Pants") then item:Clone().Parent = char end
+            -- 5. RECALCULAR ARTICULACIONES INSTANTÁNEAMENTE (Fix brazos flotantes)
+            FixJoints()
+        end)
+    else
+        -- ==========================================
+        -- RESTAURACIÓN SEGURA (SIN MORIR)
+        -- ==========================================
+        pcall(function()
+            -- Limpiar ropa del morph
+            for _, v in ipairs(char:GetChildren()) do
+                if v:IsA("Pants") or v:IsA("Shirt") or v:IsA("CharacterMesh") then v:Destroy() end
+            end
+
+            -- Reconstruir estructura original desde la caché
+            for _, data in ipairs(originalMorphCache) do
+                if data.Part and data.Part.Parent == char then
+                    data.Part.MeshId = data.MeshId
+                    data.Part.TextureID = data.TextureID
+                    data.Part.Size = data.Size
+                    data.Part.Color = data.Color
+                    data.Part.UsePartColor = data.UsePartColor
+                    
+                    local origSize = data.Part:FindFirstChild("OriginalSize")
+                    if origSize then origSize.Value = data.Size end
+                    
+                    -- Restaurar anclajes
+                    for attName, attCFrame in pairs(data.Attachments) do
+                        local att = data.Part:FindFirstChild(attName)
+                        if att and att:IsA("Attachment") then
+                            att.CFrame = attCFrame
                         end
                     end
                 end
             end
+
+            -- Readaptar esqueleto original
+            FixJoints()
         end)
-    else
-        -- RESTAURAR AVATAR ORIGINAL
-        -- Al usar el método de clonación perfecta, las partes originales se destruyen.
-        -- La forma más estable en executors de devolver el cuerpo a la normalidad es forzar un reset.
-        if humanoid then 
-            humanoid.Health = 0 
-        end
     end
 end
 
