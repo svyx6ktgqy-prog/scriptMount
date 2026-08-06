@@ -93,12 +93,12 @@ local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO V6 (SOLUCIÓN RADICAL DE BRAZOS)
+-- INYECCIÓN: MORPH COMPUESTO V6 (CORRECCIÓN DE SINTAXIS LUA)
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    if not char || not humanoid then return end
+    if not char or not humanoid then return end
 
     if encendido then
         pcall(function()
@@ -125,7 +125,7 @@ local function ToggleMorphCompuesto(encendido)
 
             -- 1. LIMPIEZA TOTAL DE ACCESORIOS Y CABEZA
             for _, v in ipairs(char:GetChildren()) do
-                if v:IsA("Accessory") || v:IsA("Hat") || v:IsA("Shirt") || v:IsA("Pants") || v:IsA("ShirtGraphic") || v:IsA("CharacterMesh") then
+                if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
                     v:Destroy()
                 end
             end
@@ -133,7 +133,7 @@ local function ToggleMorphCompuesto(encendido)
             local myHead = char:FindFirstChild("Head")
             if myHead then
                 for _, sub in ipairs(myHead:GetDescendants()) do
-                    if sub:IsA("Decal") || sub:IsA("Texture") || sub:IsA("FaceControls") || sub:IsA("SurfaceAppearance") || sub:IsA("SpecialMesh") then
+                    if sub:IsA("Decal") or sub:IsA("Texture") or sub:IsA("FaceControls") or sub:IsA("SurfaceAppearance") or sub:IsA("SpecialMesh") then
                         sub:Destroy()
                     end
                 end
@@ -147,12 +147,12 @@ local function ToggleMorphCompuesto(encendido)
                 return game:GetObjects("rbxassetid://11058199848")
             end)
             
-            if success && objects then
+            if success and objects then
                 for _, rootObj in ipairs(objects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
                         if item:IsA("MeshPart") then
                             local targetPart = char:FindFirstChild(item.Name)
-                            if targetPart && targetPart:IsA("MeshPart") then
+                            if targetPart and targetPart:IsA("MeshPart") then
                                 pcall(function()
                                     targetPart.MeshId = item.MeshId
                                     targetPart.TextureID = item.TextureID
@@ -161,14 +161,14 @@ local function ToggleMorphCompuesto(encendido)
                                     local lowerName = item.Name:lower()
                                     if lowerName == "head" then
                                         targetPart.TextureID = ""
-                                    elseif lowerName == "uppertorso" || lowerName == "lowertorso" then
+                                    elseif lowerName == "uppertorso" or lowerName == "lowertorso" then
                                         targetPart.TextureID = ""
                                         targetPart.Color = Color3.fromRGB(20, 20, 20)
                                         targetPart.UsePartColor = true 
                                     end
                                     
                                     local origSize = targetPart:FindFirstChild("OriginalSize")
-                                    if origSize && origSize:IsA("Vector3Value") then
+                                    if origSize and origSize:IsA("Vector3Value") then
                                         origSize.Value = item.Size
                                     end
                                 end)
@@ -188,7 +188,7 @@ local function ToggleMorphCompuesto(encendido)
             local successPants, pantalonesObjects = pcall(function()
                 return game:GetObjects("rbxassetid://6196345139")
             end)
-            if successPants && pantalonesObjects then
+            if successPants and pantalonesObjects then
                 for _, rootObj in ipairs(pantalonesObjects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
                         if item:IsA("Pants") then
@@ -198,8 +198,7 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- [SOLUCIÓN RADICAL]: FORZAR ALINEACIÓN Y SOLDADURA DE BRAZOS Y MANOS
-            -- Esto elimina cualquier separación errónea calculada por el cliente de iOS
+            -- ALINEACIÓN Y SOLDADURA DE BRAZOS Y MANOS
             task.spawn(function()
                 task.wait(0.1)
                 pcall(function()
@@ -216,19 +215,17 @@ local function ToggleMorphCompuesto(encendido)
                     for _, nombrePart in ipairs(partesBrazos) do
                         local part = char:FindFirstChild(nombrePart)
                         if part then
-                            -- Limpiamos joints viejos defectuosos
                             for _, child in ipairs(part:GetChildren()) do
-                                if child:IsA("Motor6D") || child:IsA("Weld") then
+                                if child:IsA("Motor6D") or child:IsA("Weld") then
                                     child:Destroy()
                                 end
                             end
 
-                            -- Creamos una unión rígida precisa basada en la posición natural del torso
                             local attachmentName = nombrePart .. "RigAttachment"
                             local attTarget = part:FindFirstChild(attachmentName)
                             local attTorso = upperTorso:FindFirstChild(attachmentName)
 
-                            if attTarget && attTorso then
+                            if attTarget and attTorso then
                                 local weld = Instance.new("Weld")
                                 weld.Name = "FixedWeld_" .. nombrePart
                                 weld.Part0 = upperTorso
@@ -247,7 +244,7 @@ local function ToggleMorphCompuesto(encendido)
         -- RESTAURAR AVATAR ORIGINAL
         pcall(function()
             for _, data in ipairs(originalMorphCache) do
-                if data.Part && data.Part.Parent == char then
+                if data.Part and data.Part.Parent == char then
                     pcall(function()
                         data.Part.MeshId = data.MeshId
                         data.Part.TextureID = data.TextureID
@@ -256,14 +253,13 @@ local function ToggleMorphCompuesto(encendido)
                         if data.UsePartColor ~= nil then data.Part.UsePartColor = data.UsePartColor end
                         
                         local origSize = data.Part:FindFirstChild("OriginalSize")
-                        if origSize && origSize:IsA("Vector3Value") then
+                        if origSize and origSize:IsA("Vector3Value") then
                             origSize.Value = data.Size
                         end
                     end)
                 end
             end
             
-            -- Limpiar welds forzados al desactivar
             for _, v in ipairs(char:GetDescendants()) do
                 if v.Name:sub(1, 10) == "FixedWeld_" then
                     v:Destroy()
