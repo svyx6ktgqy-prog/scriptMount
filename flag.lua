@@ -92,7 +92,7 @@ local originalMorphCache = {}
 local aplicarOutfitYBandera
 
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO CON RECONSTRUCCIÓN DE ARTICULACIONES
+-- INYECCIÓN: MORPH COMPUESTO CON FIX DE ARTICULACIONES Y PARTES
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
@@ -109,37 +109,43 @@ local function ToggleMorphCompuesto(encendido)
                         MeshId = v.MeshId,
                         TextureID = v.TextureID,
                         Size = v.Size,
-                        -- CORRECCIÓN: Guardamos también el OriginalSize
-                        OriginalSize = v:FindFirstChild("OriginalSize") and v.OriginalSize.Value or v.Size
+                        OriginalSize = v:FindFirstChild("OriginalSize") and v.OriginalSize.Value or v.Size,
+                        Transparency = v.Transparency
                     })
                 end
             end
         end
 
         pcall(function()
-            -- 1. LIMPIEZA TOTAL DE ACCESORIOS Y ROPA
+            -- 1. LIMPIEZA DE ACCESORIOS Y ROPA
             for _, v in ipairs(char:GetChildren()) do
                 if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
                     v:Destroy()
                 end
             end
 
-            -- LIMPIEZA PROFUNDA DE CABEZA Y CARA ANTERIOR
+            -- REPARACIÓN DE PROPIEDADES EN LAS PARTES DEL CUERPO
+            for _, v in ipairs(char:GetChildren()) do
+                if v:IsA("MeshPart") or v:IsA("BasePart") then
+                    v.Transparency = 0
+                    v.Material = Enum.Material.SmoothPlastic
+                    v.CanCollide = false
+                    v.Anchored = false
+                end
+            end
+
+            -- LIMPIEZA DE CABEZA
             local myHead = char:FindFirstChild("Head")
             if myHead then
-                myHead.Transparency = 0 -- CORRECCIÓN: Evita cabezas invisibles
+                myHead.Transparency = 0
                 for _, sub in ipairs(myHead:GetDescendants()) do
-                    -- CORRECCIÓN: Limpiamos SurfaceAppearance y WrapLayers que causan la cara transparente/bugueada
                     if sub:IsA("Decal") or sub:IsA("Texture") or sub:IsA("FaceControls") or sub.Name == "face" or sub:IsA("SurfaceAppearance") or sub:IsA("WrapLayer") or sub:IsA("WrapTarget") then
                         sub:Destroy()
                     end
                 end
-                if myHead:IsA("MeshPart") then
-                    myHead.TextureID = ""
-                end
             end
 
-            -- FUNCIÓN AUXILIAR CON TRANSFERENCIA DE ATTACHMENTS
+            -- FUNCIÓN AUXILIAR DE TRANSFERENCIA DE MALLAS Y ATTACHMENTS
             local function aplicarPaquete(assetId, soloPiernas)
                 local objects = game:GetObjects("rbxassetid://" .. tostring(assetId))
                 for _, rootObj in ipairs(objects) do
@@ -149,7 +155,6 @@ local function ToggleMorphCompuesto(encendido)
                             continue
                         end
 
-                        -- R15: Transferir Malla, Tamaño, Textura y Puntos de Unión (Attachments)
                         if item:IsA("MeshPart") then
                             local lowerName = item.Name:lower()
                             local esPierna = lowerName:find("leg") or lowerName:find("foot")
@@ -160,20 +165,21 @@ local function ToggleMorphCompuesto(encendido)
                                     targetPart.MeshId = item.MeshId
                                     targetPart.TextureID = item.TextureID
                                     targetPart.Size = item.Size
+                                    targetPart.Transparency = 0
+                                    targetPart.Material = Enum.Material.SmoothPlastic
                                     
-                                    -- CORRECCIÓN (PARTES FLOTANTES): Actualizar el OriginalSize
-                                    -- Esto obliga a Roblox a recalcular bien los hombros y caderas.
+                                    -- Actualizar el valor de escalado interno
                                     local origSize = targetPart:FindFirstChild("OriginalSize")
                                     if origSize and origSize:IsA("Vector3Value") then
                                         origSize.Value = item.Size
                                     end
                                     
-                                    -- Limpiar texturas PBR (SurfaceAppearance) que traiga el paquete
+                                    -- Eliminar SurfaceAppearance si existe
                                     for _, sub in ipairs(targetPart:GetChildren()) do
                                         if sub:IsA("SurfaceAppearance") then sub:Destroy() end
                                     end
 
-                                    -- Copiar Attachments para reajustar
+                                    -- Copiar exactamente la posición de los Attachments
                                     for _, att in ipairs(item:GetChildren()) do
                                         if att:IsA("Attachment") then
                                             local targetAtt = targetPart:FindFirstChild(att.Name)
@@ -201,30 +207,20 @@ local function ToggleMorphCompuesto(encendido)
                             item:Clone().Parent = char
                         end
 
-                        -- Extraer e Inyectar la Cara Nueva
-                        if myHead then
-                            if item:IsA("Decal") and (item.Name == "face" or item.Name == "Face") then
-                                local newFace = item:Clone()
-                                newFace.Name = "face"
-                                newFace.Parent = myHead
-                                
-                                -- CORRECCIÓN (FACES DOBLES): Si le ponemos un Decal, eliminamos la textura base
-                                if myHead:IsA("MeshPart") then
-                                    myHead.TextureID = ""
-                                end
-                            end
+                        if myHead and item:IsA("Decal") and (item.Name == "face" or item.Name == "Face") then
+                            local newFace = item:Clone()
+                            newFace.Name = "face"
+                            newFace.Parent = myHead
                         end
                     end
                 end
             end
 
-            -- 2. CARGAR BASE DE MUJER (Torso, Brazos, Cabeza y Cara)
+            -- 2. CARGAR BASE Y PIERNAS
             aplicarPaquete(11058199848, false)
-
-            -- 3. CARGAR PIERNAS
             aplicarPaquete(120778770632792, true)
 
-            -- 4. CARGAR PANTALONES
+            -- 3. CARGAR PANTALONES
             local pantalonesObjects = game:GetObjects("rbxassetid://6196345139")
             for _, rootObj in ipairs(pantalonesObjects) do
                 for _, item in ipairs(rootObj:GetDescendants()) do
@@ -234,7 +230,13 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 5. RECONSTRUIR PUNTOS DE UNIÓN DEL HUMANOIDE
+            -- 4. FIX DE PARTES DESORDENADAS: DESTRUIR UNIONES VIEJAS Y FORZAR RECONSTRUCCIÓN
+            for _, v in ipairs(char:GetDescendants()) do
+                if v:IsA("Motor6D") then
+                    v:Destroy()
+                end
+            end
+
             task.wait(0.1)
             humanoid:BuildRigFromAttachments()
 
@@ -247,14 +249,22 @@ local function ToggleMorphCompuesto(encendido)
                     data.Part.MeshId = data.MeshId
                     data.Part.TextureID = data.TextureID
                     data.Part.Size = data.Size
+                    data.Part.Transparency = data.Transparency or 0
                     
-                    -- Restaurar también el tamaño original interno
                     local origSize = data.Part:FindFirstChild("OriginalSize")
                     if origSize and data.OriginalSize then
                         origSize.Value = data.OriginalSize
                     end
                 end
             end
+
+            for _, v in ipairs(char:GetDescendants()) do
+                if v:IsA("Motor6D") then
+                    v:Destroy()
+                end
+            end
+
+            task.wait(0.1)
             humanoid:BuildRigFromAttachments()
         end)
     end
