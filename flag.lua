@@ -93,10 +93,11 @@ local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
 -- =========================================================
--- INYECCIÓN: MORPH POR CLONACIÓN (MÉTODO HOODIE / JOINT SWAP)
+-- INYECCIÓN: MORPH CLONACIÓN V6 (ANTI-BLANQUEO Y SAFE-LOAD)
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
-    local char = game:GetService("Players").LocalPlayer.Character
+    local player = game:GetService("Players").LocalPlayer
+    local char = player.Character
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
     if not char or not humanoid then return end
 
@@ -109,17 +110,15 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 2. LIMPIEZA DE ACCESORIOS Y ROPA
-            for _, v in ipairs(char:GetChildren()) do
-                if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
-                    v:Destroy()
-                end
-            end
-
-            -- FUNCIÓN AUXILIAR: REEMPLAZO Y REASIGNACIÓN DE MOTOR6D
+            -- FUNCIÓN AUXILIAR: CARGA SEGURA Y CLONACIÓN
             local function aplicarPaqueteClonado(assetId, soloPiernas)
                 local success, objects = pcall(function() return game:GetObjects("rbxassetid://" .. tostring(assetId)) end)
-                if not success or not objects then return end
+                
+                -- VALIDACIÓN CRÍTICA: Si el ejecutor falla al obtener el asset, abortamos para no dejar el avatar en blanco.
+                if not success or not objects or #objects == 0 then
+                    warn("[ERROR] No se pudo cargar el ID: " .. tostring(assetId) .. ". El ejecutor lo bloqueó o es un ID de Bundle inválido.")
+                    return false
+                end
 
                 for _, rootObj in ipairs(objects) do
                     for _, item in ipairs(rootObj:GetDescendants()) do
@@ -136,28 +135,28 @@ local function ToggleMorphCompuesto(encendido)
                                     newPart.Name = oldPart.Name
                                     newPart.CFrame = oldPart.CFrame
                                     
-                                    -- B. LIMPIAR TEXTURAS BASE
-                                    if lowerName == "head" then
+                                    -- B. FORZAR HERENCIA DE COLOR (EVITA EL EFECTO BLANCO)
+                                    newPart.Color = oldPart.Color
+                                    newPart.Material = oldPart.Material
+                                    
+                                    if lowerName == "head" or lowerName == "uppertorso" or lowerName == "lowertorso" then
                                         newPart.TextureID = ""
-                                    elseif lowerName == "uppertorso" or lowerName == "lowertorso" then
-                                        newPart.TextureID = ""
-                                        newPart.Color = Color3.fromRGB(20, 20, 20)
                                         newPart.UsePartColor = true 
+                                    else
+                                        -- Si el paquete original no trae textura, usa el color base
+                                        if newPart.TextureID == "" then
+                                            newPart.UsePartColor = true
+                                        end
                                     end
 
-                                    -- C. RESCATAR COMPONENTES CRÍTICOS DE LA PARTE ORIGINAL
-                                    -- Transferimos los Motor6D internos y elementos de la cara (Decals) a la nueva parte
+                                    -- C. RESCATAR COMPONENTES CRÍTICOS (Cara y uniones)
                                     for _, child in ipairs(oldPart:GetChildren()) do
-                                        if child:IsA("Motor6D") or child:IsA("Decal") or child:IsA("FaceControls") then
+                                        if child:IsA("Motor6D") or child:IsA("Decal") or child:IsA("FaceControls") or child:IsA("Attachment") then
                                             child.Parent = newPart
                                         end
                                     end
 
-                                    -- D. INSERTAR EN EL PERSONAJE
-                                    newPart.Parent = char
-
-                                    -- E. REDIRIGIR LOS JOINTS GLOBALES
-                                    -- Buscamos todos los Motor6D en el character que estuvieran conectados a la parte vieja y los conectamos a la nueva
+                                    -- D. RECONECTAR MOTOR6D (EVITA QUE FLOTEN LOS BRAZOS)
                                     for _, joint in ipairs(char:GetDescendants()) do
                                         if joint:IsA("Motor6D") then
                                             if joint.Part0 == oldPart then joint.Part0 = newPart end
@@ -165,44 +164,43 @@ local function ToggleMorphCompuesto(encendido)
                                         end
                                     end
 
-                                    -- F. DESTRUIR LA PARTE ORIGINAL
+                                    -- E. REEMPLAZAR EN EL MODELO
+                                    newPart.Parent = char
                                     oldPart:Destroy()
                                 end
                             end
                         end
-
-                        -- Copiar BodyColors
-                        if item:IsA("BodyColors") then
-                            local oldColors = char:FindFirstChildOfClass("BodyColors")
-                            if oldColors then oldColors:Destroy() end
-                            item:Clone().Parent = char
-                        end
                     end
                 end
+                return true
             end
 
-            -- 3. CARGAR BASE Y PIERNAS MEDIANTE CLONACIÓN
-            aplicarPaqueteClonado(11058199848, false)
-            aplicarPaqueteClonado(120778770632792, true)
+            -- 2. INTENTAR CARGAR LOS PAQUETES PRIMERO
+            local baseCargada = aplicarPaqueteClonado(11058199848, false)
+            local piernasCargadas = aplicarPaqueteClonado(120778770632792, true)
 
-            -- 4. CARGAR PANTALONES
-            local successPants, pantalonesObjects = pcall(function() return game:GetObjects("rbxassetid://6196345139") end)
-            if successPants and pantalonesObjects then
-                for _, rootObj in ipairs(pantalonesObjects) do
-                    for _, item in ipairs(rootObj:GetDescendants()) do
-                        if item:IsA("Pants") then item:Clone().Parent = char end
+            -- 3. LIMPIAR ROPA SOLO SI LA CARGA FUE EXITOSA
+            if baseCargada or piernasCargadas then
+                for _, v in ipairs(char:GetChildren()) do
+                    if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
+                        v:Destroy()
+                    end
+                end
+
+                -- CARGAR PANTALONES NUEVOS
+                local successPants, pantalonesObjects = pcall(function() return game:GetObjects("rbxassetid://6196345139") end)
+                if successPants and pantalonesObjects and #pantalonesObjects > 0 then
+                    for _, rootObj in ipairs(pantalonesObjects) do
+                        for _, item in ipairs(rootObj:GetDescendants()) do
+                            if item:IsA("Pants") then item:Clone().Parent = char end
+                        end
                     end
                 end
             end
         end)
     else
-        -- RESTAURAR AVATAR ORIGINAL
-        -- Si usas el método de clonación que destruye la parte original, la forma más limpia de apagarlo
-        -- sin mantener referencias muertas en memoria es forzar un reset o reload del Character.
-        -- Si necesitas un toggle sin resetear, requiere clonar el character original completo en memoria en el turno 1.
-        if humanoid then
-            humanoid.Health = 0 -- Opción rápida para devolver a la normalidad en executors
-        end
+        -- RESET RÁPIDO PARA RESTAURAR AVATAR
+        if humanoid then humanoid.Health = 0 end
     end
 end
 
