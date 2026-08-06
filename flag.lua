@@ -93,7 +93,7 @@ local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO V4 (SEGURO Y BLINDADO)
+-- INYECCIÓN: MORPH COMPUESTO V5 (BRAZOS Y MANOS CORREGIDOS)
 -- =========================================================
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
@@ -123,7 +123,7 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 1. LIMPIEZA TOTAL
+            -- 1. LIMPIEZA TOTAL DE ACCESORIOS Y CABEZA
             for _, v in ipairs(char:GetChildren()) do
                 if v:IsA("Accessory") or v:IsA("Hat") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("CharacterMesh") then
                     v:Destroy()
@@ -142,7 +142,20 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- FUNCIÓN AUXILIAR (CORREGIDA)
+            -- [FIX CRÍTICO 1]: NEUTRALIZAR EL ESCALADO DEL HUMANOID
+            -- Esto evita que Roblox empuje los brazos hacia afuera
+            humanoid.AutomaticScalingEnabled = false
+            for _, val in ipairs(humanoid:GetChildren()) do
+                if val:IsA("NumberValue") and string.find(val.Name, "Scale") then
+                    if val.Name == "BodyTypeScale" or val.Name == "BodyProportionScale" then
+                        val.Value = 0
+                    else
+                        val.Value = 1
+                    end
+                end
+            end
+
+            -- FUNCIÓN AUXILIAR DE PAQUETE
             local function aplicarPaquete(assetId, soloPiernas)
                 local success, objects = pcall(function()
                     return game:GetObjects("rbxassetid://" .. tostring(assetId))
@@ -178,51 +191,33 @@ local function ToggleMorphCompuesto(encendido)
                                             targetPart.TextureID = item.TextureID
                                         end
                                         
-                                        -- [FIX 1] Actualizar OriginalSize PRIMERO
                                         local origSize = targetPart:FindFirstChild("OriginalSize")
                                         if origSize and origSize:IsA("Vector3Value") then
                                             origSize.Value = item.Size
                                         end
-                                        -- Asignar Size DESPUÉS
                                         targetPart.Size = item.Size
                                     end)
                                     
+                                    -- [FIX CRÍTICO 2]: REESCRITURA DE ATTACHMENTS
                                     for _, sourceAtt in ipairs(item:GetChildren()) do
                                         if sourceAtt:IsA("Attachment") then
                                             local targetAtt = targetPart:FindFirstChild(sourceAtt.Name)
                                             if targetAtt and targetAtt:IsA("Attachment") then
                                                 pcall(function()
-                                                    -- [FIX 2] Actualizar OriginalPosition PRIMERO
-                                                    local srcOrigPos = sourceAtt:FindFirstChild("OriginalPosition")
-                                                    local tgtOrigPos = targetAtt:FindFirstChild("OriginalPosition")
-                                                    if srcOrigPos and tgtOrigPos and srcOrigPos:IsA("Vector3Value") then
-                                                        tgtOrigPos.Value = srcOrigPos.Value
-                                                    end
-                                                    
-                                                    -- [FIX 3] Usar CFrame en lugar de Position/Orientation
                                                     targetAtt.CFrame = sourceAtt.CFrame
+                                                    targetAtt.Position = sourceAtt.Position
+                                                    
+                                                    local tgtOrigPos = targetAtt:FindFirstChild("OriginalPosition")
+                                                    if tgtOrigPos and tgtOrigPos:IsA("Vector3Value") then
+                                                        tgtOrigPos.Value = sourceAtt.Position
+                                                    end
                                                 end)
                                             end
                                         end
                                     end
-
-                                    -- [FIX 4] Purgar Motor6Ds antiguos de esta parte
-                                    pcall(function()
-                                        for _, v in ipairs(targetPart:GetChildren()) do
-                                            if v:IsA("Motor6D") then 
-                                                v:Destroy() 
-                                            end
-                                        end
-                                    end)
-
+                                    
+                                    -- NOTA: Ya NO destruimos los Motor6D aquí, los modificaremos matemáticamente.
                                 end
-                            end
-                        end
-
-                        if item:IsA("CharacterMesh") then
-                            local esPiernaR6 = (item.BodyPart == Enum.BodyPart.LeftLeg or item.BodyPart == Enum.BodyPart.RightLeg)
-                            if (soloPiernas and esPiernaR6) or (not soloPiernas and not esPiernaR6) then
-                                item:Clone().Parent = char
                             end
                         end
 
@@ -235,7 +230,7 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 2. CARGAR BASE DE MUJER
+            -- 2. CARGAR BASE DE MUJER (Torso y Brazos)
             aplicarPaquete(11058199848, false)
             -- 3. CARGAR PIERNAS
             aplicarPaquete(120778770632792, true)
@@ -254,10 +249,26 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- 5. RECONSTRUIR PUNTOS DE UNIÓN
-            -- [FIX 5] Eliminado task.wait(0.1) para empalmar en el mismo frame
+            -- [FIX CRÍTICO 3]: ENSAMBLAJE QUIRÚRGICO DE ARTICULACIONES
+            -- Recalcula hombros, codos y muñecas basándose en los Attachments exactos
             task.spawn(function()
-                pcall(function() humanoid:BuildRigFromAttachments() end)
+                task.wait(0.05) -- Damos un frame para que el motor procese los tamaños
+                pcall(function()
+                    for _, obj in ipairs(char:GetDescendants()) do
+                        if obj:IsA("Motor6D") and obj.Part0 and obj.Part1 then
+                            -- Buscar el nombre del attachment correspondiente al joint (Ej: RightShoulderRigAttachment)
+                            local rigName = obj.Name .. "RigAttachment"
+                            local att0 = obj.Part0:FindFirstChild(rigName)
+                            local att1 = obj.Part1:FindFirstChild(rigName)
+                            
+                            -- Si existen ambos puntos, conectamos los huesos geométricamente
+                            if att0 and att1 then
+                                obj.C0 = att0.CFrame
+                                obj.C1 = att1.CFrame
+                            end
+                        end
+                    end
+                end)
             end)
 
         end)
@@ -280,6 +291,9 @@ local function ToggleMorphCompuesto(encendido)
                     end)
                 end
             end
+            
+            -- Reactivar el escalado natural
+            humanoid.AutomaticScalingEnabled = true
             humanoid:BuildRigFromAttachments()
         end)
     end
