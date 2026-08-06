@@ -92,9 +92,11 @@ local aplicarOutfitYBandera
 local ToggleOutfitRef = nil
 local ToggleMorphRef = nil
 
+---- =========================================================
+-- INYECCIÓN: MORPH COMPUESTO V6 (SOLUCIÓN RADICAL DE BRAZOS)
 -- =========================================================
--- INYECCIÓN: MORPH COMPUESTO V6 (CORRECCIÓN DE SINTAXIS LUA)
--- =========================================================
+local originalMorphCache = originalMorphCache or {}
+
 local function ToggleMorphCompuesto(encendido)
     local char = game:GetService("Players").LocalPlayer.Character
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
@@ -198,7 +200,7 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
 
-            -- ALINEACIÓN Y SOLDADURA DE BRAZOS Y MANOS
+            -- [SOLUCIÓN RADICAL]: FORZAR ALINEACIÓN Y SOLDADURA DE BRAZOS Y MANOS
             task.spawn(function()
                 task.wait(0.1)
                 pcall(function()
@@ -215,12 +217,14 @@ local function ToggleMorphCompuesto(encendido)
                     for _, nombrePart in ipairs(partesBrazos) do
                         local part = char:FindFirstChild(nombrePart)
                         if part then
+                            -- Limpiamos joints viejos defectuosos
                             for _, child in ipairs(part:GetChildren()) do
                                 if child:IsA("Motor6D") or child:IsA("Weld") then
                                     child:Destroy()
                                 end
                             end
 
+                            -- Creamos una unión rígida precisa basada en la posición natural del torso
                             local attachmentName = nombrePart .. "RigAttachment"
                             local attTarget = part:FindFirstChild(attachmentName)
                             local attTorso = upperTorso:FindFirstChild(attachmentName)
@@ -260,6 +264,7 @@ local function ToggleMorphCompuesto(encendido)
                 end
             end
             
+            -- Limpiar welds forzados al desactivar
             for _, v in ipairs(char:GetDescendants()) do
                 if v.Name:sub(1, 10) == "FixedWeld_" then
                     v:Destroy()
