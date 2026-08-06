@@ -87,8 +87,11 @@ local customHatModel = nil
 local flagTool = nil
 local backFlag = nil
 local isSystemActive = false
+local originalMorphCache = {}
 
 local aplicarOutfitYBandera
+local ToggleOutfitRef = nil
+local ToggleMorphRef = nil
 
 -- =========================================================
 -- INYECCIÓN: MORPH COMPUESTO V4 (SEGURO Y BLINDADO)
