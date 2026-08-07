@@ -190,9 +190,10 @@ FloatBtn.Size = UDim2.new(0, 60, 0, 60)
 FloatBtn.Position = UDim2.new(0.8, 0, 0.4, 0)
 FloatBtn.BackgroundColor3 = Color3.fromRGB(30, 200, 80)
 FloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-FloatBtn.Text = "Shoot\n(525)"
+FloatBtn.Text = "Shoot\n(525) mangó loco"
 FloatBtn.Font = Enum.Font.GothamBold
 FloatBtn.TextSize = 14
+FloatBtn.Image = "rbxassetid://124421145883538"
 FloatBtn.Visible = false
 FloatBtn.Parent = FloatGui
 
