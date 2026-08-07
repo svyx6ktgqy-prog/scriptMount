@@ -193,7 +193,6 @@ FloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 FloatBtn.Text = "Shoot\n(525) mangó loco"
 FloatBtn.Font = Enum.Font.GothamBold
 FloatBtn.TextSize = 14
-FloatBtn.Image = "rbxassetid://124421145883538"
 FloatBtn.Visible = false
 FloatBtn.Parent = FloatGui
 
