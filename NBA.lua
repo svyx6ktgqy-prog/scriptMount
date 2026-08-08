@@ -203,7 +203,7 @@ btnCorner.Parent = FloatBtn
 
 -- 2. La imagen del Mango (Más grande que el botón para que sobresalga)
 local MangoImage = Instance.new("ImageLabel")
-MangoImage.Size = UDim2.new(1.4, 0, 1.4, 0) -- 40% más grande que el círculo
+MangoImage.Size = UDim2.new(60, 0, 60, 0) -- 40% más grande que el círculo
 MangoImage.Position = UDim2.new(-0.2, 0, -0.2, 0) -- Centrado para compensar el tamaño extra
 MangoImage.BackgroundTransparency = 1 -- Fondo invisible para que solo se vea la fruta
 MangoImage.Image = "rbxassetid://124421145883538"
