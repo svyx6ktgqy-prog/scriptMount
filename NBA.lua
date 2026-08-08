@@ -180,7 +180,7 @@ local function alignCharacterToRim(targetRim)
 end
 
 -- ==========================================
--- BOTÓN FLOTANTE AUTOSHOOTV (Textura Mango + Texto)
+-- BOTÓN FLOTANTE AUTOSHOOTV (Fondo Circular + Mango Sobresaliendo + Texto)
 -- ==========================================
 local safeParent = (gethui and gethui()) or PlayerGui
 local FloatGui = Instance.new("ScreenGui")
@@ -188,20 +188,29 @@ FloatGui.Name = "AutoShootV_Floating"
 FloatGui.ResetOnSpawn = false
 FloatGui.Parent = safeParent
 
--- Base como Botón de Imagen (Textura)
-local FloatBtn = Instance.new("ImageButton")
+-- 1. Base del Botón (Solo el fondo circular verde/rojo)
+local FloatBtn = Instance.new("TextButton")
+FloatBtn.Text = "" -- Sin texto aquí, lo pondremos aparte
 FloatBtn.Size = UDim2.new(0, 60, 0, 60)
 FloatBtn.Position = UDim2.new(0.8, 0, 0.4, 0)
 FloatBtn.BackgroundColor3 = Color3.fromRGB(30, 200, 80)
-FloatBtn.Image = "rbxassetid://124421145883538"
 FloatBtn.Visible = false
 FloatBtn.Parent = FloatGui
 
 local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(1, 0)
+btnCorner.CornerRadius = UDim.new(1, 0) -- Lo hace totalmente redondo
 btnCorner.Parent = FloatBtn
 
--- Texto Transparente por encima del botón
+-- 2. La imagen del Mango (Más grande que el botón para que sobresalga)
+local MangoImage = Instance.new("ImageLabel")
+MangoImage.Size = UDim2.new(1.4, 0, 1.4, 0) -- 40% más grande que el círculo
+MangoImage.Position = UDim2.new(-0.2, 0, -0.2, 0) -- Centrado para compensar el tamaño extra
+MangoImage.BackgroundTransparency = 1 -- Fondo invisible para que solo se vea la fruta
+MangoImage.Image = "rbxassetid://124421145883538"
+MangoImage.ZIndex = 2 -- Se dibuja por encima del fondo circular
+MangoImage.Parent = FloatBtn
+
+-- 3. Texto Transparente por encima del mango
 local FloatText = Instance.new("TextLabel")
 FloatText.Size = UDim2.new(1, 0, 1, 0)
 FloatText.BackgroundTransparency = 1 
@@ -209,8 +218,10 @@ FloatText.Text = "Shoot\n(525)"
 FloatText.TextColor3 = Color3.fromRGB(255, 255, 255)
 FloatText.Font = Enum.Font.GothamBold
 FloatText.TextSize = 14
+FloatText.ZIndex = 3 -- Se dibuja por encima del mango
 FloatText.Parent = FloatBtn
 
+-- Eventos para poder arrastrar (Drag) el botón en la pantalla
 local dragging, dragInput, dragStart, startPos
 FloatBtn.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -239,6 +250,7 @@ UIS.InputChanged:Connect(function(input)
 	end
 end)
 
+-- Evento al hacer clic en el botón (Disparo)
 FloatBtn.Activated:Connect(function()
 	local shootBtn = getButton({"Offense", "OnBall", "Shoot"})
 	if shootBtn and shootBtn.Visible then
@@ -247,11 +259,11 @@ FloatBtn.Activated:Connect(function()
 			alignCharacterToRim(targetRim)
 		end
 
-		FloatBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+		FloatBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Se pone rojo al presionar
 		simulateButtonDown(shootBtn)
 		task.wait(0.525)
 		simulateButtonUp(shootBtn)
-		FloatBtn.BackgroundColor3 = Color3.fromRGB(30, 200, 80)
+		FloatBtn.BackgroundColor3 = Color3.fromRGB(30, 200, 80) -- Vuelve a verde
 	end
 end)
 
