@@ -250,10 +250,18 @@ UIS.InputChanged:Connect(function(input)
 	end
 end)
 
+-- Variable de control (Debounce) para evitar que Delta colapse por spam
+local isShooting = false
+
 -- Evento al hacer clic en el botón (Disparo)
 FloatBtn.Activated:Connect(function()
+	-- Si ya está tirando, ignora los toques extra para no crashear Delta
+	if isShooting then return end 
+
 	local shootBtn = getButton({"Offense", "OnBall", "Shoot"})
 	if shootBtn and shootBtn.Visible then
+		isShooting = true -- Bloquea el botón
+		
 		local targetRim = getClosestRim()
 		if targetRim then
 			alignCharacterToRim(targetRim)
@@ -261,9 +269,15 @@ FloatBtn.Activated:Connect(function()
 
 		FloatBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Se pone rojo al presionar
 		simulateButtonDown(shootBtn)
-		task.wait(0.525)
+		
+		task.wait(0.525) -- Tiempo de tiro
+		
 		simulateButtonUp(shootBtn)
 		FloatBtn.BackgroundColor3 = Color3.fromRGB(30, 200, 80) -- Vuelve a verde
+		
+		-- Pequeña pausa extra de 0.1s de seguridad para la memoria de iOS antes del próximo tiro
+		task.wait(0.1) 
+		isShooting = false -- Libera el botón para el siguiente tiro
 	end
 end)
 
