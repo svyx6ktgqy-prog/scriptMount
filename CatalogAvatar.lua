@@ -10,7 +10,7 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ==========================================================
--- SISTEMA DE VISUALIZADOR HUD (FRAME DE VISTA PREVIA)
+-- SISTEMA DE VISUALIZADOR HUD (PRECIO Y ROBUX CENTRADOS)
 -- ==========================================================
 if CoreGui:FindFirstChild("QuirurgicoVisualizer") then
     CoreGui.QuirurgicoVisualizer:Destroy()
@@ -51,28 +51,53 @@ RedUnderline.BorderSizePixel = 0
 RedUnderline.ZIndex = 2
 RedUnderline.Parent = ImagePreview
 
--- Contenedor del Precio con Logo Robux de Creator Store
+-- Contenedor del Precio
 local PriceFrame = Instance.new("Frame")
 PriceFrame.Size = UDim2.new(1, 0, 0, 30)
 PriceFrame.Position = UDim2.new(0, 0, 0, 165)
 PriceFrame.BackgroundTransparency = 1
 PriceFrame.Parent = Container
 
+-- Layout para centrar automáticamente el Icono + Texto en el medio exacto
+local PriceLayout = Instance.new("UIListLayout")
+PriceLayout.FillDirection = Enum.FillDirection.Horizontal
+PriceLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+PriceLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+PriceLayout.Padding = UDim.new(0, 6) -- Espacio entre el icono y el texto
+PriceLayout.Parent = PriceFrame
+
 local RobuxIcon = Instance.new("ImageLabel")
 RobuxIcon.Size = UDim2.new(0, 18, 0, 18)
-RobuxIcon.Position = UDim2.new(0.2, 0, 0.5, -9)
 RobuxIcon.BackgroundTransparency = 1
 RobuxIcon.Image = "rbxassetid://11560341824"
 RobuxIcon.Parent = PriceFrame
 
 local PriceTag = Instance.new("TextLabel")
-PriceTag.Size = UDim2.new(0.7, 0, 1, 0)
-PriceTag.Position = UDim2.new(0.32, 0, 0, 0)
+PriceTag.Size = UDim2.new(0, 0, 1, 0) -- Se auto-ajusta al texto
+PriceTag.AutomaticSize = Enum.AutomaticSize.X
 PriceTag.BackgroundTransparency = 1 
 PriceTag.Font = Enum.Font.GothamBold
 PriceTag.TextSize = 18
 PriceTag.TextXAlignment = Enum.TextXAlignment.Left
 PriceTag.Parent = PriceFrame
+
+-- ==========================================================
+-- FUNCION: ACTUALIZAR VISUALIZADOR CON CENTRADO
+-- ==========================================================
+local function UpdateVisualizer(id, price)
+    ImagePreview.Image = "rbxthumb://type=Asset&id=" .. tostring(id) .. "&w=150&h=150"
+    Container.Visible = true
+
+    if price == 0 or price == "Gratis" or price == "Gratis / Off-Sale" then
+        RobuxIcon.Visible = false
+        PriceTag.Text = "FREE"
+        PriceTag.TextColor3 = Color3.fromRGB(50, 255, 50)
+    else
+        RobuxIcon.Visible = true
+        PriceTag.Text = tostring(price):gsub(" R%$", "")
+        PriceTag.TextColor3 = Color3.fromRGB(255, 215, 0)
+    end
+end
 
 -- ==========================================================
 -- DICCIONARIO DE TIPOS DE ASSETS
