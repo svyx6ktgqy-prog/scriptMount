@@ -98,7 +98,8 @@ local function UpdateVisualizer(id, price)
         PriceTag.TextColor3 = Color3.fromRGB(50, 255, 50) -- Verde Brillante
         PriceStroke.Color = Color3.fromRGB(50, 255, 50)
     else
-        PriceTag.Text = "💰 " .. tostring(price)
+        -- Se incrusta la imagen 33333333 mediante RichText
+        PriceTag.Text = '<img src="rbxassetid://11560341824" width="16" height="16"/> ' .. tostring(price)
         PriceTag.TextColor3 = Color3.fromRGB(255, 215, 0) -- Dorado (Robux)
         PriceStroke.Color = Color3.fromRGB(255, 215, 0)
     end
