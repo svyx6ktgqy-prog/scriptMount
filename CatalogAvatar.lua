@@ -59,6 +59,16 @@ local function ResetToDefaultAvatar()
     local Hum = Char:FindFirstChildOfClass("Humanoid")
     if not Hum then return end
 
+-- NUEVO: Restaurar la visibilidad de las piernas y pies al apagar el switch
+    for _, part in ipairs(Char:GetChildren()) do
+        if part:IsA("BasePart") then
+            local pName = string.lower(part.Name)
+            if string.find(pName, "leg") or string.find(pName, "foot") then
+                part.Transparency = 0
+            end
+        end
+    end
+
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
     if backpack then
         for _, v in ipairs(backpack:GetChildren()) do
