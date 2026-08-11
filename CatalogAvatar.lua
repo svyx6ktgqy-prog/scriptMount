@@ -1,0 +1,1008 @@
+-- ==========================================================
+-- MENU DE AVATARES QUIRÚRGICO Y PRO (v22 FIX ROPA 3D)
+-- Solución AccessoryWeld para WrapLayer + Reset Default
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local CoreGui = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+
+local CurrentData = { Name = "Ninguno", Id = "0", Price = "0 R$", Category = "Desconocido", ItemType = "Asset" }
+local KeepEquippedOnDeath = false 
+local SavedEquippedIDs = {}
+local PlayingAnimationTracks = {}
+local EqPanel, RefreshEquippedItems 
+
+local function NotifyUser(title, text)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", { Title = title; Text = text; Duration = 4; })
+    end)
+end
+
+local function IsAlreadyEquipped(assetId)
+    local char = LocalPlayer.Character
+    if not char or not assetId then return false end
+    local numericId = tonumber(assetId)
+    if not numericId then return false end
+
+    for _, v in ipairs(char:GetDescendants()) do
+        if v:GetAttribute("AssetId") == numericId then
+            return true
+        end
+    end
+    return false
+end
+
+-- ==========================================================
+-- 1. RESTAURACIÓN A AVATAR DEFAULT (RESET TOTAL)
+-- ==========================================================
+local function ResetToDefaultAvatar()
+    KeepEquippedOnDeath = false
+    SavedEquippedIDs = {}
+    
+    for id, track in pairs(PlayingAnimationTracks) do
+        pcall(function()
+            track:Stop()
+            track:Destroy()
+        end)
+    end
+    PlayingAnimationTracks = {}
+
+    local Char = LocalPlayer.Character
+    if not Char then return end
+    local Hum = Char:FindFirstChildOfClass("Humanoid")
+    if not Hum then return end
+
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if backpack then
+        for _, v in ipairs(backpack:GetChildren()) do
+            if v:GetAttribute("AssetId") then
+                v:Destroy()
+            end
+        end
+    end
+
+    for _, v in ipairs(Char:GetChildren()) do
+        if v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("Tool") or v:GetAttribute("IsAnimation") then
+            v:Destroy()
+        end
+    end
+
+    pcall(function()
+        local defaultDesc = Players:GetHumanoidDescriptionFromUserId(LocalPlayer.UserId)
+        Hum:ApplyDescription(defaultDesc)
+    end)
+
+    if EqPanel and RefreshEquippedItems then
+        RefreshEquippedItems()
+    end
+end
+
+-- ==========================================================
+-- 2. BUCLE ANTI-INVISIBILIDAD Y RENDER
+-- ==========================================================
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if char then
+        for _, v in ipairs(char:GetDescendants()) do
+            if v:IsA("BasePart") and v.Parent:IsA("Accessory") then
+                v.LocalTransparencyModifier = 0
+            end
+        end
+    end
+end)
+
+-- ==========================================================
+-- 3. CEREBRO V22: FIX ROPA 3D (AccessoryWeld) + TOOLS + EMOTES
+-- ==========================================================
+local function UniversalEquip(assetId, isReequipping)
+    local numericId = tonumber(assetId)
+    if not numericId or numericId == 0 then return end
+
+    if not isReequipping and IsAlreadyEquipped(numericId) then
+        NotifyUser("⚠️ En Uso", "Este elemento ya está equipado en tu personaje.")
+        return
+    end
+
+    local Char = LocalPlayer.Character
+    if not Char then return end
+    local Hum = Char:FindFirstChildOfClass("Humanoid")
+    if not Hum then return end
+
+    local success, err = pcall(function()
+        local objects = game:GetObjects("rbxassetid://" .. tostring(numericId))
+        
+        if #objects == 0 then
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://" .. tostring(numericId)
+            anim:SetAttribute("AssetId", numericId)
+            
+            local animator = Hum:FindFirstChildOfClass("Animator") or Hum:FindFirstChild("Animator")
+            if not animator then
+                animator = Instance.new("Animator")
+                animator.Parent = Hum
+            end
+            
+            if PlayingAnimationTracks[numericId] then
+                PlayingAnimationTracks[numericId]:Stop()
+                PlayingAnimationTracks[numericId]:Destroy()
+            end
+
+            local track = animator:LoadAnimation(anim)
+            track:Play()
+            PlayingAnimationTracks[numericId] = track
+
+            local animHolder = Char:FindFirstChild("AnimFolder_" .. numericId) or Instance.new("Folder")
+            animHolder.Name = "AnimFolder_" .. numericId
+            animHolder:SetAttribute("AssetId", numericId)
+            animHolder:SetAttribute("IsAnimation", true)
+            animHolder.Parent = Char
+
+            SavedEquippedIDs[numericId] = true
+            return
+        end
+
+        local function ProcessItem(item)
+            if not item then return end
+
+            -- SOPORTE ACCESORIOS Y ROPA 3D (LAYERED CLOTHING FIX)
+            if item:IsA("Accessory") then
+                local cloneItem = item:Clone()
+                cloneItem:SetAttribute("AssetId", numericId)
+                local handle = cloneItem:FindFirstChild("Handle")
+                
+                if handle then
+                    handle.Transparency = 0
+                    handle.Anchored = false
+                    handle.CanCollide = false
+                    handle.Massless = true
+
+                    local accAttach = handle:FindFirstChildWhichIsA("Attachment")
+                    if accAttach then
+                        local targetAttach = nil
+                        for _, v in ipairs(Char:GetDescendants()) do
+                            if v:IsA("Attachment") and v.Name == accAttach.Name and v.Parent:IsA("BasePart") then
+                                targetAttach = v
+                                break
+                            end
+                        end
+                        
+                        if targetAttach then
+                            for _, v in ipairs(handle:GetJoints()) do v:Destroy() end
+                            
+                            -- FIX CLAVE: EL NOMBRE EXACTO DEBE SER AccessoryWeld
+                            local weld = Instance.new("Weld")
+                            weld.Name = "AccessoryWeld"
+                            weld.Part0 = targetAttach.Parent
+                            weld.Part1 = handle
+                            weld.C0 = targetAttach.CFrame
+                            weld.C1 = accAttach.CFrame
+                            weld.Parent = handle
+                        end
+                    else
+                        local bodyTarget = Char:FindFirstChild("UpperTorso") or Char:FindFirstChild("LowerTorso") or Char:FindFirstChild("Torso") or Char.PrimaryPart
+                        if bodyTarget then
+                            for _, v in ipairs(handle:GetJoints()) do v:Destroy() end
+                            
+                            local weld = Instance.new("Weld")
+                            weld.Name = "AccessoryWeld"
+                            weld.Part0 = bodyTarget
+                            weld.Part1 = handle
+                            weld.C0 = CFrame.new()
+                            weld.C1 = CFrame.new()
+                            weld.Parent = handle
+                        end
+                    end
+                end
+                
+                cloneItem.Parent = Char
+                pcall(function() Hum:AddAccessory(cloneItem) end)
+                SavedEquippedIDs[numericId] = true
+
+            elseif item:IsA("Animation") then
+                local animator = Hum:FindFirstChildOfClass("Animator") or Hum:FindFirstChild("Animator")
+                if not animator then
+                    animator = Instance.new("Animator")
+                    animator.Parent = Hum
+                end
+                
+                if PlayingAnimationTracks[numericId] then
+                    PlayingAnimationTracks[numericId]:Stop()
+                    PlayingAnimationTracks[numericId]:Destroy()
+                end
+
+                local track = animator:LoadAnimation(item)
+                track:Play()
+                PlayingAnimationTracks[numericId] = track
+
+                local animHolder = Char:FindFirstChild("AnimFolder_" .. numericId) or Instance.new("Folder")
+                animHolder.Name = "AnimFolder_" .. numericId
+                animHolder:SetAttribute("AssetId", numericId)
+                animHolder:SetAttribute("IsAnimation", true)
+                animHolder.Parent = Char
+
+                SavedEquippedIDs[numericId] = true
+
+            elseif item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") then
+                for _, v in pairs(Char:GetChildren()) do
+                    if v.ClassName == item.ClassName then v:Destroy() end
+                end
+                local cloneItem = item:Clone()
+                cloneItem:SetAttribute("AssetId", numericId)
+                cloneItem.Parent = Char
+                SavedEquippedIDs[numericId] = true
+
+            elseif item:IsA("MeshPart") then
+                local currentPart = Char:FindFirstChild(item.Name)
+                if currentPart and currentPart:IsA("MeshPart") then
+                    currentPart.MeshId = item.MeshId
+                    local surface = item:FindFirstChildWhichIsA("SurfaceAppearance")
+                    if surface then
+                        local oldSurface = currentPart:FindFirstChildWhichIsA("SurfaceAppearance")
+                        if oldSurface then oldSurface:Destroy() end
+                        surface:Clone().Parent = currentPart
+                    end
+                end
+                SavedEquippedIDs[numericId] = true
+
+            elseif item:IsA("Decal") then
+                local head = Char:FindFirstChild("Head")
+                if head then
+                    local currentFace = head:FindFirstChildOfClass("Decal") or head:FindFirstChild("face")
+                    if currentFace then currentFace.Texture = item.Texture
+                    else
+                        local newFace = item:Clone()
+                        newFace.Name = "face"
+                        newFace.Parent = head
+                    end
+                end
+                SavedEquippedIDs[numericId] = true
+                
+            elseif item:IsA("Tool") or item:IsA("HopperBin") or item:IsA("Gear") then
+                local Backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+                if Backpack then 
+                    local toolClone = item:Clone()
+                    toolClone:SetAttribute("AssetId", numericId)
+                    toolClone.Parent = Backpack 
+                    pcall(function() Hum:EquipTool(toolClone) end)
+                end
+                SavedEquippedIDs[numericId] = true
+
+            elseif item:IsA("Model") or item:IsA("Folder") then
+                for _, subItem in ipairs(item:GetChildren()) do
+                    ProcessItem(subItem)
+                end
+            else
+                local cloneItem = item:Clone()
+                cloneItem:SetAttribute("AssetId", numericId)
+                cloneItem.Parent = Char
+                SavedEquippedIDs[numericId] = true
+            end
+        end
+
+        for _, mainItem in ipairs(objects) do ProcessItem(mainItem) end
+    end)
+
+    if success then
+        task.delay(0.2, function()
+            if EqPanel and EqPanel.Visible and RefreshEquippedItems then
+                RefreshEquippedItems()
+            end
+        end)
+    else
+        warn("Error inyectando ID: " .. tostring(numericId) .. " | Error interno: " .. tostring(err))
+        NotifyUser("❌ Error", "El elemento no pudo ser procesado o no es compatible con el Avatar R15 actual.")
+    end
+end
+
+-- RE-EQUIPAR AUTOMÁTICO AL MORIR
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    if not KeepEquippedOnDeath then return end
+    newChar:WaitForChild("Humanoid", 10)
+    task.wait(1.2)
+    
+    for id, active in pairs(SavedEquippedIDs) do
+        if active then
+            UniversalEquip(id, true)
+        end
+    end
+end)
+
+-- ==========================================================
+-- 4. SISTEMA DE VISUALIZADOR HUD Y MENÚ DE EQUIPADOS
+-- ==========================================================
+if CoreGui:FindFirstChild("QuirurgicoVisualizer") then CoreGui.QuirurgicoVisualizer:Destroy() end
+
+local VisualizerGui = Instance.new("ScreenGui")
+VisualizerGui.Name = "QuirurgicoVisualizer"
+VisualizerGui.Parent = CoreGui
+
+local Container = Instance.new("Frame")
+Container.Size = UDim2.new(0, 160, 0, 195)
+Container.Position = UDim2.new(1, -180, 0.5, -95)
+Container.BackgroundTransparency = 1
+Container.Visible = false
+Container.Parent = VisualizerGui
+
+EqPanel = Instance.new("Frame")
+EqPanel.Size = UDim2.new(0, 350, 0, 300)
+EqPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+EqPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+EqPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+EqPanel.Visible = false
+EqPanel.Parent = VisualizerGui
+local EqCorner = Instance.new("UICorner"); EqCorner.CornerRadius = UDim.new(0, 12); EqCorner.Parent = EqPanel
+local EqStroke = Instance.new("UIStroke"); EqStroke.Color = Color3.fromRGB(150, 150, 150); EqStroke.Thickness = 2; EqStroke.Parent = EqPanel
+
+local EqTitle = Instance.new("TextLabel")
+EqTitle.Size = UDim2.new(1, 0, 0, 40)
+EqTitle.BackgroundTransparency = 1
+EqTitle.Text = "Tus Elementos (Toca para quitar)"
+EqTitle.Font = Enum.Font.GothamBold
+EqTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+EqTitle.TextSize = 14
+EqTitle.Parent = EqPanel
+
+local EqCloseBtn = Instance.new("TextButton")
+EqCloseBtn.Size = UDim2.new(0, 30, 0, 30)
+EqCloseBtn.Position = UDim2.new(1, -35, 0, 5)
+EqCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+EqCloseBtn.Text = "X"
+EqCloseBtn.Font = Enum.Font.GothamBold
+EqCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+EqCloseBtn.Parent = EqPanel
+local EqCloseCorner = Instance.new("UICorner"); EqCloseCorner.CornerRadius = UDim.new(0, 6); EqCloseCorner.Parent = EqCloseBtn
+EqCloseBtn.MouseButton1Click:Connect(function() EqPanel.Visible = false end)
+
+local EqScroll = Instance.new("ScrollingFrame")
+EqScroll.Size = UDim2.new(1, -20, 1, -50)
+EqScroll.Position = UDim2.new(0, 10, 0, 40)
+EqScroll.BackgroundTransparency = 1
+EqScroll.ScrollBarThickness = 5
+EqScroll.Parent = EqPanel
+local EqGrid = Instance.new("UIGridLayout")
+EqGrid.CellSize = UDim2.new(0, 70, 0, 70)
+EqGrid.CellPadding = UDim2.new(0, 10, 0, 10)
+EqGrid.Parent = EqScroll
+EqGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    EqScroll.CanvasSize = UDim2.new(0, 0, 0, EqGrid.AbsoluteContentSize.Y + 20)
+end)
+
+RefreshEquippedItems = function()
+    for _, v in ipairs(EqScroll:GetChildren()) do
+        if v:IsA("Frame") then v:Destroy() end
+    end
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local items = {}
+    for _, v in ipairs(char:GetChildren()) do
+        if v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("ShirtGraphic") or v:IsA("Tool") or v:GetAttribute("IsAnimation") then
+            table.insert(items, v)
+        end
+    end
+    
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if backpack then
+        for _, v in ipairs(backpack:GetChildren()) do
+            if v:IsA("Tool") then table.insert(items, v) end
+        end
+    end
+    
+    for _, item in ipairs(items) do
+        local frame = Instance.new("Frame")
+        frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        frame.Parent = EqScroll
+        local fCorner = Instance.new("UICorner"); fCorner.CornerRadius = UDim.new(0, 8); fCorner.Parent = frame
+        
+        local btn = Instance.new("ImageButton")
+        btn.Size = UDim2.new(1, 0, 1, 0)
+        btn.BackgroundTransparency = 1
+        btn.Parent = frame
+        
+        local eqId = item:GetAttribute("AssetId")
+        if (not eqId or eqId == 0) and item:IsA("Accessory") then eqId = item.SourceAssetId end
+        
+        if eqId and eqId > 0 then
+            btn.Image = "rbxthumb://type=Asset&id="..tostring(eqId).."&w=150&h=150"
+        else
+            local txt = Instance.new("TextLabel")
+            txt.Size = UDim2.new(1, -4, 1, -4)
+            txt.Position = UDim2.new(0, 2, 0, 2)
+            txt.BackgroundTransparency = 1
+            txt.Text = item.Name
+            txt.TextWrapped = true
+            txt.TextScaled = true
+            txt.Font = Enum.Font.Gotham
+            txt.TextColor3 = Color3.fromRGB(200, 200, 200)
+            txt.Parent = btn
+        end
+        
+        btn.MouseButton1Click:Connect(function()
+            if eqId then
+                SavedEquippedIDs[eqId] = nil
+                if PlayingAnimationTracks[eqId] then
+                    pcall(function()
+                        PlayingAnimationTracks[eqId]:Stop()
+                        PlayingAnimationTracks[eqId]:Destroy()
+                    end)
+                    PlayingAnimationTracks[eqId] = nil
+                end
+            end
+            item:Destroy()
+            frame:Destroy()
+        end)
+    end
+end
+
+local EyeButton = Instance.new("ImageButton")
+EyeButton.Size = UDim2.new(0, 40, 0, 40)
+EyeButton.Position = UDim2.new(0.5, 0, 0, -45)
+EyeButton.AnchorPoint = Vector2.new(0.5, 0)
+EyeButton.BackgroundTransparency = 1
+EyeButton.Image = "rbxassetid://13307406982"
+EyeButton.Parent = Container
+
+EyeButton.MouseButton1Click:Connect(function()
+    EqPanel.Visible = not EqPanel.Visible
+    if EqPanel.Visible then RefreshEquippedItems() end
+end)
+
+local ImagePreview = Instance.new("ImageButton")
+ImagePreview.Size = UDim2.new(1, 0, 0, 160)
+ImagePreview.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ImagePreview.ClipsDescendants = true
+ImagePreview.AutoButtonColor = true 
+ImagePreview.Parent = Container
+
+ImagePreview.MouseButton1Click:Connect(function()
+    local idNum = tonumber(CurrentData.Id)
+    if idNum and idNum > 0 then UniversalEquip(idNum, false) end
+end)
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = ImagePreview
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(150, 150, 150)
+UIStroke.Thickness = 2
+UIStroke.Parent = ImagePreview
+local RedUnderline = Instance.new("Frame")
+RedUnderline.Size = UDim2.new(1, -20, 0, 4)
+RedUnderline.Position = UDim2.new(0.5, 0, 1, -4)
+RedUnderline.AnchorPoint = Vector2.new(0.5, 0)
+RedUnderline.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+RedUnderline.BorderSizePixel = 0
+RedUnderline.ZIndex = 2
+RedUnderline.Parent = ImagePreview
+
+local PriceFrame = Instance.new("Frame")
+PriceFrame.Size = UDim2.new(1, 0, 0, 30)
+PriceFrame.Position = UDim2.new(0, 0, 0, 165)
+PriceFrame.BackgroundTransparency = 1
+PriceFrame.Parent = Container
+
+local PriceLayout = Instance.new("UIListLayout")
+PriceLayout.FillDirection = Enum.FillDirection.Horizontal
+PriceLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+PriceLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+PriceLayout.Padding = UDim.new(0, 6)
+PriceLayout.Parent = PriceFrame
+
+local RobuxIcon = Instance.new("ImageLabel")
+RobuxIcon.Size = UDim2.new(0, 18, 0, 18)
+RobuxIcon.BackgroundTransparency = 1
+RobuxIcon.Image = "rbxassetid://11560341824"
+RobuxIcon.Parent = PriceFrame
+
+local PriceTag = Instance.new("TextLabel")
+PriceTag.Size = UDim2.new(0, 0, 1, 0)
+PriceTag.AutomaticSize = Enum.AutomaticSize.X
+PriceTag.BackgroundTransparency = 1 
+PriceTag.Font = Enum.Font.GothamBold
+PriceTag.TextSize = 18
+PriceTag.TextXAlignment = Enum.TextXAlignment.Left
+PriceTag.Parent = PriceFrame
+
+local function UpdateVisualizer(id, price)
+    ImagePreview.Image = "rbxthumb://type=Asset&id=" .. tostring(id) .. "&w=150&h=150"
+    Container.Visible = true
+    if price == 0 or price == "Gratis" or price == "Gratis / Off-Sale" then
+        RobuxIcon.Visible = false
+        PriceTag.Text = "FREE"
+        PriceTag.TextColor3 = Color3.fromRGB(50, 255, 50)
+    else
+        RobuxIcon.Visible = true
+        PriceTag.Text = tostring(price):gsub(" R%$", "")
+        PriceTag.TextColor3 = Color3.fromRGB(255, 215, 0)
+    end
+end
+
+-- ==========================================================
+-- 5. SISTEMA KITTY CATALOG UI
+-- ==========================================================
+if CoreGui:FindFirstChild("KittyCatalogGui") then CoreGui.KittyCatalogGui:Destroy() end
+
+local KittyGui = Instance.new("ScreenGui")
+KittyGui.Name = "KittyCatalogGui"
+KittyGui.Enabled = false 
+KittyGui.Parent = CoreGui
+
+local FloatingBtn = Instance.new("ImageButton")
+FloatingBtn.Name = "KittyFloatingBtn"
+FloatingBtn.Size = UDim2.new(0, 60, 0, 60)
+FloatingBtn.Position = UDim2.new(1, -80, 0.5, -30)
+FloatingBtn.Image = "rbxassetid://15538455161"
+FloatingBtn.BackgroundTransparency = 1
+FloatingBtn.Visible = false 
+FloatingBtn.Parent = KittyGui
+
+local dragToggle, dragInput, dragStart, startPos
+FloatingBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggle = true; dragStart = input.Position; startPos = FloatingBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragToggle = false end
+        end)
+    end
+end)
+FloatingBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragToggle then
+        local delta = input.Position - dragStart
+        FloatingBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local KittyMain = Instance.new("Frame")
+KittyMain.Size = UDim2.new(0.95, 0, 0.9, 0) 
+KittyMain.Position = UDim2.new(0.5, 0, 0.5, 0) 
+KittyMain.AnchorPoint = Vector2.new(0.5, 0.5) 
+KittyMain.BackgroundColor3 = Color3.fromRGB(255, 182, 193) 
+KittyMain.BackgroundTransparency = 0.15 
+KittyMain.BorderSizePixel = 0
+KittyMain.ClipsDescendants = true
+KittyMain.Parent = KittyGui
+
+FloatingBtn.MouseButton1Click:Connect(function()
+    FloatingBtn.Visible = false; KittyMain.Visible = true
+end)
+
+local KittyConstraint = Instance.new("UISizeConstraint")
+KittyConstraint.MaxSize = Vector2.new(850, 550) 
+KittyConstraint.MinSize = Vector2.new(300, 250)
+KittyConstraint.Parent = KittyMain
+
+local KittyCorner = Instance.new("UICorner")
+KittyCorner.CornerRadius = UDim.new(0, 16)
+KittyCorner.Parent = KittyMain
+local KittyStroke = Instance.new("UIStroke")
+KittyStroke.Color = Color3.fromRGB(255, 105, 180) 
+KittyStroke.Thickness = 3
+KittyStroke.Parent = KittyMain
+
+local KittyTop = Instance.new("Frame")
+KittyTop.Size = UDim2.new(0.75, 0, 0, 60)
+KittyTop.Position = UDim2.new(0.25, 0, 0, 0)
+KittyTop.BackgroundTransparency = 1
+KittyTop.Parent = KittyMain
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -45, 0.5, -15)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseBtn.Text = "X"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Parent = KittyTop
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(1, 0) 
+CloseCorner.Parent = CloseBtn
+
+CloseBtn.MouseButton1Click:Connect(function()
+    KittyMain.Visible = false; FloatingBtn.Visible = true
+end)
+
+local SearchContainer = Instance.new("Frame")
+SearchContainer.Size = UDim2.new(0.60, 0, 0, 40)
+SearchContainer.Position = UDim2.new(0, 10, 0.5, -20)
+SearchContainer.BackgroundColor3 = Color3.fromRGB(255, 240, 245)
+SearchContainer.Parent = KittyTop
+local SearchContainerCorner = Instance.new("UICorner")
+SearchContainerCorner.CornerRadius = UDim.new(0, 8)
+SearchContainerCorner.Parent = SearchContainer
+
+local KittySearch = Instance.new("TextBox")
+KittySearch.Size = UDim2.new(1, -20, 1, 0)
+KittySearch.Position = UDim2.new(0, 10, 0, 0)
+KittySearch.BackgroundTransparency = 1
+KittySearch.PlaceholderText = "🔍 Buscar..."
+KittySearch.Text = ""
+KittySearch.Font = Enum.Font.GothamMedium
+KittySearch.TextSize = 14
+KittySearch.TextColor3 = Color3.fromRGB(50, 50, 50)
+KittySearch.TextXAlignment = Enum.TextXAlignment.Left
+KittySearch.Parent = SearchContainer
+
+local KittySearchBtn = Instance.new("TextButton")
+KittySearchBtn.Size = UDim2.new(0.20, 0, 0, 40)
+KittySearchBtn.Position = UDim2.new(0.64, 0, 0.5, -20)
+KittySearchBtn.BackgroundColor3 = Color3.fromRGB(255, 20, 147)
+KittySearchBtn.Text = "Buscar"
+KittySearchBtn.Font = Enum.Font.GothamBold
+KittySearchBtn.TextSize = 14
+KittySearchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+KittySearchBtn.Parent = KittyTop
+local SearchBtnCorner = Instance.new("UICorner")
+SearchBtnCorner.CornerRadius = UDim.new(0, 8)
+SearchBtnCorner.Parent = KittySearchBtn
+
+local KittySidebar = Instance.new("ScrollingFrame")
+KittySidebar.Size = UDim2.new(0.25, 0, 1, 0)
+KittySidebar.BackgroundColor3 = Color3.fromRGB(255, 192, 203)
+KittySidebar.BackgroundTransparency = 0.5
+KittySidebar.BorderSizePixel = 0
+KittySidebar.ScrollBarThickness = 4
+KittySidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y
+KittySidebar.CanvasSize = UDim2.new(0, 0, 0, 0)
+KittySidebar.Parent = KittyMain
+
+local SidebarLayout = Instance.new("UIListLayout")
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarLayout.Padding = UDim.new(0, 5)
+SidebarLayout.Parent = KittySidebar
+local SidebarPadding = Instance.new("UIPadding")
+SidebarPadding.PaddingTop = UDim.new(0, 10)
+SidebarPadding.PaddingLeft = UDim.new(0, 5)
+SidebarPadding.PaddingRight = UDim.new(0, 5)
+SidebarPadding.PaddingBottom = UDim.new(0, 10)
+SidebarPadding.Parent = KittySidebar
+
+local KittyResults = Instance.new("ScrollingFrame")
+KittyResults.Size = UDim2.new(0.75, 0, 1, -60)
+KittyResults.Position = UDim2.new(0.25, 0, 0, 60)
+KittyResults.BackgroundTransparency = 1
+KittyResults.ScrollBarThickness = 6
+KittyResults.ScrollBarImageColor3 = Color3.fromRGB(255, 105, 180)
+KittyResults.AutomaticCanvasSize = Enum.AutomaticSize.Y 
+KittyResults.CanvasSize = UDim2.new(0, 0, 0, 0)
+KittyResults.Parent = KittyMain
+
+local ResultsLayout = Instance.new("UIGridLayout")
+ResultsLayout.CellSize = UDim2.new(0, 130, 0, 180) 
+ResultsLayout.CellPadding = UDim2.new(0, 10, 0, 15)
+ResultsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ResultsLayout.Parent = KittyResults
+local ResultsPadding = Instance.new("UIPadding")
+ResultsPadding.PaddingTop = UDim.new(0, 10)
+ResultsPadding.PaddingLeft = UDim.new(0, 10)
+ResultsPadding.PaddingBottom = UDim.new(0, 20)
+ResultsPadding.Parent = KittyResults
+
+local TitleCat = Instance.new("TextLabel")
+TitleCat.Size = UDim2.new(1, 0, 0, 40)
+TitleCat.BackgroundTransparency = 1
+TitleCat.Text = "🎀 Categoría"
+TitleCat.Font = Enum.Font.GothamBold
+TitleCat.TextSize = 16
+TitleCat.TextColor3 = Color3.fromRGB(255, 20, 147)
+TitleCat.TextXAlignment = Enum.TextXAlignment.Center
+TitleCat.Parent = KittySidebar
+
+local KittyCurrentCategory = 1 
+
+local CategoriesEnglish = {
+    {"All", 1},
+    {"Accessories", 11}, 
+    {"Clothing (All)", 3}, {"Shirts", 3}, {"T-Shirts", 3}, {"Sweaters", 3}, {"Jackets", 3}, {"Pants", 3}, {"Shoes", 3},
+    {"Body", 4}, {"Hair", 4}, {"Heads", 4}, {"Faces / Makeup", 4},
+    {"Animations", 12}, {"Emotes", 12},
+    {"Gear", 5}
+}
+
+for i, catData in ipairs(CategoriesEnglish) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(255, 228, 225)
+    btn.Text = " " .. catData[1]
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 12
+    btn.TextColor3 = Color3.fromRGB(80, 80, 80)
+    btn.TextXAlignment = Enum.TextXAlignment.Center
+    btn.Parent = KittySidebar
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        KittyCurrentCategory = catData[2]
+        if catData[1] ~= "All" and catData[1] ~= "Accessories" and catData[1] ~= "Clothing (All)" and catData[1] ~= "Body" then
+            KittySearch.Text = catData[1] .. " "
+        else
+            KittySearch.Text = ""
+        end
+        KittySearch.PlaceholderText = "🔍 En " .. catData[1] .. "..."
+        
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 105, 180)}):Play()
+        task.wait(0.2)
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 228, 225)}):Play()
+    end)
+end
+
+local function PerformKittySearch()
+    if KittySearch.Text == "" then return end
+    for _, child in ipairs(KittyResults:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+
+    local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+    local success, response = pcall(function() return game:HttpGet(url) end)
+    
+    if not success or not response then
+        url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+        success, response = pcall(function() return game:HttpGet(url) end)
+    end
+
+    if success and response then
+        local decoded = HttpService:JSONDecode(response)
+        if decoded and decoded.data then
+            for _, item in ipairs(decoded.data) do
+                local Card = Instance.new("Frame")
+                Card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Card.Parent = KittyResults
+                
+                local CardCorner = Instance.new("UICorner")
+                CardCorner.CornerRadius = UDim.new(0, 10)
+                CardCorner.Parent = Card
+                
+                local CardImg = Instance.new("ImageLabel")
+                CardImg.Size = UDim2.new(1, 0, 0, 100)
+                CardImg.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+                CardImg.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150"
+                CardImg.Parent = Card
+                local ImgCorner = Instance.new("UICorner")
+                ImgCorner.CornerRadius = UDim.new(0, 10)
+                ImgCorner.Parent = CardImg
+                
+                local CardName = Instance.new("TextLabel")
+                CardName.Size = UDim2.new(1, -10, 0, 25)
+                CardName.Position = UDim2.new(0, 5, 0, 105)
+                CardName.BackgroundTransparency = 1
+                CardName.Text = item.name
+                CardName.Font = Enum.Font.GothamSemibold
+                CardName.TextSize = 11
+                CardName.TextColor3 = Color3.fromRGB(30, 30, 30)
+                CardName.TextWrapped = true
+                CardName.TextXAlignment = Enum.TextXAlignment.Left
+                CardName.Parent = Card
+                
+                local CardCreator = Instance.new("TextLabel")
+                CardCreator.Size = UDim2.new(1, -10, 0, 15)
+                CardCreator.Position = UDim2.new(0, 5, 0, 135)
+                CardCreator.BackgroundTransparency = 1
+                CardCreator.Text = "De " .. (item.creatorName or "Desconocido")
+                CardCreator.Font = Enum.Font.Gotham
+                CardCreator.TextSize = 10
+                CardCreator.TextColor3 = Color3.fromRGB(100, 100, 100)
+                CardCreator.TextXAlignment = Enum.TextXAlignment.Left
+                CardCreator.Parent = Card
+                
+                local CardPrice = Instance.new("TextLabel")
+                CardPrice.Size = UDim2.new(1, -25, 0, 20)
+                CardPrice.Position = UDim2.new(0, 25, 0, 155)
+                CardPrice.BackgroundTransparency = 1
+                CardPrice.Text = item.price and tostring(item.price) or "Gratis"
+                CardPrice.Font = Enum.Font.GothamBold
+                CardPrice.TextSize = 13
+                CardPrice.TextColor3 = Color3.fromRGB(50, 50, 50)
+                CardPrice.TextXAlignment = Enum.TextXAlignment.Left
+                CardPrice.Parent = Card
+                
+                local CardRobux = Instance.new("ImageLabel")
+                CardRobux.Size = UDim2.new(0, 14, 0, 14)
+                CardRobux.Position = UDim2.new(0, 6, 0, 158)
+                CardRobux.BackgroundTransparency = 1
+                CardRobux.Image = "rbxassetid://11560341824"
+                CardRobux.Visible = (item.price ~= nil and item.price > 0)
+                CardRobux.Parent = Card
+
+                local ClickBtn = Instance.new("TextButton")
+                ClickBtn.Size = UDim2.new(1, 0, 1, 0)
+                ClickBtn.BackgroundTransparency = 1
+                ClickBtn.Text = ""
+                ClickBtn.Parent = Card
+                
+                ClickBtn.MouseButton1Click:Connect(function()
+                    CurrentData.Id = tostring(item.id)
+                    CurrentData.Name = item.name
+                    CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
+                    CurrentData.ItemType = item.itemType or "Asset"
+                    
+                    UpdateVisualizer(item.id, item.price or "Gratis")
+                end)
+            end
+        end
+    end
+end
+
+KittySearch.FocusLost:Connect(function(enterPressed) if enterPressed then PerformKittySearch() end end)
+KittySearchBtn.MouseButton1Click:Connect(PerformKittySearch)
+
+-- ==========================================================
+-- LÓGICA DE DICCIONARIO Y RAYFIELD
+-- ==========================================================
+local AssetTypeNames = {
+    [2] = "T-Shirt", [5] = "Script LUA", [8] = "Sombrero", [9] = "Place", [10] = "Modelo", 
+    [11] = "Camisa", [12] = "Pantalón", [13] = "Decal", [17] = "Cabeza", [18] = "Cara", [19] = "Gear", 
+    [24] = "Animación", [27] = "Torso", [28] = "Brazo Der", [29] = "Brazo Izq", 
+    [30] = "Pierna Izq", [31] = "Pierna Der", [38] = "Plugin", [41] = "Pelo", 
+    [42] = "Acc. Cara", [43] = "Acc. Cuello", [44] = "Acc. Hombro", [45] = "Acc. Frontal", 
+    [46] = "Acc. Trasero", [47] = "Acc. Cintura", [64] = "T-Shirt 3D", [65] = "Camisa 3D", 
+    [66] = "Pantalón 3D", [67] = "Chaqueta 3D", [68] = "Suéter 3D", [69] = "Zapatos 3D", [70] = "Vestido 3D"
+}
+
+local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
+
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "🏥 Avatar Catalog Quirúrgico Pro v22",
+   LoadingTitle = "Cargando Fix Ropa 3D + Restauro...",
+   LoadingSubtitle = "Librería Optimizada",
+   ConfigurationSaving = { Enabled = false },
+   KeySystem = false
+})
+
+local SearchResultsCache = {}
+local Panel = Window:CreateTab("🏥 Catálogo Real", 4483362458)
+
+Panel:CreateToggle({
+   Name = "🎀 Activar Menú Kitty & Persistencia",
+   CurrentValue = false,
+   Flag = "KittyMenuToggle", 
+   Callback = function(Value)
+       KittyGui.Enabled = Value
+       KeepEquippedOnDeath = Value
+       
+       if Value then
+           KittyMain.Visible = true
+           FloatingBtn.Visible = false
+           Rayfield:Notify({Title = "Sistema Unificado", Content = "Menú visual y persistencia de avatar ACTIVADOS.", Duration = 3})
+       else
+           ResetToDefaultAvatar()
+           KittyMain.Visible = false
+           FloatingBtn.Visible = false
+           EqPanel.Visible = false
+           Rayfield:Notify({Title = "Restaurado", Content = "Avatar desequipado y reseteado al estado original.", Duration = 3.5})
+       end
+   end,
+})
+
+Panel:CreateSection("🔍 Búsqueda en Vivo (Nombre Real)")
+
+local SearchCategory = "All"
+Panel:CreateDropdown({
+   Name = "Filtro de Categoría",
+   Options = {"All", "Accessories", "Clothing", "Characters", "Gear", "Animations"},
+   CurrentOption = {"All"},
+   MultipleOptions = false,
+   Callback = function(Option) SearchCategory = type(Option) == "table" and Option[1] or Option end,
+})
+
+local SpinnerDropdown = Panel:CreateDropdown({
+   Name = "🔽 Resultados (Cascada)",
+   Options = {"Esperando búsqueda..."},
+   CurrentOption = {"Esperando búsqueda..."},
+   MultipleOptions = false,
+   Callback = function(Option)
+       local selectedText = type(Option) == "table" and Option[1] or Option
+       if SearchResultsCache[selectedText] then
+           local item = SearchResultsCache[selectedText]
+           CurrentData.Id = tostring(item.Id); CurrentData.Name = item.Name; CurrentData.Price = item.Price
+           CurrentData.Category = item.Category; CurrentData.ItemType = item.ItemType
+           UpdateVisualizer(item.Id, item.Price)
+           Rayfield:Notify({Title = "Seleccionado", Content = item.Name, Duration = 2})
+       end
+   end,
+})
+
+Panel:CreateInput({
+   Name = "Escribe el Nombre del Item y dale Enter",
+   PlaceholderText = "Ej: Beanie, Dominus, Cheeks...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+       if Text == "" then return end
+       Rayfield:Notify({Title = "Buscando...", Content = "Conectando al catálogo de Roblox...", Duration = 2})
+       
+       local apiCategory = CategoryToNumber[SearchCategory] or 1
+       local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(apiCategory).."&limit=10&keyword=" .. HttpService:UrlEncode(Text)
+       local success, response = pcall(function() return game:HttpGet(url) end)
+       if not success or not response then
+           url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(apiCategory).."&limit=10&keyword=" .. HttpService:UrlEncode(Text)
+           success, response = pcall(function() return game:HttpGet(url) end)
+       end
+
+       if success and response then
+           local decoded = HttpService:JSONDecode(response)
+           if decoded and decoded.data then
+               local newOptions = {}; SearchResultsCache = {} 
+               for _, item in ipairs(decoded.data) do
+                   local priceStr = item.price or 0
+                   local catName = AssetTypeNames[item.assetType] or item.itemType or "Item"
+                   local listName = string.format("%s - [%s]", item.name, catName)
+                   table.insert(newOptions, listName)
+                   SearchResultsCache[listName] = { Id = item.id, Name = item.name, Price = priceStr, Category = catName, ItemType = item.itemType or "Asset" }
+               end
+               if #newOptions > 0 then
+                   SpinnerDropdown:Refresh(newOptions, true)
+                   Rayfield:Notify({Title = "Éxito", Content = "Resultados cargados.", Duration = 3})
+               end
+           end
+       end
+   end,
+})
+
+Panel:CreateSection("Búsqueda Directa por ID")
+
+local DirectIdInput = Panel:CreateInput({
+   Name = "Ingresar ID Directa",
+   PlaceholderText = "Ej: 144275038...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+       local numericId = tonumber(Text)
+       if not numericId then return end
+       local success, info = pcall(function() return MarketplaceService:GetProductInfo(numericId) end)
+       if success and info then
+           CurrentData.Id = tostring(numericId); CurrentData.Name = info.Name
+           CurrentData.Price = info.PriceInRobux and (tostring(info.PriceInRobux) .. " R$") or "Gratis / Off-Sale"
+           CurrentData.Category = AssetTypeNames[info.AssetTypeId] or "Desconocido"
+           CurrentData.ItemType = "Asset"
+           UpdateVisualizer(CurrentData.Id, CurrentData.Price)
+           Rayfield:Notify({Title = "Item Encontrado", Content = CurrentData.Name, Duration = 2})
+       end
+   end,
+})
+
+Panel:CreateSection("🧪 Aplicar / Probar en Personaje")
+
+Panel:CreateButton({
+   Name = "⚡ Equipar/Probar Selección",
+   Callback = function()
+       local assetId = tonumber(CurrentData.Id)
+       if not assetId or assetId == 0 then return end
+       UniversalEquip(assetId, false)
+   end,
+})
+
+Panel:CreateButton({
+   Name = "🔄 Resetear Avatar a Default Manual",
+   Callback = function()
+       ResetToDefaultAvatar()
+       Rayfield:Notify({Title = "Personaje Restaurado", Content = "Se cargó el avatar oficial de Roblox.", Duration = 2.5})
+   end,
+})
+
+Panel:CreateButton({
+   Name = "👁️ Ocultar / Mostrar Visualizador Clásico",
+   Callback = function() Container.Visible = not Container.Visible end,
+})
+
+Panel:CreateSection("⚙️ Rendimiento")
+
+Panel:CreateButton({
+   Name = "🧹 Limpiar Caché y Liberar RAM",
+   Callback = function()
+       collectgarbage("collect")
+       Rayfield:Notify({Title = "RAM Purgada", Content = "Memoria optimizada.", Duration = 2.5})
+   end,
+})
