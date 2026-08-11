@@ -1917,7 +1917,7 @@ Panel:CreateInput({
        local apiCategory = CategoryToNumber[SearchCategory] or 1
        local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(apiCategory).."&limit=10&keyword=" .. HttpService:UrlEncode(Text)
        local success, response = pcall(function() return game:HttpGet(url) end)
-       if not success or not response me
+       if not success or not response then
            url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(apiCategory).."&limit=10&keyword=" .. HttpService:UrlEncode(Text)
            success, response = pcall(function() return game:HttpGet(url) end)
        end
