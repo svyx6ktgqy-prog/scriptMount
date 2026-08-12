@@ -1927,7 +1927,7 @@ end
 local function PerformKittySearch()
     if KittySearch.Text == "" then return end
     
-    -- Limpiar resultados anteriores
+    -- Limpiar UI anterior
     for _, child in ipairs(KittyResults:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
@@ -1935,41 +1935,50 @@ local function PerformKittySearch()
     task.spawn(function()
         local allItems = {}
         local nextPageCursor = nil
-        local maxPages = 10 -- Carga hasta 1200 ítems (10 págs x 120) de forma fluida
+        local maxPages = 5 -- Trae hasta 600 ítems (suficiente para evitar rate-limits)
         local pageCount = 0
 
         repeat
             pageCount = pageCount + 1
             
-            -- Construcción segura del parámetro de cursor
-            local cursorParam = ""
-            if nextPageCursor and nextPageCursor ~= "" then
-                cursorParam = "&cursor=" .. tostring(nextPageCursor)
-            end
-
-            local baseUrl = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
+            -- Construcción limpia del URL
+            local searchKeyword = HttpService:UrlEncode(KittySearch.Text)
+            local categoryId = tonumber(KittyCurrentCategory) or 1
             
-            local success, response = pcall(function() return game:HttpGet(baseUrl) end)
-            if not success or not response then
-                baseUrl = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
-                success, response = pcall(function() return game:HttpGet(baseUrl) end)
+            local url = string.format(
+                "https://catalog.roproxy.com/v1/search/items/details?category=%d&keyword=%s&limit=120",
+                categoryId,
+                searchKeyword
+            )
+            
+            if nextPageCursor and nextPageCursor ~= "" then
+                url = url .. "&cursor=" .. tostring(nextPageCursor)
             end
 
-            if success and response then
-                local decoded = HttpService:JSONDecode(response)
-                if decoded and decoded.data and #decoded.data > 0 then
+            local response = nil
+            local success = pcall(function()
+                response = game:HttpGet(url)
+            end)
+
+            if success and response and response ~= "" then
+                local decodeSuccess, decoded = pcall(function()
+                    return HttpService:JSONDecode(response)
+                end)
+
+                if decodeSuccess and decoded and decoded.data and #decoded.data > 0 then
                     for _, item in ipairs(decoded.data) do
                         table.insert(allItems, {
                             Id = item.id,
-                            Name = item.name,
-                            Creator = item.creatorName,
-                            Price = item.price,
+                            Name = item.name or "Sin nombre",
+                            Creator = item.creatorName or "Roblox",
+                            Price = item.price or 0,
                             ItemType = item.itemType or "Asset",
                             ParentContainer = KittyResults,
                             OnSelectCallback = UpdateVisualizer
                         })
                     end
-                    -- Asignar el siguiente cursor de forma segura
+                    
+                    -- Actualizar el cursor para la siguiente iteración
                     nextPageCursor = decoded.nextPageCursor
                 else
                     nextPageCursor = nil
@@ -1978,12 +1987,14 @@ local function PerformKittySearch()
                 nextPageCursor = nil
             end
             
-            task.wait(0.02) -- Yield mínimo para mantener FPS estables sin demorar la red
+            task.wait(0.1) -- Pausa necesaria para evitar el bloqueo 429 (Too Many Requests)
         until not nextPageCursor or nextPageCursor == "" or pageCount >= maxPages
 
-        -- Mandar la lista masiva completa a precargar
+        -- Forzar renderizado en pantalla
         if #allItems > 0 then
             BannerSystem.PreloadBanners(allItems)
+        else
+            warn("[KittySearch] No se encontraron elementos o la API bloqueó la petición.")
         end
     end)
 end
