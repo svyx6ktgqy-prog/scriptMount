@@ -1927,39 +1927,63 @@ end
 local function PerformKittySearch()
     if KittySearch.Text == "" then return end
     
+    -- Limpiar resultados anteriores
     for _, child in ipairs(KittyResults:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
 
     task.spawn(function()
-        -- limit=120 trae el máximo de una sola llamada sin bloquear la red
-        local baseUrl = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
-        
-        local success, response = pcall(function() return game:HttpGet(baseUrl) end)
-        if not success or not response then
-            baseUrl = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
-            success, response = pcall(function() return game:HttpGet(baseUrl) end)
-        end
+        local allItems = {}
+        local nextPageCursor = nil
+        local maxPages = 10 -- Carga hasta 1200 ítems (10 págs x 120) de forma fluida
+        local pageCount = 0
 
-        if success and response then
-            local decoded = HttpService:JSONDecode(response)
-            if decoded and decoded.data then
-                local itemsToProcess = {}
-                for _, item in ipairs(decoded.data) do
-                    table.insert(itemsToProcess, {
-                        Id = item.id,
-                        Name = item.name,
-                        Creator = item.creatorName,
-                        Price = item.price,
-                        ItemType = item.itemType or "Asset",
-                        ParentContainer = KittyResults,
-                        OnSelectCallback = UpdateVisualizer
-                    })
-                end
-                
-                -- Renderiza los 120 ítems al instante
-                BannerSystem.PreloadBanners(itemsToProcess)
+        repeat
+            pageCount = pageCount + 1
+            
+            -- Construcción segura del parámetro de cursor
+            local cursorParam = ""
+            if nextPageCursor and nextPageCursor ~= "" then
+                cursorParam = "&cursor=" .. tostring(nextPageCursor)
             end
+
+            local baseUrl = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
+            
+            local success, response = pcall(function() return game:HttpGet(baseUrl) end)
+            if not success or not response then
+                baseUrl = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
+                success, response = pcall(function() return game:HttpGet(baseUrl) end)
+            end
+
+            if success and response then
+                local decoded = HttpService:JSONDecode(response)
+                if decoded and decoded.data and #decoded.data > 0 then
+                    for _, item in ipairs(decoded.data) do
+                        table.insert(allItems, {
+                            Id = item.id,
+                            Name = item.name,
+                            Creator = item.creatorName,
+                            Price = item.price,
+                            ItemType = item.itemType or "Asset",
+                            ParentContainer = KittyResults,
+                            OnSelectCallback = UpdateVisualizer
+                        })
+                    end
+                    -- Asignar el siguiente cursor de forma segura
+                    nextPageCursor = decoded.nextPageCursor
+                else
+                    nextPageCursor = nil
+                end
+            else
+                nextPageCursor = nil
+            end
+            
+            task.wait(0.02) -- Yield mínimo para mantener FPS estables sin demorar la red
+        until not nextPageCursor or nextPageCursor == "" or pageCount >= maxPages
+
+        -- Mandar la lista masiva completa a precargar
+        if #allItems > 0 then
+            BannerSystem.PreloadBanners(allItems)
         end
     end)
 end
