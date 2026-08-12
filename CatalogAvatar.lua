@@ -1932,13 +1932,13 @@ local function PerformKittySearch()
     end
 
     task.spawn(function()
-        local allItems = {}
         local nextPageCursor = ""
-        local maxPages = 100 -- Límite de seguridad para evitar loops infinitos
+        local maxPages = 20 -- Límite optimizado para evitar latencia excesiva
         local pageCount = 0
 
         repeat
             pageCount = pageCount + 1
+            local pageItems = {}
             local cursorParam = nextPageCursor ~= "" and ("&cursor=" .. nextPageCursor) or ""
             local baseUrl = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
             
@@ -1952,7 +1952,7 @@ local function PerformKittySearch()
                 local decoded = HttpService:JSONDecode(response)
                 if decoded and decoded.data then
                     for _, item in ipairs(decoded.data) do
-                        table.insert(allItems, {
+                        table.insert(pageItems, {
                             Id = item.id,
                             Name = item.name,
                             Creator = item.creatorName,
@@ -1962,6 +1962,12 @@ local function PerformKittySearch()
                             OnSelectCallback = UpdateVisualizer
                         })
                     end
+                    
+                    -- Renderizado progresivo: carga la página actual inmediatamente en pantalla
+                    if #pageItems > 0 then
+                        BannerSystem.PreloadBanners(pageItems)
+                    end
+                    
                     nextPageCursor = decoded.nextPageCursor or nil
                 else
                     nextPageCursor = nil
@@ -1970,10 +1976,8 @@ local function PerformKittySearch()
                 nextPageCursor = nil
             end
             
-            task.wait(0.05) -- Pausa leve para evitar saturar el flujo I/O
+            task.wait(0.1) -- Pausa adaptada para no saturar peticiones
         until not nextPageCursor or pageCount >= maxPages
-
-        BannerSystem.PreloadBanners(allItems)
     end)
 end
 
