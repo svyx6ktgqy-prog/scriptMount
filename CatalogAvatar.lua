@@ -1934,7 +1934,7 @@ local function PerformKittySearch()
 
     task.spawn(function()
         local nextPageCursor = ""
-        local maxPages = 15 -- Carga hasta 1,800 elementos (15 págs x 120)
+        local maxPages = 2 -- Carga hasta 1,800 elementos (15 págs x 120)
         local pageCount = 0
 
         repeat
