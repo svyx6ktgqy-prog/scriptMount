@@ -1926,120 +1926,94 @@ end
 
 local function PerformKittySearch()
     if KittySearch.Text == "" then return end
-    
-    -- Limpiar resultados anteriores
     for _, child in ipairs(KittyResults:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
 
-    task.spawn(function()
-        local nextPageCursor = ""
-        local maxPages = 2 -- Carga hasta 1,800 elementos (15 págs x 120)
-        local pageCount = 0
+    local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+    local success, response = pcall(function() return game:HttpGet(url) end)
+    
+    if not success or not response then
+        url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+        success, response = pcall(function() return game:HttpGet(url) end)
+    end
 
-        repeat
-            pageCount = pageCount + 1
-            local cursorParam = nextPageCursor ~= "" and ("&cursor=" .. nextPageCursor) or ""
-            local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
-            
-            local success, response = pcall(function() return game:HttpGet(url) end)
-            if not success or not response then
-                url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
-                success, response = pcall(function() return game:HttpGet(url) end)
-            end
+    if success and response then
+        local decoded = HttpService:JSONDecode(response)
+        if decoded and decoded.data then
+            for _, item in ipairs(decoded.data) do
+                local Card = Instance.new("Frame")
+                Card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Card.Parent = KittyResults
+                
+                local CardCorner = Instance.new("UICorner"); CardCorner.CornerRadius = UDim.new(0, 10); CardCorner.Parent = Card
+                
+                local CardImg = Instance.new("ImageLabel")
+                CardImg.Size = UDim2.new(1, 0, 0, 100)
+                CardImg.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+                CardImg.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150"
+                CardImg.Parent = Card
+                local ImgCorner = Instance.new("UICorner"); ImgCorner.CornerRadius = UDim.new(0, 10); ImgCorner.Parent = CardImg
+                
+                local CardName = Instance.new("TextLabel")
+                CardName.Size = UDim2.new(1, -10, 0, 25)
+                CardName.Position = UDim2.new(0, 5, 0, 105)
+                CardName.BackgroundTransparency = 1
+                CardName.Text = item.name
+                CardName.Font = Enum.Font.GothamSemibold
+                CardName.TextSize = 11
+                CardName.TextColor3 = Color3.fromRGB(30, 30, 30)
+                CardName.TextWrapped = true
+                CardName.TextXAlignment = Enum.TextXAlignment.Left
+                CardName.Parent = Card
+                
+                local CardCreator = Instance.new("TextLabel")
+                CardCreator.Size = UDim2.new(1, -10, 0, 15)
+                CardCreator.Position = UDim2.new(0, 5, 0, 135)
+                CardCreator.BackgroundTransparency = 1
+                CardCreator.Text = "De " .. (item.creatorName or "Desconocido")
+                CardCreator.Font = Enum.Font.Gotham
+                CardCreator.TextSize = 10
+                CardCreator.TextColor3 = Color3.fromRGB(100, 100, 100)
+                CardCreator.TextXAlignment = Enum.TextXAlignment.Left
+                CardCreator.Parent = Card
+                
+                local CardPrice = Instance.new("TextLabel")
+                CardPrice.Size = UDim2.new(1, -25, 0, 20)
+                CardPrice.Position = UDim2.new(0, 25, 0, 155)
+                CardPrice.BackgroundTransparency = 1
+                CardPrice.Text = item.price and tostring(item.price) or "Gratis"
+                CardPrice.Font = Enum.Font.GothamBold
+                CardPrice.TextSize = 13
+                CardPrice.TextColor3 = Color3.fromRGB(50, 50, 50)
+                CardPrice.TextXAlignment = Enum.TextXAlignment.Left
+                CardPrice.Parent = Card
+                
+                local CardRobux = Instance.new("ImageLabel")
+                CardRobux.Size = UDim2.new(0, 14, 0, 14)
+                CardRobux.Position = UDim2.new(0, 6, 0, 158)
+                CardRobux.BackgroundTransparency = 1
+                CardRobux.Image = "rbxassetid://11560341824"
+                CardRobux.Visible = (item.price ~= nil and item.price > 0)
+                CardRobux.Parent = Card
 
-            if success and response then
-                local decoded = HttpService:JSONDecode(response)
-                if decoded and decoded.data then
-                    for _, item in ipairs(decoded.data) do
-                        -- Generación directa de la UI de la tarjeta
-                        local Card = Instance.new("Frame")
-                        Card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                        Card.Parent = KittyResults
-                        
-                        local CardCorner = Instance.new("UICorner")
-                        CardCorner.CornerRadius = UDim.new(0, 10)
-                        CardCorner.Parent = Card
-                        
-                        local CardImg = Instance.new("ImageLabel")
-                        CardImg.Size = UDim2.new(1, 0, 0, 100)
-                        CardImg.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
-                        CardImg.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150"
-                        CardImg.Parent = Card
-                        
-                        local ImgCorner = Instance.new("UICorner")
-                        ImgCorner.CornerRadius = UDim.new(0, 10)
-                        ImgCorner.Parent = CardImg
-                        
-                        local CardName = Instance.new("TextLabel")
-                        CardName.Size = UDim2.new(1, -10, 0, 25)
-                        CardName.Position = UDim2.new(0, 5, 0, 105)
-                        CardName.BackgroundTransparency = 1
-                        CardName.Text = item.name
-                        CardName.Font = Enum.Font.GothamSemibold
-                        CardName.TextSize = 11
-                        CardName.TextColor3 = Color3.fromRGB(30, 30, 30)
-                        CardName.TextWrapped = true
-                        CardName.TextXAlignment = Enum.TextXAlignment.Left
-                        CardName.Parent = Card
-                        
-                        local CardCreator = Instance.new("TextLabel")
-                        CardCreator.Size = UDim2.new(1, -10, 0, 15)
-                        CardCreator.Position = UDim2.new(0, 5, 0, 135)
-                        CardCreator.BackgroundTransparency = 1
-                        CardCreator.Text = "De " .. (item.creatorName or "Desconocido")
-                        CardCreator.Font = Enum.Font.Gotham
-                        CardCreator.TextSize = 10
-                        CardCreator.TextColor3 = Color3.fromRGB(100, 100, 100)
-                        CardCreator.TextXAlignment = Enum.TextXAlignment.Left
-                        CardCreator.Parent = Card
-                        
-                        local CardPrice = Instance.new("TextLabel")
-                        CardPrice.Size = UDim2.new(1, -25, 0, 20)
-                        CardPrice.Position = UDim2.new(0, 25, 0, 155)
-                        CardPrice.BackgroundTransparency = 1
-                        CardPrice.Text = item.price and tostring(item.price) or "Gratis"
-                        CardPrice.Font = Enum.Font.GothamBold
-                        CardPrice.TextSize = 13
-                        CardPrice.TextColor3 = Color3.fromRGB(50, 50, 50)
-                        CardPrice.TextXAlignment = Enum.TextXAlignment.Left
-                        CardPrice.Parent = Card
-                        
-                        local CardRobux = Instance.new("ImageLabel")
-                        CardRobux.Size = UDim2.new(0, 14, 0, 14)
-                        CardRobux.Position = UDim2.new(0, 6, 0, 158)
-                        CardRobux.BackgroundTransparency = 1
-                        CardRobux.Image = "rbxassetid://11560341824"
-                        CardRobux.Visible = (item.price ~= nil and item.price > 0)
-                        CardRobux.Parent = Card
-
-                        local ClickBtn = Instance.new("TextButton")
-                        ClickBtn.Size = UDim2.new(1, 0, 1, 0)
-                        ClickBtn.BackgroundTransparency = 1
-                        ClickBtn.Text = ""
-                        ClickBtn.Parent = Card
-                        
-                        ClickBtn.MouseButton1Click:Connect(function()
-                            CurrentData.Id = tostring(item.id)
-                            CurrentData.Name = item.name
-                            CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
-                            CurrentData.ItemType = item.itemType or "Asset"
-                            
-                            UpdateVisualizer(item.id, item.price or "Gratis")
-                        end)
-                    end
+                local ClickBtn = Instance.new("TextButton")
+                ClickBtn.Size = UDim2.new(1, 0, 1, 0)
+                ClickBtn.BackgroundTransparency = 1
+                ClickBtn.Text = ""
+                ClickBtn.Parent = Card
+                
+                ClickBtn.MouseButton1Click:Connect(function()
+                    CurrentData.Id = tostring(item.id)
+                    CurrentData.Name = item.name
+                    CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
+                    CurrentData.ItemType = item.itemType or "Asset"
                     
-                    nextPageCursor = decoded.nextPageCursor or nil
-                else
-                    nextPageCursor = nil
-                end
-            else
-                nextPageCursor = nil
+                    UpdateVisualizer(item.id, item.price or "Gratis")
+                end)
             end
-            
-            task.wait(0.03) -- Yield mínimo para rendering instantáneo sin congelar FPS
-        until not nextPageCursor or nextPageCursor == "" or pageCount >= maxPages
-    end)
+        end
+    end
 end
 
 KittySearch.FocusLost:Connect(function(enterPressed) if enterPressed then PerformKittySearch() end end)
