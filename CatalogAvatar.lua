@@ -1927,103 +1927,53 @@ end
 local function PerformKittySearch()
     if KittySearch.Text == "" then return end
     
-    -- Limpiar resultados anteriores en la UI
     for _, child in ipairs(KittyResults:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
 
     task.spawn(function()
         local allItems = {}
-        local nextPageCursor = nil
-        local maxPages = 5 -- Carga hasta 600 ítems (5 págs x 120) rápidamente
+        local nextPageCursor = ""
+        local maxPages = 15 -- Ajustado para traer hasta 1,800 elementos de forma fluida
         local pageCount = 0
-
-        -- Asegura que la categoría tenga un formato válido para la API
-        local rawCat = tostring(KittyCurrentCategory)
-        local catParam = (rawCat == "" or rawCat == "nil") and "All" or rawCat
 
         repeat
             pageCount = pageCount + 1
+            local cursorParam = nextPageCursor ~= "" and ("&cursor=" .. nextPageCursor) or ""
+            local baseUrl = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
             
-            -- Construcción limpia y segura de los parámetros
-            local searchKeyword = HttpService:UrlEncode(KittySearch.Text)
-            local url = "https://catalog.roproxy.com/v1/search/items/details?category=" .. catParam .. "&keyword=" .. searchKeyword .. "&limit=120"
-            
-            if nextPageCursor and tostring(nextPageCursor) ~= "" then
-                url = url .. "&cursor=" .. tostring(nextPageCursor)
+            local success, response = pcall(function() return game:HttpGet(baseUrl) end)
+            if not success or not response then
+                baseUrl = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
+                success, response = pcall(function() return game:HttpGet(baseUrl) end)
             end
 
-            local success, response = pcall(function()
-                return game:HttpGet(url)
-            end)
-
-            if success and response and response ~= "" then
-                local decodeSuccess, decoded = pcall(function()
-                    return HttpService:JSONDecode(response)
-                end)
-
-                if decodeSuccess and decoded and decoded.data and #decoded.data > 0 then
+            if success and response then
+                local decoded = HttpService:JSONDecode(response)
+                if decoded and decoded.data then
                     for _, item in ipairs(decoded.data) do
                         table.insert(allItems, {
                             Id = item.id,
-                            Name = item.name or "Item",
-                            Creator = item.creatorName or "Roblox",
-                            Price = item.price or 0,
+                            Name = item.name,
+                            Creator = item.creatorName,
+                            Price = item.price,
                             ItemType = item.itemType or "Asset",
                             ParentContainer = KittyResults,
                             OnSelectCallback = UpdateVisualizer
                         })
                     end
-                    -- Guardar el cursor para pedir la siguiente página
-                    nextPageCursor = decoded.nextPageCursor
+                    nextPageCursor = decoded.nextPageCursor or nil
                 else
                     nextPageCursor = nil
                 end
             else
-                -- Si falla RoProxy, intentamos con la API directa de Roblox
-                local fallbackUrl = "https://catalog.roblox.com/v1/search/items/details?category=" .. catParam .. "&keyword=" .. searchKeyword .. "&limit=120"
-                if nextPageCursor and tostring(nextPageCursor) ~= "" then
-                    fallbackUrl = fallbackUrl .. "&cursor=" .. tostring(nextPageCursor)
-                end
-
-                local fbSuccess, fbResponse = pcall(function()
-                    return game:HttpGet(fallbackUrl)
-                end)
-
-                if fbSuccess and fbResponse and fbResponse ~= "" then
-                    local decodeSuccess, decoded = pcall(function()
-                        return HttpService:JSONDecode(fbResponse)
-                    end)
-                    if decodeSuccess and decoded and decoded.data then
-                        for _, item in ipairs(decoded.data) do
-                            table.insert(allItems, {
-                                Id = item.id,
-                                Name = item.name or "Item",
-                                Creator = item.creatorName or "Roblox",
-                                Price = item.price or 0,
-                                ItemType = item.itemType or "Asset",
-                                ParentContainer = KittyResults,
-                                OnSelectCallback = UpdateVisualizer
-                            })
-                        end
-                        nextPageCursor = decoded.nextPageCursor
-                    else
-                        nextPageCursor = nil
-                    end
-                else
-                    nextPageCursor = nil
-                end
+                nextPageCursor = nil
             end
             
             task.wait(0.05)
-        until not nextPageCursor or tostring(nextPageCursor) == "" or pageCount >= maxPages
+        until not nextPageCursor or pageCount >= maxPages
 
-        -- Mandar todos los elementos recopilados al sistema de renders
-        if #allItems > 0 then
-            BannerSystem.PreloadBanners(allItems)
-        else
-            warn("[KittySearch] No se encontraron resultados o la API devolvió una respuesta vacía.")
-        end
+        BannerSystem.PreloadBanners(allItems)
     end)
 end
 
