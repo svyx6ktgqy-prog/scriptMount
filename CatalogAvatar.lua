@@ -1932,32 +1932,48 @@ local function PerformKittySearch()
     end
 
     task.spawn(function()
-        local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
-        local success, response = pcall(function() return game:HttpGet(url) end)
-        
-        if not success or not response then
-            url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
-            success, response = pcall(function() return game:HttpGet(url) end)
-        end
+        local allItems = {}
+        local nextPageCursor = ""
+        local maxPages = 100 -- Límite de seguridad para evitar loops infinitos
+        local pageCount = 0
 
-        if success and response then
-            local decoded = HttpService:JSONDecode(response)
-            if decoded and decoded.data then
-                local itemsToProcess = {}
-                for _, item in ipairs(decoded.data) do
-                    table.insert(itemsToProcess, {
-                        Id = item.id,
-                        Name = item.name,
-                        Creator = item.creatorName,
-                        Price = item.price,
-                        ItemType = item.itemType or "Asset",
-                        ParentContainer = KittyResults,
-                        OnSelectCallback = UpdateVisualizer
-                    })
-                end
-                BannerSystem.PreloadBanners(itemsToProcess)
+        repeat
+            pageCount = pageCount + 1
+            local cursorParam = nextPageCursor ~= "" and ("&cursor=" .. nextPageCursor) or ""
+            local baseUrl = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
+            
+            local success, response = pcall(function() return game:HttpGet(baseUrl) end)
+            if not success or not response then
+                baseUrl = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text) .. cursorParam
+                success, response = pcall(function() return game:HttpGet(baseUrl) end)
             end
-        end
+
+            if success and response then
+                local decoded = HttpService:JSONDecode(response)
+                if decoded and decoded.data then
+                    for _, item in ipairs(decoded.data) do
+                        table.insert(allItems, {
+                            Id = item.id,
+                            Name = item.name,
+                            Creator = item.creatorName,
+                            Price = item.price,
+                            ItemType = item.itemType or "Asset",
+                            ParentContainer = KittyResults,
+                            OnSelectCallback = UpdateVisualizer
+                        })
+                    end
+                    nextPageCursor = decoded.nextPageCursor or nil
+                else
+                    nextPageCursor = nil
+                end
+            else
+                nextPageCursor = nil
+            end
+            
+            task.wait(0.05) -- Pausa leve para evitar saturar el flujo I/O
+        until not nextPageCursor or pageCount >= maxPages
+
+        BannerSystem.PreloadBanners(allItems)
     end)
 end
 
