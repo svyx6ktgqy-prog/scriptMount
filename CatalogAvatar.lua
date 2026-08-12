@@ -1932,11 +1932,11 @@ local function PerformKittySearch()
     end
 
     task.spawn(function()
-        local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=60&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+        local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=40&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
         local success, response = pcall(function() return game:HttpGet(url) end)
         
         if not success or not response then
-            url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=60&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+            url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=40&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
             success, response = pcall(function() return game:HttpGet(url) end)
         end
 
