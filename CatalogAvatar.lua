@@ -1930,11 +1930,11 @@ local function PerformKittySearch()
         if child:IsA("Frame") then child:Destroy() end
     end
 
-    local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+    local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
     local success, response = pcall(function() return game:HttpGet(url) end)
     
     if not success or not response then
-        url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=30&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
+        url = "https://catalog.roproxy.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit=120&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
         success, response = pcall(function() return game:HttpGet(url) end)
     end
 
