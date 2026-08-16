@@ -1554,15 +1554,20 @@ ImagePreview.InputBegan:Connect(function(input)
         
         task.spawn(function()
             while isPreviewPressing do
-                -- Si se mantiene por 0.55 segundos, se activa la alerta en UI
+                -- Si se mantiene por 0.55 segundos, abre el menú de Roblox DIRECTAMENTE
                 if tick() - previewHoldStart >= 0.55 then
                     isPreviewPressing = false
                     longPressFired = true
                     
                     local assetId = tonumber(CurrentData.Id)
                     if assetId and assetId > 0 then
-                        AlertDesc.Text = "¿Deseas abrir el menú nativo del juego para obtener:\n" .. tostring(CurrentData.Name) .. "?"
-                        PurchaseAlertMenu.Visible = true
+                        if NotifyUser then
+                            NotifyUser("Obtención", "Abriendo menú de compra nativo...")
+                        end
+                        -- Llama directamente al menú de compra de Roblox, ignorando el menú UI personalizado
+                        pcall(function()
+                            MarketplaceService:PromptPurchase(LocalPlayer, assetId)
+                        end)
                     else
                         if NotifyUser then
                             NotifyUser("Error", "No hay un ítem seleccionado")
