@@ -1685,7 +1685,7 @@ local KittyCurrentCategory = 1
 local KittyPageHistory = {""} 
 local KittyCurrentPage = 1
 local KittyNextCursor = nil
-local KittyMaxPages = 30
+local KittyMaxPages = 120
 local PerformKittySearch -- pre-declarada para usarla luego
 
 local KittyResults = Instance.new("ScrollingFrame")
