@@ -1787,16 +1787,24 @@ end
 
 BtnMinus.MouseButton1Click:Connect(function()
     local current = tonumber(MaxItemsInputBox.Text) or KittySearchLimit
-    UpdateLimit(current - 10)
+    -- Restamos 20 para saltar directamente de 30 a 10
+    UpdateLimit(current - 20)
 end)
 
 BtnPlus.MouseButton1Click:Connect(function()
     local current = tonumber(MaxItemsInputBox.Text) or KittySearchLimit
-    UpdateLimit(current + 10)
+    -- Sumamos 20 para saltar directamente de 10 a 30
+    UpdateLimit(current + 20)
 end)
 
 MaxItemsInputBox.FocusLost:Connect(function()
     local val = tonumber(MaxItemsInputBox.Text) or KITTY_MIN_LIMIT
+    
+    -- Si el usuario escribe "20" manualmente, lo forzamos a 30 (o a 10)
+    if val > 10 and val < 30 then
+        val = 30 
+    end
+    
     UpdateLimit(val)
 end)
 
