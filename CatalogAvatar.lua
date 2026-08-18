@@ -1063,7 +1063,7 @@ local function RefreshSavedCharactersGrid()
                     end
 
                     for _, part in ipairs(dummy:GetChildren()) do
-                        if part:IsA("BasePart") then
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
                             part.Transparency = 0 
                         end
                     end
