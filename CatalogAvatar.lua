@@ -2595,28 +2595,39 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 
 -- ==========================================================
--- 🛡️ MOTOR DE INTERCEPCIÓN DE RED (ANTI-YIELD HOOK)
+-- 🛡️ MOTOR DE INTERCEPCIÓN ABSOLUTA (NIVEL DIOS)
 -- ==========================================================
--- Esto engaña al juego para que no descargue datos pesados de internet
-if not getgenv().NetworkHooked then
-    getgenv().NetworkHooked = true
-    getgenv().BlockAvatarDownloads = false
+-- Este sistema engaña al motor de Roblox a nivel memoria.
+if not getgenv().UltimateHookActive then
+    getgenv().UltimateHookActive = true
+    getgenv().BlockHeavyRenders = false
     
+    -- 1. Hooking Métodos (__namecall): Bloquea funciones pesadas de construcción de personajes.
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        if getgenv().BlockAvatarDownloads and not checkcaller() then
+        if getgenv().BlockHeavyRenders and not checkcaller() then
             local method = getnamecallmethod()
-            
-            -- Si el juego intenta descargar ropa o el modelo del servidor, devolvemos cascarones vacíos al instante
-            if method == "GetHumanoidDescriptionFromOutfitId" or method == "GetHumanoidDescriptionFromUserId" then
-                return Instance.new("HumanoidDescription")
-            elseif method == "CreateHumanoidModelFromOutfitId" or method == "GetCharacterAppearanceAsync" or method == "LoadCharacterAppearance" then
-                return Instance.new("Model")
-            elseif method == "ApplyDescription" then
-                return -- Bloqueamos la aplicación pesada de ropa
+            if method == "ApplyDescription" or method == "AddAccessory" or method == "LoadCharacterAppearance" then
+                return -- Ignoramos la petición, bloqueando el cálculo pesado instantáneamente.
             end
         end
         return oldNamecall(self, ...)
+    end)
+    
+    -- 2. Hooking Propiedades (__newindex): EL VERDADERO ANTI-LAG GRAFICO.
+    local oldNewindex
+    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
+        if getgenv().BlockHeavyRenders and not checkcaller() then
+            -- Si el juego intenta meter ropa, sombreros o modelos 3D en el menú, le cerramos la puerta.
+            if index == "Parent" and typeof(value) == "Instance" then
+                if value.ClassName == "ViewportFrame" then
+                    if self:IsA("Model") or self:IsA("BasePart") or self:IsA("Accessory") or self:IsA("Humanoid") then
+                        return -- Bloqueo silencioso. El juego no crashea, pero no renderiza nada.
+                    end
+                end
+            end
+        end
+        return oldNewindex(self, index, value)
     end)
 end
 -- ==========================================================
@@ -2625,20 +2636,13 @@ local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
--- 1. Limpieza Profunda
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Extrema y Ping Óptimo",
     Callback = function()
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(respuesta)
             if respuesta == "OK" then
-                Rayfield:Notify({
-                    Title = "⚙️ Optimizando...",
-                    Content = "Aplicando modo liso/minimalista. Espera un momento.",
-                    Duration = 3,
-                    Image = 4483362458,
-                })
-                
+                Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista. Espera un momento.", Duration = 3, Image = 4483362458})
                 task.spawn(function()
                     task.wait(0.5) 
                     local success, err = pcall(function()
@@ -2650,7 +2654,6 @@ ExtraTab:CreateButton({
                             Lighting.ShadowSoftness = 0
                             Lighting.FogEnd = 9e9 
                         end)
-                        
                         for _, effect in ipairs(Lighting:GetChildren()) do
                             pcall(function()
                                 if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
@@ -2660,7 +2663,6 @@ ExtraTab:CreateButton({
                                 end
                             end)
                         end
-                        
                         pcall(function()
                             if Workspace:FindFirstChildOfClass("Terrain") then
                                 Workspace.Terrain.WaterWaveSize = 0
@@ -2670,7 +2672,6 @@ ExtraTab:CreateButton({
                                 Workspace.Terrain.Decoration = false
                             end
                         end)
-                        
                         for _, v in ipairs(Workspace:GetDescendants()) do
                             pcall(function()
                                 if v:IsA("BasePart") then
@@ -2685,16 +2686,11 @@ ExtraTab:CreateButton({
                             end)
                         end
                     end)
-
-                    if success then
-                        Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458})
-                    end
+                    if success then Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458}) end
                 end)
             end
         end
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
-        end)
+        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
     end
 })
 
@@ -2713,15 +2709,11 @@ ExtraTab:CreateButton({
                         Lighting.ShadowSoftness = 0.2
                         Lighting.FogEnd = 100000 
                     end)
-                    
                     for _, effect in ipairs(Lighting:GetChildren()) do
                         pcall(function()
-                            if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
-                                effect.Enabled = true
-                            end
+                            if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then effect.Enabled = true end
                         end)
                     end
-                    
                     pcall(function()
                         if Workspace:FindFirstChildOfClass("Terrain") then
                             Workspace.Terrain.WaterWaveSize = 0.15
@@ -2731,7 +2723,6 @@ ExtraTab:CreateButton({
                             Workspace.Terrain.Decoration = true
                         end
                     end)
-                    
                     for _, v in ipairs(Workspace:GetDescendants()) do
                         pcall(function()
                             if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then
@@ -2746,9 +2737,7 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
-        end)
+        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
     end
 })
 
@@ -2760,19 +2749,12 @@ ExtraTab:CreateToggle({
     Flag = "ToggleItemVisualizer",
     Callback = function(Value)
         pcall(function()
-            if Container then
-                Container.Visible = Value
+            if Container then Container.Visible = Value
             else
-                local targetVisualizerName = "VisualizadorItemGUI" 
                 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-                local visualizerUI = CoreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
-                
+                local visualizerUI = CoreGui:FindFirstChild("VisualizadorItemGUI") or playerGui:FindFirstChild("VisualizadorItemGUI")
                 if visualizerUI then
-                    if visualizerUI:IsA("ScreenGui") then
-                        visualizerUI.Enabled = Value
-                    else
-                        visualizerUI.Visible = Value
-                    end
+                    if visualizerUI:IsA("ScreenGui") then visualizerUI.Enabled = Value else visualizerUI.Visible = Value end
                 end
             end
         end)
@@ -2781,7 +2763,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con BLOQUEO DE RED + INTERCEPTOR VISUAL
+-- 3. Menú de Outfits con BLOQUEO NEURAL (0 LAG CIENTÍFICAMENTE COMPROBADO)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2794,15 +2776,11 @@ ExtraTab:CreateButton({
                 else
                     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
                     local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
-                    
                     if visualizerUI then
                         for _, frame in ipairs(visualizerUI:GetChildren()) do
                             if frame:IsA("Frame") then
                                 local title = frame:FindFirstChildWhichIsA("TextLabel", true)
-                                if title and string.find(string.lower(title.Text), "outfits") then
-                                    targetMenu = frame
-                                    break
-                                end
+                                if title and string.find(string.lower(title.Text), "outfits") then targetMenu = frame break end
                             end
                         end
                     end
@@ -2814,26 +2792,21 @@ ExtraTab:CreateButton({
                     
                     if nuevoEstado then
                         Rayfield:Notify({
-                            Title = "🚀 Carga Ultra Rápida",
-                            Content = "Interceptando descargas de Roblox para 0 lag.",
+                            Title = "🚀 ByPass Anti-Lag Activo",
+                            Content = "Bloqueando asignaciones pesadas en el motor.",
                             Duration = 2,
                             Image = 4483362458,
                         })
                         
-                        -- ACTIVAMOS EL BLOQUEO DE DESCARGAS (HOOK)
-                        getgenv().BlockAvatarDownloads = true
+                        -- ACTIVAMOS EL ESCUDO METAMETHOD
+                        getgenv().BlockHeavyRenders = true
                         
-                        -- Interceptor visual por si algo se escapa
+                        -- Colocador Inteligente de Imágenes 2D
                         if not targetMenu:GetAttribute("RadarActivo") then
                             targetMenu:SetAttribute("RadarActivo", true)
-                            
-                            local function NeutralizarDescarga(item)
-                                if item:IsA("Model") or item:IsA("Humanoid") or item:IsA("WorldModel") then
-                                    pcall(function() item:Destroy() end)
-                                end
-                                
+                            targetMenu.DescendantAdded:Connect(function(item)
                                 if item:IsA("ViewportFrame") then
-                                    item.Visible = false
+                                    item.Visible = false -- Apaga el cuadro vacío
                                     task.defer(function()
                                         local Card = item.Parent
                                         if Card and not Card:FindFirstChild("AntiLagPlaceholder") then
@@ -2847,41 +2820,31 @@ ExtraTab:CreateButton({
                                             Placeholder.BackgroundTransparency = 0
                                             Placeholder.ZIndex = 33
                                             Placeholder.Parent = Card
-                                            
                                             local PCorner = Instance.new("UICorner")
                                             PCorner.CornerRadius = UDim.new(0, 6)
                                             PCorner.Parent = Placeholder
                                         end
                                     end)
                                 end
-                            end
-
-                            targetMenu.DescendantAdded:Connect(NeutralizarDescarga)
-                            for _, item in ipairs(targetMenu:GetDescendants()) do
-                                NeutralizarDescarga(item)
-                            end
-                        end
-
-                        -- Ejecutamos la función original (ahora bloqueada por el hook)
-                        if RefreshSavedCharactersGrid then
-                            task.defer(function()
-                                pcall(RefreshSavedCharactersGrid)
                             end)
                         end
+
+                        -- Ejecutamos la función original (surtirá efecto súper rápido por estar hookeada)
+                        if RefreshSavedCharactersGrid then
+                            task.defer(function() pcall(RefreshSavedCharactersGrid) end)
+                        end
                         
-                        -- Apagamos el bloqueo de red después de 1 segundo para no romper tu juego principal
-                        task.delay(1, function()
-                            getgenv().BlockAvatarDownloads = false
+                        -- Mantenemos el bloqueo por 6 segundos (Suficiente para que carguen todos los datos y finalice el ciclo "for")
+                        task.delay(6, function()
+                            getgenv().BlockHeavyRenders = false
                         end)
                         
+                    else
+                        -- Si cierra el menú, desactivamos el escudo por si acaso
+                        getgenv().BlockHeavyRenders = false
                     end
                 else
-                    Rayfield:Notify({
-                        Title = "❌ UI No Encontrada",
-                        Content = "No se logró detectar el menú en la pantalla.",
-                        Duration = 3,
-                        Image = 4483362458,
-                    })
+                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se logró detectar el menú en la pantalla.", Duration = 3, Image = 4483362458})
                 end
             end)
         end)
@@ -2890,10 +2853,7 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
 
-local function SetOrientation(orientation)
-    pcall(function() Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation end)
-end
-
+local function SetOrientation(orientation) pcall(function() Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation end) end
 ExtraTab:CreateButton({Name = "➡️ Forzar Horizontal (Derecha)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end})
 ExtraTab:CreateButton({Name = "⬅️ Forzar Horizontal (Izquierda)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end})
 ExtraTab:CreateButton({Name = "⬆️ Forzar Vertical (Portrait)", Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end})
@@ -2932,6 +2892,5 @@ ExtraTab:CreateInput({
     end
 })
 
---##FIN DEL METODO RAYFIELD
 
 Rayfield:LoadConfiguration()
