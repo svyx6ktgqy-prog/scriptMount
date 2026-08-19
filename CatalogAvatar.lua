@@ -2585,13 +2585,17 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN OMEGA: CHUNK-LOADING + ECLIPSE + PUNTEROS LOCALES)
+-- ==========================================================
+-- 🚀 APARTADO EXTRA: OMEGA + MESH OFF + ZERO-SHADING (REGALO)
+-- Asegúrate de que la variable 'Window' esté declarada antes de esto.
+-- ==========================================================
+
+-- Creamos la pestaña en tu Menú Rayfield ya existente
+local ExtraTab = Window:CreateTab("⚡ OPTIMIZACIÓN", 4483362458)
 
 -- ==========================================================
--- 🚀 MICRO-OPTIMIZACIONES LUA (PUNTEROS DIRECTOS EN MEMORIA)
+-- 🚀 MICRO-OPTIMIZACIONES LUA (PUNTEROS DIRECTOS)
 -- ==========================================================
--- Al guardar estas funciones globalmente como locales, Lua no tiene que 
--- buscar en su entorno C++, reduciendo el tiempo de ejecución a la mitad.
 local task_spawn, task_wait, task_defer = task.spawn, task.wait, task.defer
 local pcall, typeof, ipairs, tonumber, tostring = pcall, typeof, ipairs, tonumber, tostring
 local table_insert, table_remove = table.insert, table.remove
@@ -2610,22 +2614,22 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ==========================================================
--- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
+-- 🧠 SISTEMAS DE MEMORIA Y CACHÉ
 -- ==========================================================
 local ItemCache = {}
 local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
 
+-- Aniquilación de Ropa 3D Dinámica y Huesos
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
-    Fire = true, Smoke = true, Sparkles = true, Decal = true, Texture = true
+    Fire = true, Smoke = true, Sparkles = true, Decal = true, Texture = true,
+    WrapLayer = true, WrapTarget = true, IKControl = true, Bone = true, Attachment = true
 }
 
 -- ==========================================================
 -- ⚙️ SISTEMA OMEGA: COLA DE PROCESAMIENTO ASÍNCRONO
 -- ==========================================================
--- En lugar de limpiar 50 avatares de golpe y congelar el juego, 
--- los ponemos en fila y procesamos 3 por frame (Chunking).
 local ViewportQueue = {}
 local IsProcessingQueue = false
 
@@ -2635,12 +2639,22 @@ local function ProcessQueue()
     
     task_spawn(function()
         while #ViewportQueue > 0 do
-            -- Extraemos hasta 3 modelos por ciclo para evitar caídas de FPS
             local processLimit = math_min(#ViewportQueue, 3) 
             
             for i = 1, processLimit do
                 local model = table_remove(ViewportQueue, 1)
-                if model and model.Parent then
+                
+                if typeof(model) == "Instance" and model.Parent then
+                    -- 🎁 OPTIMIZACIÓN DE REGALO: Zero-Shading Viewport
+                    -- Si el modelo está en un ViewportFrame, le apagamos el cálculo de luz 3D
+                    if model.Parent.ClassName == "ViewportFrame" then
+                        pcall(function()
+                            model.Parent.LightColor = Color3.new(1, 1, 1)
+                            model.Parent.Ambient = Color3.new(1, 1, 1)
+                            model.Parent.LightDirection = Vector3.new(0, 0, 0)
+                        end)
+                    end
+
                     pcall(function()
                         for _, v in ipairs(model:GetDescendants()) do
                             local cName = v.ClassName 
@@ -2677,17 +2691,20 @@ local function ProcessQueue()
                     end)
                 end
             end
-            RunService.RenderStepped:Wait() -- Esperamos 1 frame antes del siguiente lote (Magia anti-lag)
+            RunService.Heartbeat:Wait() 
         end
         IsProcessingQueue = false
+        pcall(function() collectgarbage("collect") end)
     end)
 end
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN DE FONDO)
 -- ==========================================================
 local function ToggleEclipse(estado)
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+    if not playerGui then return end 
+    
     local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
     
     if estado then
@@ -2713,25 +2730,24 @@ local function ToggleEclipse(estado)
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
             local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.4), {BackgroundTransparency = 1})
             tween:Play()
-            tween.Completed:Connect(function() eclipseUI:Destroy() end)
+            tween.Completed:Wait() 
+            if eclipseUI then eclipseUI:Destroy() end
         end
     end
 end
 
 -- ==========================================================
--- 🛡️ MOTOR OMEGA (INTERCEPTOR EN TIEMPO REAL)
+-- 🛡️ MOTOR SINGULARIDAD (INTERCEPTOR)
 -- ==========================================================
-if not getgenv().OmegaRenderHook then
-    getgenv().OmegaRenderHook = true
+if not getgenv().UltimateRenderHook then
+    getgenv().UltimateRenderHook = true
     
     local oldNewindex
-    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
+    oldNewindex = hookmetamethod(game, "__newindex", newcclosure(function(self, index, value)
         if index == "Parent" and not checkcaller() then
             if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                
-                -- En lugar de procesar inmediatamente, diferimos y mandamos a la cola
                 task_defer(function()
-                    if self.ClassName == "Model" then
+                    if typeof(self) == "Instance" and self.ClassName == "Model" then
                         table_insert(ViewportQueue, self)
                         ProcessQueue()
                     end
@@ -2739,13 +2755,14 @@ if not getgenv().OmegaRenderHook then
             end
         end
         return oldNewindex(self, index, value)
-    end)
+    end))
 end
+
+-- ==========================================================
+-- ⚙️ ELEMENTOS DE LA UI (RAYFIELD)
 -- ==========================================================
 
-local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
-
-ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
+ExtraTab:CreateSection("⚡ Rendimiento Extremo del Mapa")
 
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Extrema y Ping Óptimo",
@@ -2761,6 +2778,7 @@ ExtraTab:CreateButton({
                     pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false end end)
                     for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 elseif v:IsA("SurfaceAppearance") then v:Destroy() end end) end
                     Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458})
+                    pcall(function() collectgarbage("collect") end) 
                 end)
             end
         end
@@ -2814,22 +2832,21 @@ ExtraTab:CreateButton({
                     
                     if targetMenu.Visible then
                         ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 OMEGA ECLIPSE", Content = "Procesando avatares por lotes asíncronos...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🌑 OMEGA ACTIVO", Content = "Optimizando iluminación y mallas...", Duration = 2, Image = 4483362458})
                         
                         if RefreshSavedCharactersGrid then
                             task_spawn(function()
                                 pcall(RefreshSavedCharactersGrid)
                                 
-                                -- Damos tiempo dinámico basado en la cola
                                 local waitCycles = 0
-                                while IsProcessingQueue and waitCycles < 10 do
+                                while IsProcessingQueue and waitCycles < 15 do
                                     task_wait(0.2)
                                     waitCycles = waitCycles + 1
                                 end
                                 
-                                task_wait(0.3) -- Breve margen de seguridad
+                                task_wait(0.1) 
                                 ToggleEclipse(false)
-                                Rayfield:Notify({Title = "✅ OMEGA COMPLETO", Content = "Descompresión terminada. Cero lag.", Duration = 2, Image = 4483362458})
+                                Rayfield:Notify({Title = "✅ COMPLETO", Content = "Zero-Shading aplicado. Cero lag.", Duration = 2, Image = 4483362458})
                             end)
                         else
                             task_wait(1)
@@ -2839,14 +2856,19 @@ ExtraTab:CreateButton({
                         ToggleEclipse(false) 
                     end
                 else
-                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
+                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú de outfits.", Duration = 3, Image = 4483362458})
                 end
             end)
+            
+            if not success then
+                ToggleEclipse(false)
+                warn("Error al cargar el menú de outfits: ", err)
+            end
         end)
     end
 })
 
-ExtraTab:CreateSection("🔍 Visualizador Inteligente (Con Caché)")
+ExtraTab:CreateSection("🔍 Visualizador de Items (Con Caché)")
 
 ExtraTab:CreateInput({
     Name = "👁️ Previsualizar Item por ID",
