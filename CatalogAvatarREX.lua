@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V16)
--- Físicas congeladas pre-spawn + Ocultar UI Universal + Sin Patas
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V17)
+-- Físicas congeladas pre-spawn + Ocultar/Aparecer UI Definitivo + Sin Patas
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2440,26 +2440,41 @@ ClickBtn.MouseButton1Click:Connect(function()
         local Debris = game:GetService("Debris")
         local StarterGui = game:GetService("StarterGui")
         local Lighting = game:GetService("Lighting")
+        local CoreGui = game:GetService("CoreGui") -- Añadido para el nuevo método
         local LocalPlayer = Players.LocalPlayer
 
         -- ==================================================
-        -- CONTROL DEL SCREENGUI (BARRIDO UNIVERSAL)
+        -- CONTROL DEL SCREENGUI (MÉTODO DEFINITIVO)
         -- ==================================================
-        local function HideAllFrames()
-            local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
-            if not PlayerGui then return end
+        local function ToggleUIVisibility(state)
+            pcall(function()
+                local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                
+                -- 1. Ocultar/Mostrar el GUI de nuestro propio script (prioridad)
+                if Container then 
+                    Container.Visible = state
+                end
+                
+                -- Nombres comunes de tu script inyectado (puedes agregar más a la lista)
+                local hubNames = {"VisualizadorItemGUI", "Kitty", "KittyHub"} 
+                for _, name in ipairs(hubNames) do
+                    local ui = (CoreGui and CoreGui:FindFirstChild(name)) or (PlayerGui and PlayerGui:FindFirstChild(name))
+                    if ui then
+                        if ui:IsA("ScreenGui") then ui.Enabled = state else ui.Visible = state end
+                    end
+                end
 
-            -- Ahora busca en TODOS los ScreenGuis del jugador
-            for _, gui in ipairs(PlayerGui:GetChildren()) do
-                if gui:IsA("ScreenGui") then
-                    for _, child in ipairs(gui:GetChildren()) do
-                        -- Si es un panel/marco y está visible, lo oculta.
-                        if (child:IsA("Frame") or child:IsA("ScrollingFrame")) and child.Visible then
-                            child.Visible = false
+                -- 2. Barrido universal seguro para los demás menús en PlayerGui
+                if PlayerGui then
+                    for _, gui in ipairs(PlayerGui:GetChildren()) do
+                        if gui:IsA("ScreenGui") then
+                            gui.Enabled = state
+                        elseif gui:IsA("Frame") or gui:IsA("ScrollingFrame") then
+                            gui.Visible = state
                         end
                     end
                 end
-            end
+            end)
         end
 
         -- ==================================================
@@ -2726,8 +2741,10 @@ ClickBtn.MouseButton1Click:Connect(function()
             if dist <= 8.5 and promptState == "Waiting" then
                 promptState = "Prompting"
                 
-                -- Ocultamos todos los menús visibles usando el nuevo barrido universal
-                HideAllFrames()
+                -- ==========================================
+                -- OCULTAMOS LA UI UNIVERSALMENTE (MÉTODO NUEVO)
+                -- ==========================================
+                ToggleUIVisibility(false)
 
                 local blurEffect = Instance.new("BlurEffect")
                 blurEffect.Name = "KittyPreviewBlur"
@@ -2736,6 +2753,12 @@ ClickBtn.MouseButton1Click:Connect(function()
 
                 local bindable = Instance.new("BindableFunction")
                 bindable.OnInvoke = function(response)
+                    
+                    -- ==========================================
+                    -- RESTAURAMOS LA UI, SIN IMPORTAR QUÉ ELIJA
+                    -- ==========================================
+                    ToggleUIVisibility(true)
+
                     if response == "Conseguir" then
                         if proximityConn then proximityConn:Disconnect() end
                         RainActive = false 
@@ -2831,7 +2854,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
     end)
 end)
-
+                
 -- ==========================================================
 -- FIN MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
 -- ==========================================================
