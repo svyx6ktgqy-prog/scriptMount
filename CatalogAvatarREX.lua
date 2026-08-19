@@ -2423,7 +2423,7 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED)
 -- 3D Quantum Drop + Baldosa + Cartel + Imagen Flotante Rotativa
 -- + Alerta Nativa + Atracción Magnética Serpenteante
 -- ==========================================================
@@ -2440,9 +2440,7 @@ ClickBtn.MouseButton1Click:Connect(function()
     task.spawn(function()
         local Workspace = game:GetService("Workspace")
         local Players = game:GetService("Players")
-        local TweenService = game:GetService("TweenService")
         local RunService = game:GetService("RunService")
-        local Debris = game:GetService("Debris")
         local StarterGui = game:GetService("StarterGui")
         local LocalPlayer = Players.LocalPlayer
 
@@ -2457,7 +2455,9 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
-        local spawnPos = hrp.Position + hrp.CFrame.LookVector * 8 + Vector3.new(0, 12, 0)
+        
+        -- Fix: Altura de spawn reducida para evitar rebotes exagerados
+        local spawnPos = hrp.Position + hrp.CFrame.LookVector * 7 + Vector3.new(0, 6, 0)
 
         -- ==================================================
         -- 1. BALDOSA (Asset 4699539638) - cae del cielo
@@ -2480,11 +2480,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                     p.Massless = false
                 end
             end
-            if Tile:IsA("Model") and Tile.PrimaryPart then
-                Tile:SetPrimaryPartCFrame(CFrame.new(spawnPos))
-            elseif Tile:IsA("BasePart") then
-                Tile.CFrame = CFrame.new(spawnPos)
-            end
+            -- Fix: PivotTo mueve el modelo aunque no tenga PrimaryPart
+            Tile:PivotTo(CFrame.new(spawnPos))
         else
             -- Fallback simple
             Tile = Instance.new("Part")
@@ -2499,7 +2496,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARTEL (Asset 121348416036836) - cae acostado y se levanta
+        -- 2. CARTEL (Asset 121348416036836) - cae acostado
         -- ==================================================
         local signSuccess, signObjs = pcall(function()
             return game:GetObjects("rbxassetid://121348416036836")
@@ -2518,13 +2515,9 @@ ClickBtn.MouseButton1Click:Connect(function()
                 end
             end
 
-            -- Posición inicial: cae acostado un poco más lejos
-            local signSpawn = spawnPos + Vector3.new(3.5, 8, 0)
-            if Sign:IsA("Model") and Sign.PrimaryPart then
-                Sign:SetPrimaryPartCFrame(CFrame.new(signSpawn) * CFrame.Angles(math.rad(90), 0, 0))
-            elseif Sign:IsA("BasePart") then
-                Sign.CFrame = CFrame.new(signSpawn) * CFrame.Angles(math.rad(90), 0, 0)
-            end
+            -- Fix: PivotTo para el cartel y ajuste de rotación/posición
+            local signSpawn = spawnPos + Vector3.new(3, 2, 0)
+            Sign:PivotTo(CFrame.new(signSpawn) * CFrame.Angles(math.rad(90), 0, 0))
         end
 
         -- ==================================================
@@ -2536,21 +2529,27 @@ ClickBtn.MouseButton1Click:Connect(function()
         ImagePart.Anchored = true
         ImagePart.CanCollide = false
         ImagePart.Transparency = 1
-        ImagePart.CFrame = CFrame.new(spawnPos + Vector3.new(0, 4.2, 0))
+        ImagePart.CFrame = CFrame.new(spawnPos + Vector3.new(0, 3.5, 0))
         ImagePart.Parent = PreviewFolder
 
-        local Surface = Instance.new("SurfaceGui")
-        Surface.Face = Enum.NormalId.Front
-        Surface.AlwaysOnTop = true
-        Surface.Parent = ImagePart
+        -- Cara frontal
+        local SurfaceFront = Instance.new("SurfaceGui")
+        SurfaceFront.Face = Enum.NormalId.Front
+        SurfaceFront.AlwaysOnTop = true
+        SurfaceFront.Parent = ImagePart
 
-        local Img = Instance.new("ImageLabel")
-        Img.Size = UDim2.new(1, 0, 1, 0)
-        Img.BackgroundTransparency = 1
-        Img.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
-        Img.Parent = Surface
+        local ImgFront = Instance.new("ImageLabel")
+        ImgFront.Size = UDim2.new(1, 0, 1, 0)
+        ImgFront.BackgroundTransparency = 1
+        ImgFront.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
+        ImgFront.Parent = SurfaceFront
 
-        -- Rotación continua + flotación suave
+        -- Fix: Cara trasera para que no desaparezca al rotar
+        local SurfaceBack = SurfaceFront:Clone()
+        SurfaceBack.Face = Enum.NormalId.Back
+        SurfaceBack.Parent = ImagePart
+
+        -- Rotación continua + flotación suave anclada a la baldosa
         local rotConnection
         local floatTime = 0
         rotConnection = RunService.RenderStepped:Connect(function(dt)
@@ -2559,7 +2558,14 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime += dt
-            local basePos = (Tile and (Tile:IsA("Model") and Tile.PrimaryPart or Tile).Position or spawnPos) + Vector3.new(0, 3.8 + math.sin(floatTime * 1.8) * 0.35, 0)
+            
+            -- Fix: Uso seguro de GetPivot() para rastrear el modelo de la baldosa dinámicamente
+            local currentTilePos = spawnPos
+            if Tile and Tile.Parent then
+                currentTilePos = Tile:GetPivot().Position
+            end
+            
+            local basePos = currentTilePos + Vector3.new(0, 3.5 + math.sin(floatTime * 1.8) * 0.35, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
 
@@ -2576,12 +2582,12 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
 
             local dist = (hrp.Position - ImagePart.Position).Magnitude
-            if dist <= 5.5 then
+            if dist <= 6.5 then -- Aumentado un poco el rango para mejor responsividad
                 alreadyPrompted = true
                 if proximityConn then proximityConn:Disconnect() end
 
                 -- ==================================================
-                -- ALERTA NATIVA REINVENTADA (Ítem + Nombre + Logo)
+                -- ALERTA NATIVA REINVENTADA
                 -- ==================================================
                 local bindable = Instance.new("BindableFunction")
                 bindable.OnInvoke = function(response)
@@ -2618,7 +2624,6 @@ ClickBtn.MouseButton1Click:Connect(function()
 
                                 if t >= 1 then
                                     attractConn:Disconnect()
-                                    -- "Comido"
                                     ImagePart:Destroy()
                                     if rotConnection then rotConnection:Disconnect() end
 
@@ -2630,10 +2635,16 @@ ClickBtn.MouseButton1Click:Connect(function()
                                         task.spawn(function()
                                             for i = 1, 12 do
                                                 if not obj.Parent then break end
+                                                -- Fix: Si el objeto es un modelo, movemos todo usando Pivot
+                                                if obj:IsA("Model") then
+                                                    local pivot = obj:GetPivot()
+                                                    local randomOffset = CFrame.Angles(math.rad(math.random(-8, 8)), math.rad(math.random(-8, 8)), 0)
+                                                    obj:PivotTo(pivot * CFrame.new(0, -0.18, 0) * randomOffset)
+                                                end
+                                                
                                                 for _, p in ipairs(obj:GetDescendants()) do
                                                     if p:IsA("BasePart") then
                                                         p.Transparency = math.clamp(p.Transparency + 0.12, 0, 1)
-                                                        p.CFrame = p.CFrame * CFrame.new(0, -0.18, 0) * CFrame.Angles(math.rad(math.random(-8, 8)), math.rad(math.random(-8, 8)), 0)
                                                     end
                                                 end
                                                 if obj:IsA("BasePart") then
@@ -2664,7 +2675,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                     end
                 end
 
-                -- Alerta nativa reinventada
                 pcall(function()
                     StarterGui:SetCore("SendNotification", {
                         Title = item.name,
@@ -2679,7 +2689,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
         end)
 
-        -- Auto-limpieza de seguridad (por si el jugador se aleja mucho)
+        -- Auto-limpieza de seguridad
         task.delay(45, function()
             if PreviewFolder and PreviewFolder.Parent and not alreadyPrompted then
                 PreviewFolder:Destroy()
