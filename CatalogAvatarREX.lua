@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + HASH DICTIONARY O(1) + 0 LAG)
+--#EXTRA: RAYFIELD TAB (ECLIPSE VERSION: GRAPHICS BLACKOUT + HASH DICTIONARY O(1) + 0 LAG)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2596,26 +2596,20 @@ local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
 -- ==========================================================
--- 🔔 SISTEMA DE ALERTA NATIVA (100% SEGURO PARA DELTA)
+-- 🔔 NATIVE ALERT SYSTEM (100% SAFE FOR DELTA / MOBILE OPTIMIZED)
 -- ==========================================================
 local function UniversalAlert(config)
     task.spawn(function()
         pcall(function()
             local rawText = config.Text or config.Content or ""
             
-            -- SOLUCIÓN: Condensamos Nombre y Verificado en una sola línea.
-            -- Eliminamos el ID de textura del texto (ya que Roblox no renderiza imágenes ahí, solo emojis).
-            -- Esto evita que el layout corte tu mensaje real ('rawText').
-            local formattedText = string.format(
-                "👤 Nombre: %s | ✅ Verificado\n%s",
-                Players.LocalPlayer.DisplayName,
-                rawText
-            )
-
+            -- THE TRICK: We use the Verified Image ID as the main Notification Icon.
+            -- We put the Player's name in the Title.
+            -- This makes the custom image stand out perfectly without breaking the text layout.
             local alertData = {
-                Title = config.Title or "Notificación",
-                Text = formattedText,
-                Icon = "rbxassetid://9322622699", -- Perfil cuadrado
+                Title = "✔️ " .. Players.LocalPlayer.DisplayName,
+                Text = rawText,
+                Icon = "rbxassetid://93631347041836", -- Custom Verified Texture ID
                 Duration = config.Duration or 5
             }
 
@@ -2631,12 +2625,12 @@ local function UniversalAlert(config)
 end
 
 -- ==========================================================
--- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
+-- 🧠 ULTRA-FAST CACHE & MEMORY SYSTEMS
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Created ONCE (Saves micro-calculations)
 
--- Diccionario Hash O(1) para identificación instantánea (100x más rápido que :IsA())
+-- Hash Dictionary O(1) for instant identification (100x faster than :IsA())
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
@@ -2644,33 +2638,33 @@ local TrashClasses = {
 }
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (DEFINICIÓN MANTENIDA POR SEGURIDAD)
+-- 🌑 "ECLIPSE" SYSTEM (DEFINITION KEPT FOR SAFETY)
 -- ==========================================================
-local function ToggleEclipse(estado)
+local function ToggleEclipse(state)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
     
-    if estado then
+    if state then
         if not eclipseUI then
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield (CoreGui) queda encima
+            eclipseUI.DisplayOrder = 9999 -- Covers the game, but Rayfield (CoreGui) stays on top
             
-            local fondo = Instance.new("Frame")
-            fondo.Name = "FondoNegro"
-            fondo.Size = UDim2.new(1, 0, 1, 0)
-            fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            fondo.BackgroundTransparency = 1
-            fondo.Parent = eclipseUI
+            local blackoutFrame = Instance.new("Frame")
+            blackoutFrame.Name = "BlackBackground"
+            blackoutFrame.Size = UDim2.new(1, 0, 1, 0)
+            blackoutFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            blackoutFrame.BackgroundTransparency = 1
+            blackoutFrame.Parent = eclipseUI
             eclipseUI.Parent = playerGui
         end
         pcall(function() settings().Rendering.QualityLevel = 1 end)
-        eclipseUI.FondoNegro.BackgroundTransparency = 0
+        eclipseUI.BlackBackground.BackgroundTransparency = 0
     else
-        if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
+        if eclipseUI and eclipseUI:FindFirstChild("BlackBackground") then
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
-            local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+            local tween = TweenService:Create(eclipseUI.BlackBackground, TweenInfo.new(0.5), {BackgroundTransparency = 1})
             tween:Play()
             tween.Completed:Connect(function() eclipseUI:Destroy() end)
         end
@@ -2678,7 +2672,7 @@ local function ToggleEclipse(estado)
 end
 
 -- ==========================================================
--- 🛡️ MOTOR ECLIPSE (INTERCEPTOR CON DICCIONARIO HASH)
+-- 🛡️ ECLIPSE ENGINE (INTERCEPTOR WITH HASH DICTIONARY)
 -- ==========================================================
 if not getgenv().EclipseRenderHook then
     getgenv().EclipseRenderHook = true
@@ -2710,8 +2704,8 @@ if not getgenv().EclipseRenderHook then
                                     v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                     v.RequiresNeck = false
                                     pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
-                                        pcall(function() v:SetStateEnabled(state, false) end)
+                                    for _, humanoidState in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+                                        pcall(function() v:SetStateEnabled(humanoidState, false) end)
                                     end
                                 elseif TrashClasses[cName] then
                                     if (cName == "Decal" or cName == "Texture") then
@@ -2733,51 +2727,51 @@ end
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
-ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
+ExtraTab:CreateSection("⚡ Extreme Optimization & Performance")
 
 ExtraTab:CreateButton({
-    Name = "🧹 Limpieza Extrema y Ping Óptimo",
+    Name = "🧹 Extreme Cleanup & Ping Optimizer",
     Callback = function()
         local bindable = Instance.new("BindableFunction")
-        bindable.OnInvoke = function(respuesta)
-            if respuesta == "OK" then
-                UniversalAlert({Title = "⚙️ Optimizando...", Text = "Aplicando modo liso/minimalista.", Duration = 3})
+        bindable.OnInvoke = function(response)
+            if response == "OK" then
+                UniversalAlert({Text = "Applying smooth/minimalist mode.", Duration = 3})
                 task.spawn(function()
                     task.wait(0.5) 
                     pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
                     for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
                     pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false end end)
                     for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 elseif v:IsA("SurfaceAppearance") then v:Destroy() end end) end
-                    UniversalAlert({Title = "✅ Listo", Text = "Entorno liso al 100%.", Duration = 3})
+                    UniversalAlert({Text = "Environment is 100% smooth.", Duration = 3})
                 end)
             end
         end
-        UniversalAlert({Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
+        UniversalAlert({Text = "The map will lose textures. Continue?", Duration = 10, Button1 = "OK", Button2 = "Cancel", Callback = bindable})
     end
 })
 
 ExtraTab:CreateButton({
-    Name = "🌍 Restaurar Entorno (Normalidad)",
+    Name = "🌍 Restore Environment (Default)",
     Callback = function()
         local bindable = Instance.new("BindableFunction")
-        bindable.OnInvoke = function(respuesta)
-            if respuesta == "OK" then
+        bindable.OnInvoke = function(response)
+            if response == "OK" then
                 task.spawn(function()
                     pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
                     pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
                     for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then v.Material = Enum.Material.Plastic; v.CastShadow = true elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end end) end
-                    UniversalAlert({Title = "✅ Restaurado", Text = "Gráficos a la normalidad.", Duration = 3})
+                    UniversalAlert({Text = "Graphics returned to normal.", Duration = 3})
                 end)
             end
         end
-        UniversalAlert({Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
+        UniversalAlert({Text = "Do you want to restore original graphics?", Duration = 10, Button1 = "OK", Button2 = "Cancel", Callback = bindable})
     end
 })
 
-ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
+ExtraTab:CreateSection("🖼️ Item Visualizer Control")
 
 ExtraTab:CreateToggle({
-    Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
+    Name = "👁️ Toggle Item Visualizer",
     CurrentValue = false,
     Flag = "ToggleItemVisualizer",
     Callback = function(Value)
@@ -2792,10 +2786,10 @@ ExtraTab:CreateToggle({
     end
 })
 
-ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
+ExtraTab:CreateSection("👔 Outfit Manager")
 
 ExtraTab:CreateButton({
-    Name = "📁 Mostrar/Ocultar Menú de Outfits",
+    Name = "📁 Toggle Outfit Menu",
     Callback = function()
         task.spawn(function()
             local success, err = pcall(function()
@@ -2819,7 +2813,7 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        UniversalAlert({Title = "📁 Menú de Outfits", Text = "Cargando avatares guardados...", Duration = 2})
+                        UniversalAlert({Text = "Loading saved avatars...", Duration = 2})
                         
                         if RefreshSavedCharactersGrid then
                             task.spawn(function()
@@ -2828,27 +2822,27 @@ ExtraTab:CreateButton({
                         end
                     end
                 else
-                    UniversalAlert({Title = "❌ Error", Text = "No se detectó el menú de outfits.", Duration = 3})
+                    UniversalAlert({Text = "Outfit menu not detected.", Duration = 3})
                 end
             end)
         end)
     end
 })
 
-ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
+ExtraTab:CreateSection("📱 Device Screen Control (Mobile)")
 
 local function SetOrientation(orientation) pcall(function() Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation end) end
-ExtraTab:CreateButton({Name = "➡️ Forzar Horizontal (Derecha)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end})
-ExtraTab:CreateButton({Name = "⬅️ Forzar Horizontal (Izquierda)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end})
-ExtraTab:CreateButton({Name = "⬆️ Forzar Vertical (Portrait)", Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end})
-ExtraTab:CreateButton({Name = "🔄 Sensor Horizontal Automático", Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end})
-ExtraTab:CreateButton({Name = "🌐 Sensor Libre (Rotación Total)", Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end})
+ExtraTab:CreateButton({Name = "➡️ Force Landscape (Right)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end})
+ExtraTab:CreateButton({Name = "⬅️ Force Landscape (Left)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end})
+ExtraTab:CreateButton({Name = "⬆️ Force Portrait", Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end})
+ExtraTab:CreateButton({Name = "🔄 Auto Sensor Landscape", Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end})
+ExtraTab:CreateButton({Name = "🌐 Free Sensor (Full Rotation)", Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end})
 
-ExtraTab:CreateSection("🔍 Visualizador Inteligente (Con Caché)")
+ExtraTab:CreateSection("🔍 Smart Item Visualizer (Cached)")
 
 ExtraTab:CreateInput({
-    Name = "👁️ Previsualizar Item por ID",
-    PlaceholderText = "Pega el ID aquí para verificar...",
+    Name = "👁️ Preview Item via ID",
+    PlaceholderText = "Paste Item ID here...",
     RemoveTextAfterFocusLost = false,
     Callback = function(Text)
         local itemID = tonumber(Text)
@@ -2868,14 +2862,14 @@ ExtraTab:CreateInput({
             if itemInfo then
                 pcall(function()
                     if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
-                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis") end
+                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Free") end
                 end)
-                UniversalAlert({Title = "✅ Item Validado", Text = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 3})
+                UniversalAlert({Text = "Showing: " .. (itemInfo.Name or "Unknown Item"), Duration = 3})
             else
-                UniversalAlert({Title = "❌ Item Inválido", Text = "El ID ingresado no existe o falló la red.", Duration = 4})
+                UniversalAlert({Text = "The entered ID does not exist or network failed.", Duration = 4})
             end
         else
-            UniversalAlert({Title = "⚠️ Error de Entrada", Text = "Por favor, ingresa únicamente números válidos.", Duration = 3})
+            UniversalAlert({Text = "Please enter valid numbers only.", Duration = 3})
         end
     end
 })
