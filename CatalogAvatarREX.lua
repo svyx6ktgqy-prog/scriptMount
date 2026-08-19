@@ -188,15 +188,227 @@ function BannerSystem.RenderBanner(bannerData)
     ClickBtn.Text = ""
     ClickBtn.Parent = Card
     
+        -- ==========================================================
+    -- 🌀 SISTEMA DE APARICIÓN 3D Y ATRACCIÓN DE ÍTEMS DE CATÁLOGO
+    -- ==========================================================
+    local function Spawn3DCatalogItem(data)
+        task.spawn(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+            local hrp = char.HumanoidRootPart
+
+            -- Posición base en el suelo frente al jugador
+            local spawnCF = hrp.CFrame * CFrame.new(0, -2, -8)
+            local dropStartCF = spawnCF * CFrame.new(0, 18, 0)
+
+            -- Contenedor de la estructura 3D
+            local SpawnModel = Instance.new("Model")
+            SpawnModel.Name = "CatalogItem3D_" .. tostring(data.Id)
+            SpawnModel.Parent = workspace
+
+            ---------------------------------------------------------
+            -- 1. CARGA DE BALDOSA (4699539638) Y CARTEL (121348416036836)
+            ---------------------------------------------------------
+            local tileObj, signObj
+            pcall(function()
+                local tileAssets = game:GetObjects("rbxassetid://4699539638")
+                if tileAssets and #tileAssets > 0 then tileObj = tileAssets[1] end
+            end)
+            pcall(function()
+                local signAssets = game:GetObjects("rbxassetid://121348416036836")
+                if signAssets and #signAssets > 0 then signObj = signAssets[1] end
+            end)
+
+            -- Fallback si no cargan los assets
+            if not tileObj then
+                tileObj = Instance.new("Part")
+                tileObj.Size = Vector3.new(6, 0.5, 6)
+                tileObj.Material = Enum.Material.SmoothPlastic
+                tileObj.Color = Color3.fromRGB(255, 105, 180)
+            end
+
+            tileObj.Parent = SpawnModel
+            if tileObj:IsA("Model") then
+                tileObj:SetPrimaryPartCFrame(dropStartCF)
+            elseif tileObj:IsA("BasePart") then
+                tileObj.CFrame = dropStartCF
+                tileObj.Anchored = true
+            end
+
+            -- Cartel parado en el borde exterior
+            if signObj then
+                signObj.Parent = SpawnModel
+                local signCF = dropStartCF * CFrame.new(0, 1.2, -3.2) * CFrame.Angles(math.rad(90), 0, 0)
+                if signObj:IsA("Model") then
+                    signObj:SetPrimaryPartCFrame(signCF)
+                elseif signObj:IsA("BasePart") then
+                    signObj.CFrame = signCF
+                    signObj.Anchored = true
+                end
+            end
+
+            ---------------------------------------------------------
+            -- 2. ÍTEM ROTATIVO 3D (FLOTANTE SOBRE LA BALDOSA)
+            ---------------------------------------------------------
+            local FloatingPart = Instance.new("Part")
+            FloatingPart.Size = Vector3.new(2.5, 2.5, 0.2)
+            FloatingPart.Transparency = 1
+            FloatingPart.CanCollide = false
+            FloatingPart.Anchored = true
+            FloatingPart.CFrame = dropStartCF * CFrame.new(0, 3.5, 0)
+            FloatingPart.Parent = SpawnModel
+
+            local BbGui = Instance.new("BillboardGui")
+            BbGui.Size = UDim2.new(0, 140, 0, 140)
+            BbGui.AlwaysOnTop = true
+            BbGui.Parent = FloatingPart
+
+            local ItemImg = Instance.new("ImageLabel")
+            ItemImg.Size = UDim2.new(1, 0, 1, 0)
+            ItemImg.BackgroundTransparency = 1
+            ItemImg.Image = "rbxthumb://type=Asset&id=" .. tostring(data.Id) .. "&w=150&h=150"
+            ItemImg.Parent = BbGui
+
+            ---------------------------------------------------------
+            -- 3. ANIMACIÓN DE CAÍDA CUÁNTICA DE LLUVIA Y REBOTE
+            ---------------------------------------------------------
+            local dropTweenInfo = TweenInfo.new(0.85, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out)
+            
+            if tileObj:IsA("BasePart") then
+                TweenService:Create(tileObj, dropTweenInfo, { CFrame = spawnCF }):Play()
+            elseif tileObj:IsA("Model") and tileObj.PrimaryPart then
+                TweenService:Create(tileObj.PrimaryPart, dropTweenInfo, { CFrame = spawnCF }):Play()
+            end
+
+            if signObj then
+                local targetSignCF = spawnCF * CFrame.new(0, 1.2, -3.2) * CFrame.Angles(math.rad(90), 0, 0)
+                if signObj:IsA("BasePart") then
+                    TweenService:Create(signObj, dropTweenInfo, { CFrame = targetSignCF }):Play()
+                elseif signObj:IsA("Model") and signObj.PrimaryPart then
+                    TweenService:Create(signObj.PrimaryPart, dropTweenInfo, { CFrame = targetSignCF }):Play()
+                end
+            end
+
+            local floatTargetCF = spawnCF * CFrame.new(0, 3.5, 0)
+            TweenService:Create(FloatingPart, dropTweenInfo, { CFrame = floatTargetCF }):Play()
+
+            -- Loop de rotación 3D del ítem flotante
+            local isInteracted = false
+            task.spawn(function()
+                local angle = 0
+                while SpawnModel and SpawnModel.Parent and not isInteracted do
+                    angle = angle + 3
+                    FloatingPart.CFrame = floatTargetCF * CFrame.Angles(0, math.rad(angle), 0)
+                    task.wait(0.02)
+                end
+            end)
+
+            ---------------------------------------------------------
+            -- 4. DETECCIÓN DE PROXIMIDAD Y NOTIFICACIÓN NATIVA
+            ---------------------------------------------------------
+            local TouchSensor = Instance.new("Part")
+            TouchSensor.Size = Vector3.new(7, 6, 7)
+            TouchSensor.CFrame = spawnCF
+            TouchSensor.Transparency = 1
+            TouchSensor.CanCollide = false
+            TouchSensor.Anchored = true
+            TouchSensor.Parent = SpawnModel
+
+            local touchConnection
+            touchConnection = RunService.Heartbeat:Connect(function()
+                if isInteracted or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+                
+                local currentHRP = LocalPlayer.Character.HumanoidRootPart
+                local dist = (currentHRP.Position - TouchSensor.Position).Magnitude
+
+                if dist <= 4.5 then
+                    isInteracted = true
+                    touchConnection:Disconnect()
+
+                    -- Callback del botón nativo
+                    local bindable = Instance.new("BindableFunction")
+                    bindable.OnInvoke = function(buttonText)
+                        if buttonText == "Aceptar" then
+                            ---------------------------------------------------------
+                            -- 5. ATRACCIÓN IMÁN / SERPIENTE HACIA LA CABEZA
+                            ---------------------------------------------------------
+                            task.spawn(function()
+                                local head = LocalPlayer.Character:FindFirstChild("Head") or currentHRP
+                                local steps = 25
+                                
+                                for i = 1, steps do
+                                    if not head or not head.Parent then break end
+                                    local alpha = i / steps
+                                    local targetPos = head.Position
+                                    local snakeOffset = Vector3.new(math.sin(i * 0.8) * 1.5, math.cos(i * 0.5) * 1.2, 0)
+                                    
+                                    FloatingPart.CFrame = FloatingPart.CFrame:Lerp(CFrame.new(targetPos + snakeOffset), alpha)
+                                    task.wait(0.02)
+                                end
+
+                                -- EFECTO DE ABSORCIÓN / SER CONSUMIDO
+                                TweenService:Create(FloatingPart, TweenInfo.new(0.2), { Size = Vector3.new(0,0,0) }):Play()
+                                task.wait(0.2)
+
+                                ---------------------------------------------------------
+                                -- 6. DESAPARICIÓN GLITCH DE LAS BALDOSAS
+                                ---------------------------------------------------------
+                                task.spawn(function()
+                                    for g = 1, 6 do
+                                        local glitchOffset = Vector3.new((math.random() - 0.5) * 0.6, -0.3 * g, (math.random() - 0.5) * 0.6)
+                                        if tileObj:IsA("BasePart") then tileObj.CFrame = tileObj.CFrame * CFrame.new(glitchOffset) end
+                                        if signObj and signObj:IsA("BasePart") then signObj.CFrame = signObj.CFrame * CFrame.new(glitchOffset) end
+                                        task.wait(0.04)
+                                    end
+                                    
+                                    local sinkCF = spawnCF * CFrame.new(0, -6, 0)
+                                    if tileObj:IsA("BasePart") then TweenService:Create(tileObj, TweenInfo.new(0.4), { CFrame = sinkCF, Transparency = 1 }):Play() end
+                                    if signObj and signObj:IsA("BasePart") then TweenService:Create(signObj, TweenInfo.new(0.4), { CFrame = sinkCF, Transparency = 1 }):Play() end
+                                    
+                                    task.wait(0.4)
+                                    SpawnModel:Destroy()
+                                end)
+
+                                ---------------------------------------------------------
+                                -- 7. CARGAR EN EL "VISUALIZADOR DE ÍTEMS"
+                                ---------------------------------------------------------
+                                CurrentData.Id = tostring(data.Id)
+                                CurrentData.Name = data.Name or "Item"
+                                CurrentData.Price = data.Price and (tostring(data.Price) .. " R$") or "Gratis"
+                                CurrentData.ItemType = data.ItemType or "Asset"
+
+                                if UpdateVisualizer then
+                                    UpdateVisualizer(data.Id, data.Price or "Gratis")
+                                end
+                                if data.OnSelectCallback then
+                                    data.OnSelectCallback(data.Id, data.Price or "Gratis")
+                                end
+                            end)
+                        else
+                            -- Si se cancela, se destruye todo
+                            SpawnModel:Destroy()
+                        end
+                    end
+
+                    -- Disparar alerta nativa con los datos del ítem
+                    pcall(function()
+                        StarterGui:SetCore("SendNotification", {
+                            Title = tostring(data.Name or "Ítem del Catálogo"),
+                            Text = "¿Deseas obtener este elemento?",
+                            Icon = "rbxthumb://type=Asset&id=" .. tostring(data.Id) .. "&w=150&h=150",
+                            Duration = 8,
+                            Button1 = "Aceptar",
+                            Button2 = "Rechazar",
+                            Callback = bindable
+                        })
+                    end)
+                end
+            end)
+        end)
+    end
+
     ClickBtn.MouseButton1Click:Connect(function()
-        CurrentData.Id = tostring(bannerData.Id)
-        CurrentData.Name = bannerData.Name
-        CurrentData.Price = bannerData.Price and (tostring(bannerData.Price) .. " R$") or "Gratis"
-        CurrentData.ItemType = bannerData.ItemType or "Asset"
-        
-        if bannerData.OnSelectCallback then
-            bannerData.OnSelectCallback(bannerData.Id, bannerData.Price or "Gratis")
-        end
+        Spawn3DCatalogItem(bannerData)
     end)
 
     return Card
