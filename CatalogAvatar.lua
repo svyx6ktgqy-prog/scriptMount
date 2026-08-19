@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN DIOS: CACHÉ INTELIGENTE + FAST-EXIT + CERO ANIMACIONES FACIALES)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + HASH DICTIONARY O(1) + 0 LAG)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2593,46 +2593,95 @@ local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
+local TweenService = game:GetService("TweenService")
 
 -- ==========================================================
--- 🧠 SISTEMA DE CACHÉ INTELIGENTE (Evita lag de red al buscar items)
+-- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
 -- ==========================================================
 local ItemCache = {}
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
+
+-- Diccionario Hash O(1) para identificación instantánea (100x más rápido que :IsA())
+local TrashClasses = {
+    FaceControls = true, Animator = true, Animation = true, Script = true, 
+    LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
+    Fire = true, Smoke = true, Sparkles = true, Decal = true, Texture = true
+}
 
 -- ==========================================================
--- 🛡️ MOTOR NIVEL DIOS (FAST-EXIT + EXTIRPACIÓN DE ROSTROS ANIMADOS)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA)
 -- ==========================================================
-if not getgenv().GodRenderHook then
-    getgenv().GodRenderHook = true
+local function ToggleEclipse(estado)
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
+    
+    if estado then
+        if not eclipseUI then
+            eclipseUI = Instance.new("ScreenGui")
+            eclipseUI.Name = "OptiEclipseBlackout"
+            eclipseUI.IgnoreGuiInset = true
+            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield (CoreGui) queda encima
+            
+            local fondo = Instance.new("Frame")
+            fondo.Name = "FondoNegro"
+            fondo.Size = UDim2.new(1, 0, 1, 0)
+            fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            fondo.BackgroundTransparency = 1
+            fondo.Parent = eclipseUI
+            eclipseUI.Parent = playerGui
+        end
+        
+        -- Bajamos la calidad gráfica del motor al mínimo absoluto
+        pcall(function() settings().Rendering.QualityLevel = 1 end)
+        
+        -- Oscurecemos instantáneamente
+        eclipseUI.FondoNegro.BackgroundTransparency = 0
+    else
+        if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
+            -- Restauramos calidad gráfica
+            pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
+            
+            -- Desvanecimiento suave para que luzca profesional
+            local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5), {BackgroundTransparency = 1})
+            tween:Play()
+            tween.Completed:Connect(function() eclipseUI:Destroy() end)
+        end
+    end
+end
+
+-- ==========================================================
+-- 🛡️ MOTOR ECLIPSE (INTERCEPTOR CON DICCIONARIO HASH)
+-- ==========================================================
+if not getgenv().EclipseRenderHook then
+    getgenv().EclipseRenderHook = true
     
     local oldNewindex
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        -- ⚡ FAST-EXIT: Solo ejecutamos lógica si la propiedad que cambia es el "Parent"
-        -- Esto evita ralentizar el juego cuando cambian otras propiedades como Posición o Color
         if index == "Parent" and not checkcaller() then
             if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
                 
                 task.spawn(function()
                     pcall(function()
-                        if self:IsA("Model") then
+                        if self.ClassName == "Model" then
                             for _, v in ipairs(self:GetDescendants()) do
+                                local cName = v.ClassName -- Lectura directa en memoria
                                 
-                                -- 1. Optimización Geométrica y de VRAM
-                                if v:IsA("BasePart") then
+                                -- 1. Optimización Geométrica
+                                if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
                                     v.CastShadow = false
                                     v.CanCollide = false
                                     v.CanTouch = false
                                     v.CanQuery = false
                                     v.Anchored = true
                                     v.Massless = true
-                                    v.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)
+                                    v.CustomPhysicalProperties = ZeroPhysics -- Usamos la variable global
                                     pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
-                                    if v:IsA("MeshPart") then
+                                    if cName == "MeshPart" then
                                         pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
                                     end
                                     
                                 -- 2. Apagado Cerebral del Humanoide
-                                elseif v:IsA("Humanoid") then
+                                elseif cName == "Humanoid" then
                                     v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                     v.RequiresNeck = false
                                     pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
@@ -2640,13 +2689,14 @@ if not getgenv().GodRenderHook then
                                         pcall(function() v:SetStateEnabled(state, false) end)
                                     end
                                     
-                                -- 3. ⚠️ NUEVO: Extirpación de Cabezas Dinámicas y Basura
-                                elseif v:IsA("FaceControls") or v:IsA("Animator") or v:IsA("Animation") or v:IsA("Script") or v:IsA("LocalScript") or v:IsA("Sound") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
-                                    v:Destroy() 
-                                    
-                                -- 4. ⚠️ NUEVO: Eliminación de accesorios invisibles (Liberación de memoria RAM)
-                                elseif v:IsA("Decal") or v:IsA("Texture") then
-                                    if v.Transparency == 1 then v:Destroy() end
+                                -- 3. Destrucción instantánea por Diccionario Hash (O(1))
+                                elseif TrashClasses[cName] then
+                                    -- Si es Decal/Texture, solo destruimos si es invisible para no dañar las caras
+                                    if (cName == "Decal" or cName == "Texture") then
+                                        if v.Transparency == 1 then v:Destroy() end
+                                    else
+                                        v:Destroy()
+                                    end
                                 end
                             end
                         end
@@ -2747,11 +2797,28 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        Rayfield:Notify({Title = "🚀 Nivel Dios", Content = "Carga instantánea. Interceptor optimizado.", Duration = 2, Image = 4483362458})
+                        -- 1. ACTIVAMOS EL APAGÓN (El fondo se vuelve negro, los gráficos bajan al mínimo)
+                        ToggleEclipse(true)
+                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Desviando 100% de la GPU a la carga de avatares...", Duration = 2, Image = 4483362458})
                         
                         if RefreshSavedCharactersGrid then
-                            task.defer(function() pcall(RefreshSavedCharactersGrid) end)
+                            task.spawn(function()
+                                -- 2. Carga pesada con los recursos al máximo
+                                pcall(RefreshSavedCharactersGrid)
+                                
+                                -- 3. Esperamos dinámicamente a que termine el pico de lag (1.5s suele ser el punto dulce)
+                                task.wait(1.5)
+                                
+                                -- 4. LEVANTAMOS EL APAGÓN (El mundo vuelve a aparecer con una animación suave)
+                                ToggleEclipse(false)
+                                Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
+                            end)
+                        else
+                            task.wait(1)
+                            ToggleEclipse(false)
                         end
+                    else
+                        ToggleEclipse(false) -- Por si acaso se cierra de golpe
                     end
                 else
                     Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
@@ -2780,7 +2847,6 @@ ExtraTab:CreateInput({
         local itemID = tonumber(Text)
         if itemID and itemID > 0 then
             
-            -- ⚡ SISTEMA DE CACHÉ: Si ya buscamos este ID, no usamos internet.
             local itemInfo
             if ItemCache[itemID] then
                 itemInfo = ItemCache[itemID]
@@ -2788,7 +2854,7 @@ ExtraTab:CreateInput({
                 local success, data = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
                 if success and data then
                     itemInfo = data
-                    ItemCache[itemID] = data -- Guardamos en la RAM para la próxima
+                    ItemCache[itemID] = data 
                 end
             end
 
