@@ -2585,15 +2585,16 @@ Panel:CreateInput({
    end,
 })
 
- --#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + HASH DICTIONARY O(1) + 0 LAG)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + HASH DICTIONARY O(1) + 0 LAG + CROSSFADE)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
-local StarterGui = game:GetService("StarterGui") 
+local StarterGui = game:GetService("StarterGui") 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 -- ==========================================================
 -- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
@@ -2603,139 +2604,162 @@ local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola ve
 
 -- Diccionario Hash O(1) DEFINITIVO (Todo lo que no sea geometría pura o uniones vitales muere aquí)
 local TrashClasses = {
-    -- Scripts & Lógica
-    FaceControls = true, Animator = true, Animation = true, Script = true, 
-    LocalScript = true, ModuleScript = true,
-    
-    -- Audio y Efectos Visuales Especiales
-    Sound = true, ParticleEmitter = true, Trail = true, Fire = true, 
-    Smoke = true, Sparkles = true, Beam = true, Highlight = true, ForceField = true,
-    
-    -- Texturas 2D (Se evalúan antes de destruir)
-    Decal = true, Texture = true,
-    
-    -- Deformación, Huesos y Ropa 3D
-    WrapLayer = true, WrapTarget = true, IKControl = true, Bone = true, Attachment = true,
-    
-    -- Luces Dinámicas (Consumen muchísimo renderizado)
-    PointLight = true, SpotLight = true, SurfaceLight = true,
-    
-    -- Interacción inútil en Viewports
-    ProximityPrompt = true, ClickDetector = true, BillboardGui = true, SurfaceGui = true,
-    
-    -- Físicas innecesarias (No se toca Weld ni Motor6D para no desarmar el avatar)
-    SpringConstraint = true, RopeConstraint = true, RodConstraint = true
+    -- Scripts & Lógica
+    FaceControls = true, Animator = true, Animation = true, Script = true, 
+    LocalScript = true, ModuleScript = true,
+    
+    -- Audio y Efectos Visuales Especiales
+    Sound = true, ParticleEmitter = true, Trail = true, Fire = true, 
+    Smoke = true, Sparkles = true, Beam = true, Highlight = true, ForceField = true,
+    
+    -- Texturas 2D (Se evalúan antes de destruir)
+    Decal = true, Texture = true,
+    
+    -- Deformación, Huesos y Ropa 3D
+    WrapLayer = true, WrapTarget = true, IKControl = true, Bone = true, Attachment = true,
+    
+    -- Luces Dinámicas (Consumen muchísimo renderizado)
+    PointLight = true, SpotLight = true, SurfaceLight = true,
+    
+    -- Interacción inútil en Viewports
+    ProximityPrompt = true, ClickDetector = true, BillboardGui = true, SurfaceGui = true,
+    
+    -- Físicas innecesarias (No se toca Weld ni Motor6D para no desarmar el avatar)
+    SpringConstraint = true, RopeConstraint = true, RodConstraint = true
 }
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO ANIMADO CON TITILEO)
 -- ==========================================================
+local activeEclipseTween = nil -- Controla el bucle de titileo
+
 local function ToggleEclipse(estado)
-    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-    local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
-    
-    if estado then
-        if not eclipseUI then
-            eclipseUI = Instance.new("ScreenGui")
-            eclipseUI.Name = "OptiEclipseBlackout"
-            eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield (CoreGui) queda encima
-            
-            local fondo = Instance.new("Frame")
-            fondo.Name = "FondoNegro"
-            fondo.Size = UDim2.new(1, 0, 1, 0)
-            fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            fondo.BackgroundTransparency = 1
-            fondo.Parent = eclipseUI
-            eclipseUI.Parent = playerGui
-        end
-        
-        -- Bajamos la calidad gráfica del motor al mínimo absoluto
-        pcall(function() settings().Rendering.QualityLevel = 1 end)
-        
-        -- Oscurecemos instantáneamente
-        eclipseUI.FondoNegro.BackgroundTransparency = 0
-    else
-        if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
-            -- Restauramos calidad gráfica
-            pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
-            
-            -- Desvanecimiento suave para que luzca profesional
-            local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-            tween:Play()
-            tween.Completed:Connect(function() eclipseUI:Destroy() end)
-        end
-    end
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
+    
+    if estado then
+        if not eclipseUI then
+            eclipseUI = Instance.new("ScreenGui")
+            eclipseUI.Name = "OptiEclipseBlackout"
+            eclipseUI.IgnoreGuiInset = true
+            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield (CoreGui) queda encima
+            
+            local fondo = Instance.new("Frame")
+            fondo.Name = "FondoNegro"
+            fondo.Size = UDim2.new(1, 0, 1, 0)
+            fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            fondo.BackgroundTransparency = 1 -- Inicia transparente
+            fondo.Parent = eclipseUI
+            eclipseUI.Parent = playerGui
+        end
+        
+        -- Bajamos la calidad gráfica del motor al mínimo absoluto
+        pcall(function() settings().Rendering.QualityLevel = 1 end)
+        
+        local fondo = eclipseUI.FondoNegro
+        
+        -- 1. CROSSFADE DE ENTRADA (Suave)
+        local fadeIn = TweenService:Create(fondo, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+        fadeIn:Play()
+
+        -- 2. EFECTO DE TITILEO (Pulsación Infinita)
+        fadeIn.Completed:Connect(function()
+            if eclipseUI.Parent and fondo.Parent then
+                local pulseInfo = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+                activeEclipseTween = TweenService:Create(fondo, pulseInfo, {BackgroundTransparency = 0.2})
+                activeEclipseTween:Play()
+            end
+        end)
+    else
+        if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
+            -- Restauramos calidad gráfica
+            pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
+            
+            -- Cancelamos el titileo si existe
+            if activeEclipseTween then
+                activeEclipseTween:Cancel()
+                activeEclipseTween = nil
+            end
+            
+            -- 3. CROSSFADE DE SALIDA (Suave)
+            local fadeOut = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+            fadeOut:Play()
+            
+            fadeOut.Completed:Connect(function() 
+                eclipseUI:Destroy() 
+            end)
+        end
+    end
 end
 
 -- ==========================================================
 -- 🛡️ MOTOR ECLIPSE (INTERCEPTOR CON DICCIONARIO HASH)
 -- ==========================================================
 if not getgenv().EclipseRenderHook then
-    getgenv().EclipseRenderHook = true
-    
-    local oldNewindex
-    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        if index == "Parent" and not checkcaller() then
-            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                
-                -- ILUMINACIÓN PLANA: Desactivar sombras del contenedor ViewportFrame
-                pcall(function()
-                    value.LightColor = Color3.new(1, 1, 1)
-                    value.Ambient = Color3.new(1, 1, 1)
-                    value.LightDirection = Vector3.new(0, 0, 0)
-                end)
+    getgenv().EclipseRenderHook = true
+    
+    local oldNewindex
+    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
+        if index == "Parent" and not checkcaller() then
+            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+                
+                -- ILUMINACIÓN PLANA: Desactivar sombras del contenedor ViewportFrame
+                pcall(function()
+                    value.LightColor = Color3.new(1, 1, 1)
+                    value.Ambient = Color3.new(1, 1, 1)
+                    value.LightDirection = Vector3.new(0, 0, 0)
+                end)
 
-                task.spawn(function()
-                    pcall(function()
-                        if self.ClassName == "Model" then
-                            for _, v in ipairs(self:GetDescendants()) do
-                                local cName = v.ClassName -- Lectura directa en memoria rápida
-                                
-                                -- 1. Optimización Geométrica Total
-                                if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
-                                    v.CastShadow = false
-                                    v.CanCollide = false
-                                    v.CanTouch = false
-                                    v.CanQuery = false
-                                    v.Anchored = true
-                                    v.Massless = true
-                                    v.Reflectance = 0 -- Evita cálculos de reflejos PBR
-                                    v.CustomPhysicalProperties = ZeroPhysics
-                                    
-                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
-                                    if cName == "MeshPart" then
-                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
-                                    end
-                                    
-                                -- 2. Lobotomía del Humanoide
-                                elseif cName == "Humanoid" then
-                                    v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-                                    v.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-                                    v.RequiresNeck = false
-                                    v.BreakJointsOnDeath = false
-                                    pcall(function() v.EvaluateStateMachine = false end)
-                                    pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
-                                        pcall(function() v:SetStateEnabled(state, false) end)
-                                    end
-                                    
-                                -- 3. Destrucción instantánea por Diccionario Hash O(1)
-                                elseif TrashClasses[cName] then
-                                    if (cName == "Decal" or cName == "Texture") then
-                                        if v.Transparency == 1 then v:Destroy() end
-                                    else
-                                        v:Destroy()
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                end)
-            end
-        end
-        return oldNewindex(self, index, value)
-    end)
+                task.spawn(function()
+                    pcall(function()
+                        if self.ClassName == "Model" then
+                            for _, v in ipairs(self:GetDescendants()) do
+                                local cName = v.ClassName -- Lectura directa en memoria rápida
+                                
+                                -- 1. Optimización Geométrica Total
+                                if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
+                                    v.CastShadow = false
+                                    v.CanCollide = false
+                                    v.CanTouch = false
+                                    v.CanQuery = false
+                                    v.Anchored = true
+                                    v.Massless = true
+                                    v.Reflectance = 0 -- Evita cálculos de reflejos PBR
+                                    v.CustomPhysicalProperties = ZeroPhysics
+                                    
+                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
+                                    if cName == "MeshPart" then
+                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
+                                    end
+                                    
+                                -- 2. Lobotomía del Humanoide
+                                elseif cName == "Humanoid" then
+                                    v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                                    v.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+                                    v.RequiresNeck = false
+                                    v.BreakJointsOnDeath = false
+                                    pcall(function() v.EvaluateStateMachine = false end)
+                                    pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+                                        pcall(function() v:SetStateEnabled(state, false) end)
+                                    end
+                                    
+                                -- 3. Destrucción instantánea por Diccionario Hash O(1)
+                                elseif TrashClasses[cName] then
+                                    if (cName == "Decal" or cName == "Texture") then
+                                        if v.Transparency == 1 then v:Destroy() end
+                                    else
+                                        v:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                end)
+            end
+        end
+        return oldNewindex(self, index, value)
+    end)
 end
 -- ==========================================================
 
@@ -2744,130 +2768,145 @@ local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
 ExtraTab:CreateButton({
-    Name = "🧹 Limpieza Extrema y Ping Óptimo",
-    Callback = function()
-        local bindable = Instance.new("BindableFunction")
-        bindable.OnInvoke = function(respuesta)
-            if respuesta == "OK" then
-                Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista.", Duration = 3, Image = 4483362458})
-                task.spawn(function()
-                    task.wait(0.5) 
-                    -- Limpieza de Iluminación y Sombras
-                    pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
-                    for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
-                    
-                    -- Limpieza de Terreno y Nubes Volumétricas
-                    pcall(function() 
-                        if Workspace:FindFirstChildOfClass("Terrain") then 
-                            Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false 
-                            for _, cloud in ipairs(Workspace.Terrain:GetChildren()) do if cloud:IsA("Clouds") then cloud:Destroy() end end
-                        end 
-                    end)
-                    
-                    -- Plasticidad Global
-                    for _, v in ipairs(Workspace:GetDescendants()) do 
-                        pcall(function() 
-                            if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false 
-                            elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 
-                            elseif v:IsA("SurfaceAppearance") then v:Destroy() end 
-                        end) 
-                    end
-                    
-                    pcall(function() collectgarbage("collect") end) -- Purga de RAM
-                    Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100% y memoria liberada.", Duration = 3, Image = 4483362458})
-                end)
-            end
-        end
-        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
-    end
+    Name = "🧹 Limpieza Extrema y Ping Óptimo",
+    Callback = function()
+        local bindable = Instance.new("BindableFunction")
+        bindable.OnInvoke = function(respuesta)
+            if respuesta == "OK" then
+                Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista.", Duration = 3, Image = 4483362458})
+                task.spawn(function()
+                    task.wait(0.5) 
+                    -- Limpieza de Iluminación y Sombras
+                    pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
+                    for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
+                    
+                    -- Limpieza de Terreno y Nubes Volumétricas
+                    pcall(function() 
+                        if Workspace:FindFirstChildOfClass("Terrain") then 
+                            Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false 
+                            for _, cloud in ipairs(Workspace.Terrain:GetChildren()) do if cloud:IsA("Clouds") then cloud:Destroy() end end
+                        end 
+                    end)
+                    
+                    -- Plasticidad Global
+                    for _, v in ipairs(Workspace:GetDescendants()) do 
+                        pcall(function() 
+                            if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false 
+                            elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 
+                            elseif v:IsA("SurfaceAppearance") then v:Destroy() end 
+                        end) 
+                    end
+                    
+                    pcall(function() collectgarbage("collect") end) -- Purga de RAM
+                    Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100% y memoria liberada.", Duration = 3, Image = 4483362458})
+                end)
+            end
+        end
+        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
+    end
 })
 
 ExtraTab:CreateButton({
-    Name = "🌍 Restaurar Entorno (Normalidad)",
-    Callback = function()
-        local bindable = Instance.new("BindableFunction")
-        bindable.OnInvoke = function(respuesta)
-            if respuesta == "OK" then
-                task.spawn(function()
-                    pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
-                    pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
-                    for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then v.Material = Enum.Material.Plastic; v.CastShadow = true elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end end) end
-                    Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos a la normalidad.", Duration = 3, Image = 4483362458})
-                end)
-            end
-        end
-        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
-    end
+    Name = "🌍 Restaurar Entorno (Normalidad)",
+    Callback = function()
+        local bindable = Instance.new("BindableFunction")
+        bindable.OnInvoke = function(respuesta)
+            if respuesta == "OK" then
+                task.spawn(function()
+                    pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
+                    pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
+                    for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then v.Material = Enum.Material.Plastic; v.CastShadow = true elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end end) end
+                    Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos a la normalidad.", Duration = 3, Image = 4483362458})
+                end)
+            end
+        end
+        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
+    end
 })
 
 ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
 
 ExtraTab:CreateToggle({
-    Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
-    CurrentValue = false,
-    Flag = "ToggleItemVisualizer",
-    Callback = function(Value)
-        pcall(function()
-            if Container then Container.Visible = Value
-            else
-                local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-                local visualizerUI = CoreGui:FindFirstChild("VisualizadorItemGUI") or playerGui:FindFirstChild("VisualizadorItemGUI")
-                if visualizerUI then if visualizerUI:IsA("ScreenGui") then visualizerUI.Enabled = Value else visualizerUI.Visible = Value end end
-            end
-        end)
-    end
+    Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
+    CurrentValue = false,
+    Flag = "ToggleItemVisualizer",
+    Callback = function(Value)
+        pcall(function()
+            if Container then Container.Visible = Value
+            else
+                local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+                local visualizerUI = CoreGui:FindFirstChild("VisualizadorItemGUI") or playerGui:FindFirstChild("VisualizadorItemGUI")
+                if visualizerUI then if visualizerUI:IsA("ScreenGui") then visualizerUI.Enabled = Value else visualizerUI.Visible = Value end end
+            end
+        end)
+    end
 })
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
 ExtraTab:CreateButton({
-    Name = "📁 Mostrar/Ocultar Menú de Outfits",
-    Callback = function()
-        task.spawn(function()
-            local success, err = pcall(function()
-                local targetMenu = nil
-                
-                if CharMenu then targetMenu = CharMenu
-                else
-                    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-                    local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
-                    if visualizerUI then
-                        for _, frame in ipairs(visualizerUI:GetChildren()) do
-                            if frame:IsA("Frame") then
-                                local title = frame:FindFirstChildWhichIsA("TextLabel", true)
-                                if title and string.find(string.lower(title.Text), "outfits") then targetMenu = frame break end
-                            end
-                        end
-                    end
-                end
+    Name = "📁 Mostrar/Ocultar Menú de Outfits",
+    Callback = function()
+        task.spawn(function()
+            local success, err = pcall(function()
+                local targetMenu = nil
+                
+                if CharMenu then targetMenu = CharMenu
+                else
+                    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+                    local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
+                    if visualizerUI then
+                        for _, frame in ipairs(visualizerUI:GetChildren()) do
+                            if frame:IsA("Frame") then
+                                local title = frame:FindFirstChildWhichIsA("TextLabel", true)
+                                if title and string.find(string.lower(title.Text), "outfits") then targetMenu = frame break end
+                            end
+                        end
+                    end
+                end
 
-                if targetMenu then
-                    targetMenu.Visible = not targetMenu.Visible 
-                    
-                    if targetMenu.Visible then
-                        ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Desviando 100% de la GPU a la carga de avatares...", Duration = 2, Image = 4483362458})
-                        
-                        if RefreshSavedCharactersGrid then
-                            task.spawn(function()
-                                pcall(RefreshSavedCharactersGrid)
-                                task.wait(1.5)
-                                ToggleEclipse(false)
-                                Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
-                            end)
-                        else
-                            task.wait(1)
-                            ToggleEclipse(false)
-                        end
-                    else
-                        ToggleEclipse(false)
-                    end
-                else
-                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
-                end
-            end)
-        end)
-    end
+                if targetMenu then
+                    targetMenu.Visible = not targetMenu.Visible 
+                    
+                    if targetMenu.Visible then
+                        ToggleEclipse(true)
+                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Optimizando carga de avatares...", Duration = 2, Image = 4483362458})
+                        
+                        -- 🚀 OPTIMIZACIÓN EXTREMA DE CARGA DE PERSONAJE
+                        -- Purgamos los Viewports antiguos de la UI y forzamos al recolector de basura 
+                        -- a limpiar la memoria ANTES de que el juego intente renderizar los nuevos.
+                        pcall(function()
+                            for _, v in ipairs(targetMenu:GetDescendants()) do
+                                if v:IsA("ViewportFrame") then
+                                    v:ClearAllChildren() -- Destruye modelos 3D previos para liberar VRAM instantáneamente
+                                end
+                            end
+                            collectgarbage("collect") -- Limpieza profunda de RAM
+                        end)
+                        
+                        if RefreshSavedCharactersGrid then
+                            task.spawn(function()
+                                task.wait(0.2) -- Damos tiempo al Crossfade y la limpieza de RAM
+                                pcall(RefreshSavedCharactersGrid)
+                                task.wait(1.5)
+                                ToggleEclipse(false)
+                                Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
+                            end)
+                        else
+                            task.wait(1)
+                            ToggleEclipse(false)
+                        end
+                    else
+                        ToggleEclipse(false)
+                        -- Limpiamos RAM al cerrar el menú
+                        pcall(function() collectgarbage("collect") end)
+                    end
+                else
+                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
+                end
+            end)
+        end)
+    end
 })
 
 ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
@@ -2882,37 +2921,37 @@ ExtraTab:CreateButton({Name = "🌐 Sensor Libre (Rotación Total)", Callback = 
 ExtraTab:CreateSection("🔍 Visualizador Inteligente (Con Caché)")
 
 ExtraTab:CreateInput({
-    Name = "👁️ Previsualizar Item por ID",
-    PlaceholderText = "Pega el ID aquí para verificar...",
-    RemoveTextAfterFocusLost = false,
-    Callback = function(Text)
-        local itemID = tonumber(Text)
-        if itemID and itemID > 0 then
-            
-            local itemInfo
-            if ItemCache[itemID] then
-                itemInfo = ItemCache[itemID]
-            else
-                local success, data = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
-                if success and data then
-                    itemInfo = data
-                    ItemCache[itemID] = data 
-                end
-            end
+    Name = "👁️ Previsualizar Item por ID",
+    PlaceholderText = "Pega el ID aquí para verificar...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local itemID = tonumber(Text)
+        if itemID and itemID > 0 then
+            
+            local itemInfo
+            if ItemCache[itemID] then
+                itemInfo = ItemCache[itemID]
+            else
+                local success, data = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
+                if success and data then
+                    itemInfo = data
+                    ItemCache[itemID] = data 
+                end
+            end
 
-            if itemInfo then
-                pcall(function()
-                    if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
-                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis") end
-                end)
-                Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 3, Image = 4483362458})
-            else
-                Rayfield:Notify({Title = "Item Inválido", Content = "El ID ingresado no existe o falló la red.", Duration = 4, Image = 4483362458})
-            end
-        else
-            Rayfield:Notify({Title = "Error de Entrada", Content = "Por favor, ingresa únicamente números válidos.", Duration = 3, Image = 4483362458})
-        end
-    end
+            if itemInfo then
+                pcall(function()
+                    if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
+                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis") end
+                end)
+                Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 3, Image = 4483362458})
+            else
+                Rayfield:Notify({Title = "Item Inválido", Content = "El ID ingresado no existe o falló la red.", Duration = 4, Image = 4483362458})
+            end
+        else
+            Rayfield:Notify({Title = "Error de Entrada", Content = "Por favor, ingresa únicamente números válidos.", Duration = 3, Image = 4483362458})
+        end
+    end
 })
 
 Rayfield:LoadConfiguration()
