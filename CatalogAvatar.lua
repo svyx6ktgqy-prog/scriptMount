@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + CROSSFADE + HASH O(1) + 0 LAG)
+--# EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE SEGURA PARA DELTA: SIN HOOKS INVASIVOS)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2597,39 +2597,12 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 -- ==========================================================
--- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
+-- 🧠 SISTEMAS DE MEMORIA Y CACHÉ
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
-
--- Diccionario Hash O(1) DEFINITIVO (Todo lo que no sea geometría pura o uniones vitales muere aquí)
-local TrashClasses = {
-    -- Scripts & Lógica
-    FaceControls = true, Animator = true, Animation = true, Script = true, 
-    LocalScript = true, ModuleScript = true,
-    
-    -- Audio y Efectos Visuales Especiales
-    Sound = true, ParticleEmitter = true, Trail = true, Fire = true, 
-    Smoke = true, Sparkles = true, Beam = true, Highlight = true, ForceField = true,
-    
-    -- Texturas 2D (Se evalúan antes de destruir)
-    Decal = true, Texture = true,
-    
-    -- Deformación, Huesos y Ropa 3D
-    WrapLayer = true, WrapTarget = true, IKControl = true, Bone = true, Attachment = true,
-    
-    -- Luces Dinámicas (Consumen muchísimo renderizado)
-    PointLight = true, SpotLight = true, SurfaceLight = true,
-    
-    -- Interacción inútil en Viewports
-    ProximityPrompt = true, ClickDetector = true, BillboardGui = true, SurfaceGui = true,
-    
-    -- Físicas innecesarias (No se toca Weld ni Motor6D para no desarmar el avatar)
-    SpringConstraint = true, RopeConstraint = true, RodConstraint = true
-}
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO CON CROSSFADE Y TITILEO)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO CON CROSSFADE Y TITILEO - 100% SEGURO)
 -- ==========================================================
 local eclipseActive = false
 
@@ -2654,7 +2627,7 @@ local function ToggleEclipse(estado)
             eclipseUI.Parent = playerGui
         end
         
-        -- Bajamos la calidad gráfica del motor al mínimo absoluto
+        -- Bajamos la calidad gráfica del motor al mínimo absoluto temporalmente
         pcall(function() settings().Rendering.QualityLevel = 1 end)
         
         local fondo = eclipseUI:FindFirstChild("FondoNegro")
@@ -2696,78 +2669,11 @@ local function ToggleEclipse(estado)
 end
 
 -- ==========================================================
--- 🛡️ MOTOR ECLIPSE (INTERCEPTOR CON DICCIONARIO HASH)
+-- ⚙️ INTERFAZ DE USUARIO RAYFIELD
 -- ==========================================================
-if not getgenv().EclipseRenderHook then
-    getgenv().EclipseRenderHook = true
-    
-    local oldNewindex
-    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        if index == "Parent" and not checkcaller() then
-            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                
-                -- ILUMINACIÓN PLANA: Desactivar sombras del contenedor ViewportFrame
-                pcall(function()
-                    value.LightColor = Color3.new(1, 1, 1)
-                    value.Ambient = Color3.new(1, 1, 1)
-                    value.LightDirection = Vector3.new(0, 0, 0)
-                end)
 
-                task.spawn(function()
-                    pcall(function()
-                        if self.ClassName == "Model" then
-                            -- NUEVA OPTIMIZACIÓN: Evita que el motor calcule distancias de cámara en avatares
-                            pcall(function() self.LevelOfDetail = Enum.ModelLevelOfDetail.Disabled end)
-                            
-                            for _, v in ipairs(self:GetDescendants()) do
-                                local cName = v.ClassName
-                                
-                                -- 1. Optimización Geométrica Total
-                                if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
-                                    v.CastShadow = false
-                                    v.CanCollide = false
-                                    v.CanTouch = false
-                                    v.CanQuery = false
-                                    v.Anchored = true
-                                    v.Massless = true
-                                    v.Reflectance = 0
-                                    v.CustomPhysicalProperties = ZeroPhysics
-                                    
-                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
-                                    if cName == "MeshPart" then
-                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
-                                    end
-                                    
-                                -- 2. Lobotomía del Humanoide
-                                elseif cName == "Humanoid" then
-                                    v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-                                    v.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-                                    v.RequiresNeck = false
-                                    v.BreakJointsOnDeath = false
-                                    pcall(function() v.EvaluateStateMachine = false end)
-                                    pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
-                                        pcall(function() v:SetStateEnabled(state, false) end)
-                                    end
-                                    
-                                -- 3. Destrucción instantánea por Diccionario Hash O(1)
-                                elseif TrashClasses[cName] then
-                                    if (cName == "Decal" or cName == "Texture") then
-                                        if v.Transparency == 1 then v:Destroy() end
-                                    else
-                                        v:Destroy()
-                                    end
-                                end
-                            end
-                        end
-                    end)
-                end)
-            end
-        end
-        return oldNewindex(self, index, value)
-    end)
-end
--- ==========================================================
+-- Verificación rápida de Rayfield
+if not Window then return end
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
@@ -2873,23 +2779,21 @@ ExtraTab:CreateButton({
                     
                     if targetMenu.Visible then
                         ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Procesando avatares con máxima prioridad...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Procesando avatares...", Duration = 2, Image = 4483362458})
                         
                         task.spawn(function()
-                            -- OPTIMIZACIÓN PRE-CARGA: Vaciamos la memoria RAM antes de inyectar los modelos
                             pcall(function() collectgarbage("collect") end)
                             
                             if RefreshSavedCharactersGrid then
                                 pcall(RefreshSavedCharactersGrid)
                             end
                             
-                            task.wait(1.5) -- Tiempo prudente para permitir que los Viewports carguen su contenido
+                            task.wait(1.5) 
                             
-                            -- OPTIMIZACIÓN POST-CARGA: Destruimos rastros de texturas o instancias huérfanas en RAM
                             pcall(function() collectgarbage("collect") end)
                             
                             ToggleEclipse(false)
-                            Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
+                            Rayfield:Notify({Title = "✅ Carga Completada", Content = "Restaurando mundo.", Duration = 2, Image = 4483362458})
                         end)
                     else
                         ToggleEclipse(false)
