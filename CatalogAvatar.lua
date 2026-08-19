@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN CUÁNTICA: 0% FÍSICAS + POLÍGONOS DEGRADADOS + VRAM LIBERADA)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN DIOS: CACHÉ INTELIGENTE + FAST-EXIT + CERO ANIMACIONES FACIALES)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2593,60 +2593,66 @@ local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
-local RunService = game:GetService("RunService")
 
 -- ==========================================================
--- 🛡️ MOTOR CUÁNTICO (DEGRADACIÓN DE POLÍGONOS Y LIMPIEZA VRAM)
+-- 🧠 SISTEMA DE CACHÉ INTELIGENTE (Evita lag de red al buscar items)
 -- ==========================================================
-if not getgenv().QuantumRenderHook then
-    getgenv().QuantumRenderHook = true
+local ItemCache = {}
+
+-- ==========================================================
+-- 🛡️ MOTOR NIVEL DIOS (FAST-EXIT + EXTIRPACIÓN DE ROSTROS ANIMADOS)
+-- ==========================================================
+if not getgenv().GodRenderHook then
+    getgenv().GodRenderHook = true
     
     local oldNewindex
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        -- Interceptamos la entrada al Menú 3D
-        if not checkcaller() and index == "Parent" and typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-            
-            task.spawn(function()
-                pcall(function()
-                    if self:IsA("Model") then
-                        -- LIMPIEZA Y OPTIMIZACIÓN EXTREMA POR NODO
-                        for _, v in ipairs(self:GetDescendants()) do
-                            
-                            -- 1. Optimización Geométrica y Física (VRAM + CPU)
-                            if v:IsA("BasePart") then
-                                v.CastShadow = false
-                                v.CanCollide = false
-                                v.CanTouch = false
-                                v.CanQuery = false
-                                v.Anchored = true
-                                v.Massless = true
-                                v.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)
+        -- ⚡ FAST-EXIT: Solo ejecutamos lógica si la propiedad que cambia es el "Parent"
+        -- Esto evita ralentizar el juego cuando cambian otras propiedades como Posición o Color
+        if index == "Parent" and not checkcaller() then
+            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+                
+                task.spawn(function()
+                    pcall(function()
+                        if self:IsA("Model") then
+                            for _, v in ipairs(self:GetDescendants()) do
                                 
-                                -- ⚠️ NUEVO: Forzamos la geometría a cubos básicos en memoria (Adiós lag de Hitboxes)
-                                pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
-                                
-                                -- ⚠️ NUEVO: Forzamos la tarjeta gráfica a renderizar en baja calidad (LOD)
-                                if v:IsA("MeshPart") then
-                                    pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
+                                -- 1. Optimización Geométrica y de VRAM
+                                if v:IsA("BasePart") then
+                                    v.CastShadow = false
+                                    v.CanCollide = false
+                                    v.CanTouch = false
+                                    v.CanQuery = false
+                                    v.Anchored = true
+                                    v.Massless = true
+                                    v.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)
+                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
+                                    if v:IsA("MeshPart") then
+                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
+                                    end
+                                    
+                                -- 2. Apagado Cerebral del Humanoide
+                                elseif v:IsA("Humanoid") then
+                                    v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                                    v.RequiresNeck = false
+                                    pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+                                        pcall(function() v:SetStateEnabled(state, false) end)
+                                    end
+                                    
+                                -- 3. ⚠️ NUEVO: Extirpación de Cabezas Dinámicas y Basura
+                                elseif v:IsA("FaceControls") or v:IsA("Animator") or v:IsA("Animation") or v:IsA("Script") or v:IsA("LocalScript") or v:IsA("Sound") or v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                                    v:Destroy() 
+                                    
+                                -- 4. ⚠️ NUEVO: Eliminación de accesorios invisibles (Liberación de memoria RAM)
+                                elseif v:IsA("Decal") or v:IsA("Texture") then
+                                    if v.Transparency == 1 then v:Destroy() end
                                 end
-                                
-                            -- 2. Apagado Cerebral Absoluto
-                            elseif v:IsA("Humanoid") then
-                                v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-                                v.RequiresNeck = false
-                                pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
-                                    pcall(function() v:SetStateEnabled(state, false) end)
-                                end
-                                
-                            -- 3. ⚠️ NUEVO: Extirpación de Basura Gráfica y de Memoria
-                            elseif v:IsA("Animator") or v:IsA("Animation") or v:IsA("Script") or v:IsA("LocalScript") or v:IsA("Sound") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
-                                v:Destroy() 
                             end
                         end
-                    end
+                    end)
                 end)
-            end)
+            end
         end
         return oldNewindex(self, index, value)
     end)
@@ -2716,7 +2722,6 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits (RENDIMIENTO CUÁNTICO - MAX RENDER)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2742,13 +2747,10 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        Rayfield:Notify({Title = "🚀 Nivel Cuántico", Content = "Polígonos degradados, memorias limpias.", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🚀 Nivel Dios", Content = "Carga instantánea. Interceptor optimizado.", Duration = 2, Image = 4483362458})
                         
                         if RefreshSavedCharactersGrid then
-                            -- El defer más limpio posible para evitar interrupciones de FPS
-                            task.defer(function() 
-                                pcall(RefreshSavedCharactersGrid) 
-                            end)
+                            task.defer(function() pcall(RefreshSavedCharactersGrid) end)
                         end
                     end
                 else
@@ -2768,7 +2770,7 @@ ExtraTab:CreateButton({Name = "⬆️ Forzar Vertical (Portrait)", Callback = fu
 ExtraTab:CreateButton({Name = "🔄 Sensor Horizontal Automático", Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end})
 ExtraTab:CreateButton({Name = "🌐 Sensor Libre (Rotación Total)", Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end})
 
-ExtraTab:CreateSection("🔍 Visualizador Inteligente")
+ExtraTab:CreateSection("🔍 Visualizador Inteligente (Con Caché)")
 
 ExtraTab:CreateInput({
     Name = "👁️ Previsualizar Item por ID",
@@ -2777,15 +2779,27 @@ ExtraTab:CreateInput({
     Callback = function(Text)
         local itemID = tonumber(Text)
         if itemID and itemID > 0 then
-            local success, itemInfo = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
-            if success and itemInfo then
+            
+            -- ⚡ SISTEMA DE CACHÉ: Si ya buscamos este ID, no usamos internet.
+            local itemInfo
+            if ItemCache[itemID] then
+                itemInfo = ItemCache[itemID]
+            else
+                local success, data = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
+                if success and data then
+                    itemInfo = data
+                    ItemCache[itemID] = data -- Guardamos en la RAM para la próxima
+                end
+            end
+
+            if itemInfo then
                 pcall(function()
                     if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
                     if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis") end
                 end)
-                Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 4, Image = 4483362458})
+                Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 3, Image = 4483362458})
             else
-                Rayfield:Notify({Title = "Item Inválido", Content = "El ID ingresado no existe.", Duration = 4, Image = 4483362458})
+                Rayfield:Notify({Title = "Item Inválido", Content = "El ID ingresado no existe o falló la red.", Duration = 4, Image = 4483362458})
             end
         else
             Rayfield:Notify({Title = "Error de Entrada", Content = "Por favor, ingresa únicamente números válidos.", Duration = 3, Image = 4483362458})
