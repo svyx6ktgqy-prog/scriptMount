@@ -2585,79 +2585,64 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO).
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA)
 
--- Metodos
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
 
-local ExtraTab = Window:CreateTab("EXTRA", 4483362458) -- Icono genérico de Rayfield (opcional)
+local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
--- 1. Boton limpiador avanzado de RAM y Caché (Con Notificación PRO de Rayfield)
+-- 1. Limpieza Profunda (Segura para Delta sin romper hilos)
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Profunda de RAM / Caché",
     Callback = function()
-        pcall(function()
-            -- 1. Limpieza de cola de descargas nativa de Roblox (Libera carga de red)
+        local success, err = pcall(function()
             game:GetService("ContentProvider"):ClearWorkspaceQueue()
             
-            -- 2. Recolección de basura forzada (Soportado por la mayoría de ejecutores móviles)
             if collectgarbage then
                 collectgarbage("collect")
-                -- Segunda pasada para asegurar limpieza profunda
                 task.wait(0.1)
                 collectgarbage("collect") 
             end
             
-            -- 3. Limpieza de memoria visual huérfana
-            for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
+            for _, v in ipairs(Workspace:GetDescendants()) do
                 if v:IsA("Texture") or v:IsA("Decal") then
                     v.LocalTransparencyModifier = 0 
                 end
             end
-            
-            -- Notificación estilo PRO de Rayfield
+        end)
+
+        if success then
             Rayfield:Notify({
                 Title = "Optimización Completada",
-                Content = "Se ha liberado la memoria RAM y caché del juego exitosamente. Rendimiento al máximo.",
-                Duration = 5,
+                Content = "Memoria RAM y caché liberadas con éxito.",
+                Duration = 4,
                 Image = 4483362458,
-                Actions = { -- Botón decorativo en la notificación
-                    Ignore = {
-                        Name = "Excelente",
-                        Callback = function() end
-                    }
-                }
             })
-        end)
+        end
     end
 })
 
 ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
 
--- 2. Boton ocultar-mostrar visualizador de items (Aislado del Catálogo)
+-- 2. Mostrar/Ocultar Visualizador (Evita errores si el UI no existe)
 ExtraTab:CreateToggle({
     Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
     CurrentValue = true,
     Flag = "ToggleItemVisualizer",
     Callback = function(Value)
         pcall(function()
-            -- Buscamos específicamente el UI del Visualizador (No el Catálogo)
-            local coreGui = game:GetService("CoreGui")
-            local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
+            local targetVisualizerName = "VisualizadorItemGUI" -- Cambia esto por el nombre de tu GUI
             
-            -- Reemplaza "NombreDeTuVisualizadorUI" por el nombre exacto de tu ScreenGui del visualizador
-            local targetVisualizerName = "VisualizadorItemGUI" 
-            
-            local visualizerUI = coreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
+            local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+            local visualizerUI = CoreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
             
             if visualizerUI then
                 visualizerUI.Enabled = Value
-            else
-                -- Búsqueda de respaldo en caso de que esté dentro de otro Frame
-                if VisualizerImageFrame then 
-                    VisualizerImageFrame.Visible = Value
-                end
             end
         end)
     end
@@ -2665,81 +2650,91 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
 
--- 3. Botones para Orientación de PANTALLA Avanzada
+-- 3. Orientación de Pantalla (Sintaxis directa y segura)
+local function SetOrientation(orientation)
+    pcall(function()
+        Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation
+    end)
+end
+
 ExtraTab:CreateButton({
     Name = "➡️ Forzar Horizontal (Derecha)",
-    Callback = function()
-        pcall(function()
-            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeRight
-        end)
-    end
+    Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end
 })
 
 ExtraTab:CreateButton({
     Name = "⬅️ Forzar Horizontal (Izquierda)",
-    Callback = function()
-        pcall(function()
-            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeLeft
-        end)
-    end
+    Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end
 })
 
 ExtraTab:CreateButton({
     Name = "⬆️ Forzar Vertical (Portrait)",
-    Callback = function()
-        pcall(function()
-            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.Portrait
-        end)
-    end
+    Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end
 })
 
 ExtraTab:CreateButton({
     Name = "🔄 Sensor Horizontal Automático",
-    Callback = function()
-        pcall(function()
-            -- Gira automáticamente, pero solo en formato horizontal
-            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.SensorLandscape
-        end)
-    end
+    Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end
 })
 
 ExtraTab:CreateButton({
     Name = "🌐 Sensor Libre (Rotación Total)",
-    Callback = function()
-        pcall(function()
-            -- Sigue el giroscopio del teléfono a cualquier orientación
-            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.Sensor
-        end)
-    end
+    Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end
 })
 
-ExtraTab:CreateSection("🛍️ Utilidades de Catálogo Rápido")
+ExtraTab:CreateSection("🔍 Visualizador Inteligente")
 
--- 4. Buscar por ID con notificación integrada
+-- 4. Buscador PRO: Valida en Roblox y lo envía al visualizador
 ExtraTab:CreateInput({
-    Name = "🔍 Equipar Item por ID",
-    PlaceholderText = "Pega el ID aquí...",
+    Name = "👁️ Previsualizar Item por ID",
+    PlaceholderText = "Pega el ID aquí para verificar...",
     RemoveTextAfterFocusLost = false,
     Callback = function(Text)
         local itemID = tonumber(Text)
+        
         if itemID and itemID > 0 then
-            pcall(function()
-                if UniversalEquip then
-                    UniversalEquip(itemID, false)
-                    
-                    Rayfield:Notify({
-                        Title = "Item Equipado",
-                        Content = "Se ha cargado el ID: " .. tostring(itemID) .. " con éxito.",
-                        Duration = 3,
-                        Image = 4483362458,
-                    })
-                end
+            -- Validación en los servidores de Roblox
+            local success, itemInfo = pcall(function()
+                return MarketplaceService:GetProductInfo(itemID)
             end)
+
+            if success and itemInfo then
+                -- ENVIAR AL VISUALIZADOR
+                pcall(function()
+                    -- Aquí debes colocar el nombre de la función que actualiza tu visualizador.
+                    -- Ejemplos comunes: PreviewItem(itemID), UpdateVisualizer(itemID)
+                    if PreviewItem then
+                        PreviewItem(itemID)
+                    elseif LoadToVisualizer then
+                        LoadToVisualizer(itemID)
+                    else
+                        -- Si controlas la imagen directamente por UI, descomenta y edita esto:
+                        -- local imagenUI = CoreGui.VisualizadorItemGUI.ImageLabel
+                        -- imagenUI.Image = "rbxthumb://type=Asset&id="..itemID.."&w=420&h=420"
+                    end
+                end)
+
+                -- Notificación PRO mostrando el nombre real del ítem encontrado
+                Rayfield:Notify({
+                    Title = "Item Validado",
+                    Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"),
+                    Duration = 4,
+                    Image = 4483362458,
+                })
+            else
+                -- El ID no existe en Roblox o está borrado
+                Rayfield:Notify({
+                    Title = "Item Inválido",
+                    Content = "El ID ingresado no existe en el catálogo de Roblox.",
+                    Duration = 4,
+                    Image = 4483362458,
+                })
+            end
         else
             Rayfield:Notify({
-                Title = "Error de Sistema",
-                Content = "Por favor, ingresa un ID numérico válido.",
-                Duration = 4,
+                Title = "Error de Entrada",
+                Content = "Por favor, ingresa únicamente números válidos.",
+                Duration = 3,
                 Image = 4483362458,
             })
         end
