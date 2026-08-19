@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V18)
--- Físicas congeladas + Ocultar UI Universal + Suelo Raycast Preciso
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V19)
+-- Anti-flotación estricta + Imagen en mesa + Cara trasera 2D
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2450,12 +2450,8 @@ ClickBtn.MouseButton1Click:Connect(function()
             pcall(function()
                 local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
                 
-                -- 1. Ocultar/Mostrar el GUI de nuestro propio script (prioridad)
-                if Container then 
-                    Container.Visible = state
-                end
+                if Container then Container.Visible = state end
                 
-                -- Nombres comunes de tu script inyectado
                 local hubNames = {"VisualizadorItemGUI", "Kitty", "KittyHub"} 
                 for _, name in ipairs(hubNames) do
                     local ui = (CoreGui and CoreGui:FindFirstChild(name)) or (PlayerGui and PlayerGui:FindFirstChild(name))
@@ -2464,7 +2460,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                     end
                 end
 
-                -- 2. Barrido universal seguro para los demás menús en PlayerGui
                 if PlayerGui then
                     for _, gui in ipairs(PlayerGui:GetChildren()) do
                         if gui:IsA("ScreenGui") then
@@ -2481,14 +2476,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- 1. LIMPIEZA SEGURA DE PREVIEWS ANTERIORES
         -- ==================================================
         for _, child in ipairs(Workspace:GetChildren()) do
-            if child.Name == "Kitty3DPreview" then
-                child:Destroy()
-            end
+            if child.Name == "Kitty3DPreview" then child:Destroy() end
         end
         for _, child in ipairs(Lighting:GetChildren()) do
-            if child.Name == "KittyPreviewBlur" then
-                child:Destroy()
-            end
+            if child.Name == "KittyPreviewBlur" then child:Destroy() end
         end
         task.wait() 
 
@@ -2510,11 +2501,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             local cfValue = Instance.new("CFrameValue")
             cfValue.Value = targetCFrame + Vector3.new(0, dropHeight, 0)
             
-            if model:IsA("Model") then
-                model:PivotTo(cfValue.Value)
-            else
-                model.CFrame = cfValue.Value
-            end
+            if model:IsA("Model") then model:PivotTo(cfValue.Value) else model.CFrame = cfValue.Value end
             
             local dropTween = TweenService:Create(cfValue, TweenInfo.new(0.65, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Value = targetCFrame})
             dropTween:Play()
@@ -2533,13 +2520,9 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         local function LockPhysics(obj)
-            if obj:IsA("BasePart") then
-                obj.Anchored = true; obj.CanCollide = false
-            end
+            if obj:IsA("BasePart") then obj.Anchored = true; obj.CanCollide = false end
             for _, p in ipairs(obj:GetDescendants()) do
-                if p:IsA("BasePart") then
-                    p.Anchored = true; p.CanCollide = false
-                end
+                if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end
             end
         end
 
@@ -2554,23 +2537,38 @@ ClickBtn.MouseButton1Click:Connect(function()
                     model.Parent = PreviewFolder 
                     
                     -- ==================================================
-                    -- NUEVO: RAYCAST PARA LA ESCENOGRAFÍA (PRECISIÓN MILIMÉTRICA)
+                    -- NUEVO: RAYCAST PERFORADOR (EVITA FLOTAR EN EL AIRE)
                     -- ==================================================
                     local baseTargetCFrame = CFrame.new(spawnPos) * offsetCFrame
-                    local rayOrigin = baseTargetCFrame.Position + Vector3.new(0, 50, 0) -- Buscamos desde arriba
+                    local rayOrigin = baseTargetCFrame.Position + Vector3.new(0, 50, 0)
+                    
+                    local ignoreList = {char, PreviewFolder}
                     local raycastParams = RaycastParams.new()
                     raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-                    raycastParams.FilterDescendantsInstances = {char, PreviewFolder} -- Ignoramos al jugador y a la preview
                     
-                    local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+                    local trueGroundY = baseTargetCFrame.Y
                     
-                    local finalCFrame = baseTargetCFrame
-                    if result then
-                        -- Si encontramos el suelo, ajustamos la "Y" manteniendo la rotación y el X/Z original
-                        -- Mantenemos el offset.Y para que los objetos que deben ir un poco arriba (como el cartel) no se hundan
-                        finalCFrame = CFrame.new(baseTargetCFrame.X, result.Position.Y + offsetCFrame.Y, baseTargetCFrame.Z) * baseTargetCFrame.Rotation
+                    -- Bucle para atravesar techos invisibles o zonas sin colisión
+                    for i = 1, 10 do
+                        raycastParams.FilterDescendantsInstances = ignoreList
+                        local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+                        
+                        if result then
+                            local inst = result.Instance
+                            if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                                -- Si es un bloque invisible falso, lo ignoramos y repetimos el escaneo
+                                table.insert(ignoreList, inst)
+                            else
+                                -- Encontramos suelo real
+                                trueGroundY = result.Position.Y
+                                break
+                            end
+                        else
+                            break
+                        end
                     end
-
+                    
+                    local finalCFrame = CFrame.new(baseTargetCFrame.X, trueGroundY + offsetCFrame.Y, baseTargetCFrame.Z) * baseTargetCFrame.Rotation
                     AnimateDrop(model, finalCFrame)
                     table.insert(SceneObjects, model)
                 end
@@ -2578,7 +2576,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA (SIN PATAS)
+        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, -0.2, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
@@ -2602,7 +2600,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. EFECTO: LLUVIA DE BILLETES
+        -- 3. EFECTO: LLUVIA DE BILLETES (SIN TOCAR)
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2668,11 +2666,11 @@ ClickBtn.MouseButton1Click:Connect(function()
                     end
 
                     local currentPos = isModel and bill:GetPivot().Position or bill.Position
-                    local raycastParams = RaycastParams.new()
-                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-                    raycastParams.FilterDescendantsInstances = AllRainBills 
+                    local raycastParamsRain = RaycastParams.new()
+                    raycastParamsRain.FilterType = Enum.RaycastFilterType.Exclude
+                    raycastParamsRain.FilterDescendantsInstances = AllRainBills 
                     
-                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), raycastParams)
+                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), raycastParamsRain)
 
                     if result then
                         fallConn:Disconnect()
@@ -2708,11 +2706,11 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. IMAGEN FLOTANTE
+        -- 4. IMAGEN FLOTANTE (Centrada en mesa + Sombreado 2D)
         -- ==================================================
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
-        ImagePart.Size = Vector3.new(5, 5, 0.15)
+        ImagePart.Size = Vector3.new(5, 5, 0.05) -- Grosor hiperfino para la ilusión 2D
         ImagePart.Anchored = true; ImagePart.CanCollide = false
         ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
 
@@ -2726,8 +2724,14 @@ ClickBtn.MouseButton1Click:Connect(function()
         ImgFront.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
         ImgFront.Parent = SurfaceFront
 
-        local SurfaceBack = SurfaceFront:Clone()
-        SurfaceBack.Face = Enum.NormalId.Back; SurfaceBack.Parent = ImagePart
+        local SurfaceBack = Instance.new("SurfaceGui")
+        SurfaceBack.Face = Enum.NormalId.Back
+        SurfaceBack.AlwaysOnTop = true; SurfaceBack.Parent = ImagePart
+
+        local ImgBack = ImgFront:Clone()
+        ImgBack.Parent = SurfaceBack
+        -- Oscurecemos un 20% la cara trasera. Al girar, el cerebro lo interpreta como una sombra rotatoria 2D.
+        ImgBack.ImageColor3 = Color3.fromRGB(180, 180, 180) 
 
         local rotConnection
         local floatTime = 0
@@ -2737,7 +2741,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime = floatTime + dt
-            local basePos = spawnPos + Vector3.new(0, 7.5 + math.sin(floatTime * 1.8) * 0.4, 0)
+            -- Ajustado de 7.5 a 4.2 para que el ítem quede posando perfectamente sobre la mesa
+            local basePos = spawnPos + Vector3.new(0, 4.2 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
 
@@ -2758,9 +2763,6 @@ ClickBtn.MouseButton1Click:Connect(function()
             if dist <= 8.5 and promptState == "Waiting" then
                 promptState = "Prompting"
                 
-                -- ==========================================
-                -- OCULTAMOS LA UI UNIVERSALMENTE (MÉTODO NUEVO)
-                -- ==========================================
                 ToggleUIVisibility(false)
 
                 local blurEffect = Instance.new("BlurEffect")
@@ -2770,19 +2772,13 @@ ClickBtn.MouseButton1Click:Connect(function()
 
                 local bindable = Instance.new("BindableFunction")
                 bindable.OnInvoke = function(response)
-                    
-                    -- ==========================================
-                    -- RESTAURAMOS LA UI, SIN IMPORTAR QUÉ ELIJA
-                    -- ==========================================
                     ToggleUIVisibility(true)
 
                     if response == "Conseguir" then
                         if proximityConn then proximityConn:Disconnect() end
                         RainActive = false 
                         
-                        if PreviewFolder and PreviewFolder.Parent then
-                            PreviewFolder.Name = "Kitty3DPreview_Sinking"
-                        end
+                        if PreviewFolder and PreviewFolder.Parent then PreviewFolder.Name = "Kitty3DPreview_Sinking" end
                         
                         task.spawn(function()
                             if rotConnection then rotConnection:Disconnect() end
@@ -2794,10 +2790,7 @@ ClickBtn.MouseButton1Click:Connect(function()
 
                             local attractConn
                             attractConn = RunService.RenderStepped:Connect(function()
-                                if not ImagePart or not ImagePart.Parent then
-                                    attractConn:Disconnect()
-                                    return
-                                end
+                                if not ImagePart or not ImagePart.Parent then attractConn:Disconnect(); return end
 
                                 local t = math.clamp((tick() - startTime) / duration, 0, 1)
                                 local ease = t * t * (3 - 2 * t)
@@ -2816,11 +2809,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                                         task.spawn(function()
                                             for i = 1, 20 do 
                                                 if not obj.Parent then break end
-                                                if obj:IsA("Model") then
-                                                    obj:PivotTo(obj:GetPivot() * CFrame.new(0, -0.35, 0))
-                                                elseif obj:IsA("BasePart") then
-                                                    obj.CFrame = obj.CFrame * CFrame.new(0, -0.35, 0)
-                                                end
+                                                if obj:IsA("Model") then obj:PivotTo(obj:GetPivot() * CFrame.new(0, -0.35, 0))
+                                                elseif obj:IsA("BasePart") then obj.CFrame = obj.CFrame * CFrame.new(0, -0.35, 0) end
                                                 for _, p in ipairs(obj:GetDescendants()) do
                                                     if p:IsA("BasePart") then p.Transparency = math.clamp(p.Transparency + 0.06, 0, 1) end
                                                 end
@@ -2835,9 +2825,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     for _, b in ipairs(AllRainBills) do SinkAndDestroy(b) end
 
                                     task.delay(1.5, function()
-                                        if PreviewFolder and PreviewFolder.Parent then
-                                            PreviewFolder:Destroy()
-                                        end
+                                        if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end
                                     end)
 
                                     if blurEffect then blurEffect:Destroy() end
