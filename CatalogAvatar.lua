@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - CORREGIDA)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - CORREGIDA V4)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2595,70 +2595,39 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 
 -- ==========================================================
--- 🛡️ MOTOR DE INTERCEPCIÓN "SINGULARIDAD" (0 RED, 0 RENDER, 0 EVENTOS)
+-- 🛡️ MOTOR DE INTERCEPCIÓN "CERO ABSOLUTO" (0 OVERHEAD)
 -- ==========================================================
-if not getgenv().SingularityHookActive then
-    getgenv().SingularityHookActive = true
+if not getgenv().ZeroLagHookActive then
+    getgenv().ZeroLagHookActive = true
     getgenv().BlockHeavyRenders = false
     
-    -- Variables estáticas para no saturar la memoria creando nuevas instancias en bucle
-    local DummyDesc = Instance.new("HumanoidDescription")
-    local DummyModel = Instance.new("Model")
-    
-    -- 1. INTERCEPTOR DE RED Y PROCESAMIENTO
+    -- 1. INTERCEPTOR DE RED (Optimizado)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         if getgenv().BlockHeavyRenders and not checkcaller() then
             local method = getnamecallmethod()
             
-            -- Bloquea las pausas (Yields) de internet al instante
             if method == "GetHumanoidDescriptionFromOutfitId" or method == "GetHumanoidDescriptionFromUserId" then
-                return DummyDesc
+                return Instance.new("HumanoidDescription") 
             elseif method == "GetCharacterAppearanceAsync" or method == "CreateHumanoidModelFromOutfitId" then
-                return DummyModel
-            
-            -- Bloquea el cálculo de físicas y ropa al instante
+                return Instance.new("Model") 
             elseif method == "ApplyDescription" or method == "AddAccessory" or method == "LoadCharacterAppearance" or method == "ClearCharacterAppearance" then
-                return
+                return 
             end
         end
         return oldNamecall(self, ...)
     end)
     
-    -- 2. INTERCEPTOR GRÁFICO E INYECCIÓN 2D DIRECTA
+    -- 2. INTERCEPTOR GRÁFICO (Sin Lua Bridge Overhead)
     local oldNewindex
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
         if getgenv().BlockHeavyRenders and not checkcaller() then
-            
-            -- Intercepta el intento de meter 3D en el menú
-            if index == "Parent" and typeof(value) == "Instance" then
-                if value.ClassName == "ViewportFrame" and (self:IsA("Model") or self:IsA("BasePart") or self:IsA("Accessory") or self:IsA("Humanoid")) then
-                    return -- Silencia el renderizado
+            -- Verificación ultra rápida sin usar :IsA() para evitar lag en el puente Lua-C
+            if index == "Parent" and typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+                local cName = self.ClassName
+                if cName == "Model" or cName == "Part" or cName == "MeshPart" or cName == "Accessory" or cName == "Humanoid" or cName == "Shirt" or cName == "Pants" then
+                    return -- Bloqueo instantáneo de mallas 3D
                 end
-            end
-            
-            -- Intercepta el ViewportFrame y clava la imagen 2D desde la matriz
-            if self:IsA("ViewportFrame") and index == "Visible" and value == true then
-                task.defer(function()
-                    local Card = self.Parent
-                    if Card and not Card:FindFirstChild("AntiLagPlaceholder") then
-                        local Placeholder = Instance.new("ImageLabel")
-                        Placeholder.Name = "AntiLagPlaceholder"
-                        Placeholder.Size = UDim2.new(1, -10, 0, 75)
-                        Placeholder.Position = UDim2.new(0, 5, 0, 5)
-                        Placeholder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                        Placeholder.Image = "rbxassetid://132859920937628" 
-                        Placeholder.ScaleType = Enum.ScaleType.Fit
-                        Placeholder.BackgroundTransparency = 0
-                        Placeholder.ZIndex = 33
-                        Placeholder.Parent = Card
-                        
-                        local PCorner = Instance.new("UICorner")
-                        PCorner.CornerRadius = UDim.new(0, 6)
-                        PCorner.Parent = Placeholder
-                    end
-                end)
-                return oldNewindex(self, index, false) -- Mantiene el 3D apagado
             end
         end
         return oldNewindex(self, index, value)
@@ -2676,16 +2645,14 @@ ExtraTab:CreateButton({
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(respuesta)
             if respuesta == "OK" then
-                Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista. Espera un momento.", Duration = 3, Image = 4483362458})
+                Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista.", Duration = 3, Image = 4483362458})
                 task.spawn(function()
                     task.wait(0.5) 
-                    local success, err = pcall(function()
-                        pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
-                        for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then effect.Enabled = false elseif effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
-                        pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false end end)
-                        for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 elseif v:IsA("SurfaceAppearance") then v:Destroy() end end) end
-                    end)
-                    if success then Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458}) end
+                    pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
+                    for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
+                    pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false end end)
+                    for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 elseif v:IsA("SurfaceAppearance") then v:Destroy() end end) end
+                    Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458})
                 end)
             end
         end
@@ -2701,7 +2668,6 @@ ExtraTab:CreateButton({
             if respuesta == "OK" then
                 task.spawn(function()
                     pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
-                    for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then effect.Enabled = true end end) end
                     pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
                     for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then v.Material = Enum.Material.Plastic; v.CastShadow = true elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end end) end
                     Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos a la normalidad.", Duration = 3, Image = 4483362458})
@@ -2732,7 +2698,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con SINGULARITY HOOK (VELOCIDAD MÁXIMA)
+-- 3. Menú de Outfits con CERO LAG + LOGO FIJO
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2740,8 +2706,7 @@ ExtraTab:CreateButton({
             local success, err = pcall(function()
                 local targetMenu = nil
                 
-                if CharMenu then
-                    targetMenu = CharMenu
+                if CharMenu then targetMenu = CharMenu
                 else
                     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
                     local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
@@ -2760,27 +2725,55 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = nuevoEstado
                     
                     if nuevoEstado then
-                        Rayfield:Notify({Title = "🚀 ByPass Anti-Lag Activo", Content = "Inyectando memoria directamente...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🚀 Modo Cero Absoluto", Content = "Carga instantánea activada.", Duration = 2, Image = 4483362458})
                         
-                        -- ACTIVAMOS EL ESCUDO METAMETHOD TOTAL
+                        -- Enciende el escudo metamétodo
                         getgenv().BlockHeavyRenders = true
                         
-                        -- Ya no necesitamos el radar lento "DescendantAdded", el hook hace todo desde las sombras.
+                        -- Inyector de Logo Optimizado (Garantiza que el logo se vea)
+                        local function InyectarLogo(item)
+                            if item.ClassName == "ViewportFrame" then
+                                -- Mantenemos el cuadro vacío limpio
+                                item.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                                item.BackgroundTransparency = 0
+                                
+                                -- Clavamos el logo 2D por encima del ViewportFrame
+                                if not item:FindFirstChild("AntiLagLogo") then
+                                    local img = Instance.new("ImageLabel")
+                                    img.Name = "AntiLagLogo"
+                                    img.Size = UDim2.new(1, -16, 1, -16)
+                                    img.AnchorPoint = Vector2.new(0.5, 0.5)
+                                    img.Position = UDim2.new(0.5, 0, 0.5, 0)
+                                    img.BackgroundTransparency = 1
+                                    img.Image = "rbxassetid://132859920937628" 
+                                    img.ScaleType = Enum.ScaleType.Fit
+                                    img.ZIndex = 50 -- Asegura que esté por encima de todo
+                                    img.Parent = item
+                                end
+                            end
+                        end
 
+                        if not targetMenu:GetAttribute("LogoInyectorActivo") then
+                            targetMenu:SetAttribute("LogoInyectorActivo", true)
+                            targetMenu.DescendantAdded:Connect(InyectarLogo)
+                        end
+                        
+                        -- Aplica el logo a los que ya existen en el menú
+                        for _, item in ipairs(targetMenu:GetDescendants()) do InyectarLogo(item) end
+
+                        -- Llama la carga del menú
                         if RefreshSavedCharactersGrid then
                             task.defer(function() pcall(RefreshSavedCharactersGrid) end)
                         end
                         
-                        -- Protegemos tu juego apagando el escudo a los pocos segundos
-                        task.delay(5, function()
-                            getgenv().BlockHeavyRenders = false
-                        end)
+                        -- Apaga el escudo después de 5 segundos para mantener la estabilidad del juego
+                        task.delay(5, function() getgenv().BlockHeavyRenders = false end)
                         
                     else
                         getgenv().BlockHeavyRenders = false
                     end
                 else
-                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se logró detectar el menú en la pantalla.", Duration = 3, Image = 4483362458})
+                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
                 end
             end)
         end)
