@@ -2595,36 +2595,70 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 
 -- ==========================================================
--- 🛡️ MOTOR DE INTERCEPCIÓN ABSOLUTA (NIVEL DIOS)
+-- 🛡️ MOTOR DE INTERCEPCIÓN "SINGULARIDAD" (0 RED, 0 RENDER, 0 EVENTOS)
 -- ==========================================================
--- Este sistema engaña al motor de Roblox a nivel memoria.
-if not getgenv().UltimateHookActive then
-    getgenv().UltimateHookActive = true
+if not getgenv().SingularityHookActive then
+    getgenv().SingularityHookActive = true
     getgenv().BlockHeavyRenders = false
     
-    -- 1. Hooking Métodos (__namecall): Bloquea funciones pesadas de construcción de personajes.
+    -- Variables estáticas para no saturar la memoria creando nuevas instancias en bucle
+    local DummyDesc = Instance.new("HumanoidDescription")
+    local DummyModel = Instance.new("Model")
+    
+    -- 1. INTERCEPTOR DE RED Y PROCESAMIENTO
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         if getgenv().BlockHeavyRenders and not checkcaller() then
             local method = getnamecallmethod()
-            if method == "ApplyDescription" or method == "AddAccessory" or method == "LoadCharacterAppearance" then
-                return -- Ignoramos la petición, bloqueando el cálculo pesado instantáneamente.
+            
+            -- Bloquea las pausas (Yields) de internet al instante
+            if method == "GetHumanoidDescriptionFromOutfitId" or method == "GetHumanoidDescriptionFromUserId" then
+                return DummyDesc
+            elseif method == "GetCharacterAppearanceAsync" or method == "CreateHumanoidModelFromOutfitId" then
+                return DummyModel
+            
+            -- Bloquea el cálculo de físicas y ropa al instante
+            elseif method == "ApplyDescription" or method == "AddAccessory" or method == "LoadCharacterAppearance" or method == "ClearCharacterAppearance" then
+                return
             end
         end
         return oldNamecall(self, ...)
     end)
     
-    -- 2. Hooking Propiedades (__newindex): EL VERDADERO ANTI-LAG GRAFICO.
+    -- 2. INTERCEPTOR GRÁFICO E INYECCIÓN 2D DIRECTA
     local oldNewindex
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
         if getgenv().BlockHeavyRenders and not checkcaller() then
-            -- Si el juego intenta meter ropa, sombreros o modelos 3D en el menú, le cerramos la puerta.
+            
+            -- Intercepta el intento de meter 3D en el menú
             if index == "Parent" and typeof(value) == "Instance" then
-                if value.ClassName == "ViewportFrame" then
-                    if self:IsA("Model") or self:IsA("BasePart") or self:IsA("Accessory") or self:IsA("Humanoid") then
-                        return -- Bloqueo silencioso. El juego no crashea, pero no renderiza nada.
-                    end
+                if value.ClassName == "ViewportFrame" and (self:IsA("Model") or self:IsA("BasePart") or self:IsA("Accessory") or self:IsA("Humanoid")) then
+                    return -- Silencia el renderizado
                 end
+            end
+            
+            -- Intercepta el ViewportFrame y clava la imagen 2D desde la matriz
+            if self:IsA("ViewportFrame") and index == "Visible" and value == true then
+                task.defer(function()
+                    local Card = self.Parent
+                    if Card and not Card:FindFirstChild("AntiLagPlaceholder") then
+                        local Placeholder = Instance.new("ImageLabel")
+                        Placeholder.Name = "AntiLagPlaceholder"
+                        Placeholder.Size = UDim2.new(1, -10, 0, 75)
+                        Placeholder.Position = UDim2.new(0, 5, 0, 5)
+                        Placeholder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                        Placeholder.Image = "rbxassetid://132859920937628" 
+                        Placeholder.ScaleType = Enum.ScaleType.Fit
+                        Placeholder.BackgroundTransparency = 0
+                        Placeholder.ZIndex = 33
+                        Placeholder.Parent = Card
+                        
+                        local PCorner = Instance.new("UICorner")
+                        PCorner.CornerRadius = UDim.new(0, 6)
+                        PCorner.Parent = Placeholder
+                    end
+                end)
+                return oldNewindex(self, index, false) -- Mantiene el 3D apagado
             end
         end
         return oldNewindex(self, index, value)
@@ -2646,45 +2680,10 @@ ExtraTab:CreateButton({
                 task.spawn(function()
                     task.wait(0.5) 
                     local success, err = pcall(function()
-                        pcall(function()
-                            Lighting.GlobalShadows = false
-                            Lighting.Brightness = 0
-                            Lighting.EnvironmentDiffuseScale = 0
-                            Lighting.EnvironmentSpecularScale = 0
-                            Lighting.ShadowSoftness = 0
-                            Lighting.FogEnd = 9e9 
-                        end)
-                        for _, effect in ipairs(Lighting:GetChildren()) do
-                            pcall(function()
-                                if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
-                                    effect.Enabled = false
-                                elseif effect:IsA("Atmosphere") or effect:IsA("Sky") then
-                                    effect:Destroy() 
-                                end
-                            end)
-                        end
-                        pcall(function()
-                            if Workspace:FindFirstChildOfClass("Terrain") then
-                                Workspace.Terrain.WaterWaveSize = 0
-                                Workspace.Terrain.WaterWaveSpeed = 0
-                                Workspace.Terrain.WaterReflectance = 0
-                                Workspace.Terrain.WaterTransparency = 1
-                                Workspace.Terrain.Decoration = false
-                            end
-                        end)
-                        for _, v in ipairs(Workspace:GetDescendants()) do
-                            pcall(function()
-                                if v:IsA("BasePart") then
-                                    v.Material = Enum.Material.SmoothPlastic
-                                    v.Reflectance = 0
-                                    v.CastShadow = false
-                                elseif v:IsA("Texture") or v:IsA("Decal") then
-                                    v.Transparency = 1 
-                                elseif v:IsA("SurfaceAppearance") then
-                                    v:Destroy() 
-                                end
-                            end)
-                        end
+                        pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
+                        for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then effect.Enabled = false elseif effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
+                        pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false end end)
+                        for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 elseif v:IsA("SurfaceAppearance") then v:Destroy() end end) end
                     end)
                     if success then Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458}) end
                 end)
@@ -2701,38 +2700,10 @@ ExtraTab:CreateButton({
         bindable.OnInvoke = function(respuesta)
             if respuesta == "OK" then
                 task.spawn(function()
-                    pcall(function()
-                        Lighting.GlobalShadows = true
-                        Lighting.Brightness = 2 
-                        Lighting.EnvironmentDiffuseScale = 1
-                        Lighting.EnvironmentSpecularScale = 1
-                        Lighting.ShadowSoftness = 0.2
-                        Lighting.FogEnd = 100000 
-                    end)
-                    for _, effect in ipairs(Lighting:GetChildren()) do
-                        pcall(function()
-                            if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then effect.Enabled = true end
-                        end)
-                    end
-                    pcall(function()
-                        if Workspace:FindFirstChildOfClass("Terrain") then
-                            Workspace.Terrain.WaterWaveSize = 0.15
-                            Workspace.Terrain.WaterWaveSpeed = 10
-                            Workspace.Terrain.WaterReflectance = 1
-                            Workspace.Terrain.WaterTransparency = 0.3
-                            Workspace.Terrain.Decoration = true
-                        end
-                    end)
-                    for _, v in ipairs(Workspace:GetDescendants()) do
-                        pcall(function()
-                            if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then
-                                v.Material = Enum.Material.Plastic
-                                v.CastShadow = true
-                            elseif v:IsA("Texture") or v:IsA("Decal") then
-                                v.Transparency = 0 
-                            end
-                        end)
-                    end
+                    pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
+                    for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then effect.Enabled = true end end) end
+                    pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
+                    for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then v.Material = Enum.Material.Plastic; v.CastShadow = true elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end end) end
                     Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos a la normalidad.", Duration = 3, Image = 4483362458})
                 end)
             end
@@ -2753,9 +2724,7 @@ ExtraTab:CreateToggle({
             else
                 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
                 local visualizerUI = CoreGui:FindFirstChild("VisualizadorItemGUI") or playerGui:FindFirstChild("VisualizadorItemGUI")
-                if visualizerUI then
-                    if visualizerUI:IsA("ScreenGui") then visualizerUI.Enabled = Value else visualizerUI.Visible = Value end
-                end
+                if visualizerUI then if visualizerUI:IsA("ScreenGui") then visualizerUI.Enabled = Value else visualizerUI.Visible = Value end end
             end
         end)
     end
@@ -2763,7 +2732,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con BLOQUEO NEURAL (0 LAG CIENTÍFICAMENTE COMPROBADO)
+-- 3. Menú de Outfits con SINGULARITY HOOK (VELOCIDAD MÁXIMA)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2791,56 +2760,23 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = nuevoEstado
                     
                     if nuevoEstado then
-                        Rayfield:Notify({
-                            Title = "🚀 ByPass Anti-Lag Activo",
-                            Content = "Bloqueando asignaciones pesadas en el motor.",
-                            Duration = 2,
-                            Image = 4483362458,
-                        })
+                        Rayfield:Notify({Title = "🚀 ByPass Anti-Lag Activo", Content = "Inyectando memoria directamente...", Duration = 2, Image = 4483362458})
                         
-                        -- ACTIVAMOS EL ESCUDO METAMETHOD
+                        -- ACTIVAMOS EL ESCUDO METAMETHOD TOTAL
                         getgenv().BlockHeavyRenders = true
                         
-                        -- Colocador Inteligente de Imágenes 2D
-                        if not targetMenu:GetAttribute("RadarActivo") then
-                            targetMenu:SetAttribute("RadarActivo", true)
-                            targetMenu.DescendantAdded:Connect(function(item)
-                                if item:IsA("ViewportFrame") then
-                                    item.Visible = false -- Apaga el cuadro vacío
-                                    task.defer(function()
-                                        local Card = item.Parent
-                                        if Card and not Card:FindFirstChild("AntiLagPlaceholder") then
-                                            local Placeholder = Instance.new("ImageLabel")
-                                            Placeholder.Name = "AntiLagPlaceholder"
-                                            Placeholder.Size = UDim2.new(1, -10, 0, 75)
-                                            Placeholder.Position = UDim2.new(0, 5, 0, 5)
-                                            Placeholder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                                            Placeholder.Image = "rbxassetid://132859920937628" 
-                                            Placeholder.ScaleType = Enum.ScaleType.Fit
-                                            Placeholder.BackgroundTransparency = 0
-                                            Placeholder.ZIndex = 33
-                                            Placeholder.Parent = Card
-                                            local PCorner = Instance.new("UICorner")
-                                            PCorner.CornerRadius = UDim.new(0, 6)
-                                            PCorner.Parent = Placeholder
-                                        end
-                                    end)
-                                end
-                            end)
-                        end
+                        -- Ya no necesitamos el radar lento "DescendantAdded", el hook hace todo desde las sombras.
 
-                        -- Ejecutamos la función original (surtirá efecto súper rápido por estar hookeada)
                         if RefreshSavedCharactersGrid then
                             task.defer(function() pcall(RefreshSavedCharactersGrid) end)
                         end
                         
-                        -- Mantenemos el bloqueo por 6 segundos (Suficiente para que carguen todos los datos y finalice el ciclo "for")
-                        task.delay(6, function()
+                        -- Protegemos tu juego apagando el escudo a los pocos segundos
+                        task.delay(5, function()
                             getgenv().BlockHeavyRenders = false
                         end)
                         
                     else
-                        -- Si cierra el menú, desactivamos el escudo por si acaso
                         getgenv().BlockHeavyRenders = false
                     end
                 else
@@ -2872,15 +2808,8 @@ ExtraTab:CreateInput({
             local success, itemInfo = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
             if success and itemInfo then
                 pcall(function()
-                    if CurrentData then
-                        CurrentData.Id = tostring(itemID)
-                        CurrentData.Price = tostring(itemInfo.PriceInRobux or 0)
-                        if itemInfo.Name then CurrentData.Name = itemInfo.Name end
-                    end
-                    if UpdateVisualizer then
-                        local price = itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis"
-                        UpdateVisualizer(itemID, price)
-                    end
+                    if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
+                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis") end
                 end)
                 Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 4, Image = 4483362458})
             else
@@ -2891,6 +2820,5 @@ ExtraTab:CreateInput({
         end
     end
 })
-
 
 Rayfield:LoadConfiguration()
