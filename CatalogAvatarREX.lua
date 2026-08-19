@@ -2744,7 +2744,7 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
+        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⛔️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
     end
 })
 
