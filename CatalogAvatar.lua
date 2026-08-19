@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PLUS++ ESTADO: CERO FÍSICAS / CERO LAG)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN CUÁNTICA: 0% FÍSICAS + POLÍGONOS DEGRADADOS + VRAM LIBERADA)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2596,23 +2596,23 @@ local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
 
 -- ==========================================================
--- 🛡️ MOTOR DE DESFRAGMENTACIÓN 3D (ANULADOR DE FÍSICAS PLUS++)
+-- 🛡️ MOTOR CUÁNTICO (DEGRADACIÓN DE POLÍGONOS Y LIMPIEZA VRAM)
 -- ==========================================================
-if not getgenv().PlusPlusRenderHook then
-    getgenv().PlusPlusRenderHook = true
+if not getgenv().QuantumRenderHook then
+    getgenv().QuantumRenderHook = true
     
     local oldNewindex
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        -- Si un objeto está siendo asignado a un ViewportFrame (Menú 3D)
+        -- Interceptamos la entrada al Menú 3D
         if not checkcaller() and index == "Parent" and typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
             
             task.spawn(function()
                 pcall(function()
                     if self:IsA("Model") then
-                        -- ⚠️ EL VERDADERO ANTI-LAG: Momificamos el modelo 3D
+                        -- LIMPIEZA Y OPTIMIZACIÓN EXTREMA POR NODO
                         for _, v in ipairs(self:GetDescendants()) do
                             
-                            -- 1. Eliminamos cálculos de entorno y colisión (Boost de CPU)
+                            -- 1. Optimización Geométrica y Física (VRAM + CPU)
                             if v:IsA("BasePart") then
                                 v.CastShadow = false
                                 v.CanCollide = false
@@ -2622,19 +2622,26 @@ if not getgenv().PlusPlusRenderHook then
                                 v.Massless = true
                                 v.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)
                                 
-                            -- 2. Apagamos el "Cerebro" del Avatar (El Humanoide causa el 90% del lag)
+                                -- ⚠️ NUEVO: Forzamos la geometría a cubos básicos en memoria (Adiós lag de Hitboxes)
+                                pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
+                                
+                                -- ⚠️ NUEVO: Forzamos la tarjeta gráfica a renderizar en baja calidad (LOD)
+                                if v:IsA("MeshPart") then
+                                    pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
+                                end
+                                
+                            -- 2. Apagado Cerebral Absoluto
                             elseif v:IsA("Humanoid") then
                                 v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                 v.RequiresNeck = false
-                                -- Desactivamos absolutamente todos los estados físicos del personaje
-                                local states = Enum.HumanoidStateType:GetEnumItems()
-                                for _, state in ipairs(states) do
+                                pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
                                     pcall(function() v:SetStateEnabled(state, false) end)
                                 end
                                 
-                            -- 3. Aniquilamos todo lo que intente moverse
-                            elseif v:IsA("Animator") or v:IsA("Animation") or v:IsA("Script") or v:IsA("LocalScript") then
-                                v:Destroy()
+                            -- 3. ⚠️ NUEVO: Extirpación de Basura Gráfica y de Memoria
+                            elseif v:IsA("Animator") or v:IsA("Animation") or v:IsA("Script") or v:IsA("LocalScript") or v:IsA("Sound") or v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                                v:Destroy() 
                             end
                         end
                     end
@@ -2709,7 +2716,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits (ANTI-STUTTER PLUS++)
+-- 3. Menú de Outfits (RENDIMIENTO CUÁNTICO - MAX RENDER)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2735,12 +2742,11 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        Rayfield:Notify({Title = "🚀 Carga PLUS++", Content = "Físicas desactivadas. Renderizando en frío.", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🚀 Nivel Cuántico", Content = "Polígonos degradados, memorias limpias.", Duration = 2, Image = 4483362458})
                         
                         if RefreshSavedCharactersGrid then
-                            -- Usamos spawn para no interrumpir el hilo principal, 
-                            -- permitiendo que tu juego fluya mientras se arma el menú en segundo plano.
-                            task.spawn(function() 
+                            -- El defer más limpio posible para evitar interrupciones de FPS
+                            task.defer(function() 
                                 pcall(RefreshSavedCharactersGrid) 
                             end)
                         end
