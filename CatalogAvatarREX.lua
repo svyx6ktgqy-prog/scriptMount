@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V19)
--- Anti-flotación estricta + Imagen en mesa + Cara trasera 2D
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V20)
+-- Rotación 3D Perfecta (Sin Z-Fighting) + Altura Ajustada
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2444,7 +2444,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local LocalPlayer = Players.LocalPlayer
 
         -- ==================================================
-        -- CONTROL DEL SCREENGUI (MÉTODO DEFINITIVO)
+        -- CONTROL DEL SCREENGUI
         -- ==================================================
         local function ToggleUIVisibility(state)
             pcall(function()
@@ -2536,9 +2536,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
-                    -- ==================================================
-                    -- NUEVO: RAYCAST PERFORADOR (EVITA FLOTAR EN EL AIRE)
-                    -- ==================================================
                     local baseTargetCFrame = CFrame.new(spawnPos) * offsetCFrame
                     local rayOrigin = baseTargetCFrame.Position + Vector3.new(0, 50, 0)
                     
@@ -2548,7 +2545,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                     
                     local trueGroundY = baseTargetCFrame.Y
                     
-                    -- Bucle para atravesar techos invisibles o zonas sin colisión
                     for i = 1, 10 do
                         raycastParams.FilterDescendantsInstances = ignoreList
                         local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
@@ -2556,10 +2552,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                         if result then
                             local inst = result.Instance
                             if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
-                                -- Si es un bloque invisible falso, lo ignoramos y repetimos el escaneo
                                 table.insert(ignoreList, inst)
                             else
-                                -- Encontramos suelo real
                                 trueGroundY = result.Position.Y
                                 break
                             end
@@ -2600,7 +2594,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. EFECTO: LLUVIA DE BILLETES (SIN TOCAR)
+        -- 3. EFECTO: LLUVIA DE BILLETES
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2706,17 +2700,21 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. IMAGEN FLOTANTE (Centrada en mesa + Sombreado 2D)
+        -- 4. IMAGEN FLOTANTE (Fix Espejo Invertido + Altura)
         -- ==================================================
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
-        ImagePart.Size = Vector3.new(5, 5, 0.05) -- Grosor hiperfino para la ilusión 2D
+        ImagePart.Size = Vector3.new(5, 5, 0.05) 
         ImagePart.Anchored = true; ImagePart.CanCollide = false
         ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
 
+        -- FIX CLAVE: AlwaysOnTop = false evita que se superpongan visualmente y se rompa el 3D al girar.
+        -- LightInfluence = 0 mantiene la imagen iluminada al máximo aunque AlwaysOnTop esté desactivado.
         local SurfaceFront = Instance.new("SurfaceGui")
         SurfaceFront.Face = Enum.NormalId.Front
-        SurfaceFront.AlwaysOnTop = true; SurfaceFront.Parent = ImagePart
+        SurfaceFront.AlwaysOnTop = false 
+        SurfaceFront.LightInfluence = 0 
+        SurfaceFront.Parent = ImagePart
 
         local ImgFront = Instance.new("ImageLabel")
         ImgFront.Size = UDim2.new(1, 0, 1, 0)
@@ -2726,12 +2724,12 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         local SurfaceBack = Instance.new("SurfaceGui")
         SurfaceBack.Face = Enum.NormalId.Back
-        SurfaceBack.AlwaysOnTop = true; SurfaceBack.Parent = ImagePart
+        SurfaceBack.AlwaysOnTop = false 
+        SurfaceBack.LightInfluence = 0 
+        SurfaceBack.Parent = ImagePart
 
         local ImgBack = ImgFront:Clone()
         ImgBack.Parent = SurfaceBack
-        -- Oscurecemos un 20% la cara trasera. Al girar, el cerebro lo interpreta como una sombra rotatoria 2D.
-        ImgBack.ImageColor3 = Color3.fromRGB(180, 180, 180) 
 
         local rotConnection
         local floatTime = 0
@@ -2741,8 +2739,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime = floatTime + dt
-            -- Ajustado de 7.5 a 4.2 para que el ítem quede posando perfectamente sobre la mesa
-            local basePos = spawnPos + Vector3.new(0, 4.2 + math.sin(floatTime * 1.8) * 0.4, 0)
+            -- FIX CLAVE: Elevado a 5.2 para que destaque apenitas más por encima de la mesa.
+            local basePos = spawnPos + Vector3.new(0, 5.2 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
 
@@ -2859,7 +2857,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
     end)
 end)
-        
+
 -- ==========================================================
 -- FIN MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
 -- ==========================================================
