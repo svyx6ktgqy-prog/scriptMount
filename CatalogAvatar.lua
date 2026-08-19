@@ -2585,30 +2585,27 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - COMPLETA)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - CORREGIDA)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
-local StarterGui = game:GetService("StarterGui") -- Necesario para la alerta interactiva
+local StarterGui = game:GetService("StarterGui") 
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
--- 1. Limpieza Profunda (VERSIÓN EXTREMA PLUS+ CON ALERTA DE CONFIRMACIÓN)
+-- 1. Limpieza Profunda (CORREGIDA - SIN ERROR DE COLLECTGARBAGE)
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Extrema y Ping Óptimo",
     Callback = function()
         
-        -- Función que procesa el clic del usuario (OK o Cancelar)
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(respuesta)
             if respuesta == "OK" then
-                -- === SI ACEPTA: INICIA LA LIMPIEZA ===
-                local ramAntes = math.floor(gcinfo() / 1024)
                 
                 Rayfield:Notify({
                     Title = "⚙️ Optimizando...",
@@ -2632,7 +2629,7 @@ ExtraTab:CreateButton({
                             Lighting.FogEnd = 9e9 
                         end)
                         
-                        -- Apagar Post-Procesados (ignorando errores si no se dejan apagar)
+                        -- Apagar Post-Procesados
                         for _, effect in ipairs(Lighting:GetChildren()) do
                             pcall(function()
                                 if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
@@ -2643,7 +2640,7 @@ ExtraTab:CreateButton({
                             end)
                         end
                         
-                        -- Neutralizar Terreno Protegido
+                        -- Neutralizar Terreno
                         pcall(function()
                             if Workspace:FindFirstChildOfClass("Terrain") then
                                 Workspace.Terrain.WaterWaveSize = 0
@@ -2654,7 +2651,7 @@ ExtraTab:CreateButton({
                             end
                         end)
                         
-                        -- FORZAR MODO LISO (Con pcall por cada pieza para evitar bloqueos)
+                        -- FORZAR MODO LISO
                         for _, v in ipairs(Workspace:GetDescendants()) do
                             pcall(function()
                                 if v:IsA("BasePart") then
@@ -2668,22 +2665,15 @@ ExtraTab:CreateButton({
                                 end
                             end)
                         end
-
-                        if collectgarbage then
-                            collectgarbage("collect")
-                            task.wait(0.1)
-                            collectgarbage("collect") 
-                        end
+                        
+                        -- NOTA: Se eliminó collectgarbage() porque Roblox Luau lo bloquea y genera crash.
+                        -- La memoria se liberará sola al destruir las texturas.
                     end)
-
-                    local ramDespues = math.floor(gcinfo() / 1024)
-                    local ramLiberada = ramAntes - ramDespues
-                    if ramLiberada < 0 then ramLiberada = 0 end 
 
                     if success then
                         Rayfield:Notify({
                             Title = "✅ Modo Competitivo Activado",
-                            Content = "Entorno liso al 100%. RAM liberada: " .. ramLiberada .. " MB.",
+                            Content = "Entorno liso al 100%. Ping y FPS optimizados.",
                             Duration = 5,
                             Image = 4483362458,
                         })
@@ -2697,7 +2687,6 @@ ExtraTab:CreateButton({
                     end
                 end)
             else
-                -- === SI CANCELA ===
                 Rayfield:Notify({
                     Title = "❌ Acción Cancelada",
                     Content = "No se aplicaron los cambios de optimización.",
@@ -2707,7 +2696,6 @@ ExtraTab:CreateButton({
             end
         end
 
-        -- Lanza la alerta flotante nativa de Roblox con botones
         pcall(function()
             StarterGui:SetCore("SendNotification", {
                 Title = "⚠️ ¿Modo Extremo?",
@@ -2716,6 +2704,67 @@ ExtraTab:CreateButton({
                 Button1 = "OK",
                 Button2 = "Cancelar",
                 Callback = bindable
+            })
+        end)
+    end
+})
+
+-- NUEVO BOTÓN: Restaurar a la Normalidad
+ExtraTab:CreateButton({
+    Name = "🌍 Restaurar Entorno (Normalidad)",
+    Callback = function()
+        Rayfield:Notify({
+            Title = "🌍 Restaurando...",
+            Content = "Devolviendo luces, sombras y texturas base...",
+            Duration = 3,
+            Image = 4483362458,
+        })
+        
+        task.spawn(function()
+            pcall(function()
+                Lighting.GlobalShadows = true
+                Lighting.Brightness = 2 
+                Lighting.EnvironmentDiffuseScale = 1
+                Lighting.EnvironmentSpecularScale = 1
+                Lighting.ShadowSoftness = 0.2
+                Lighting.FogEnd = 100000 
+            end)
+            
+            for _, effect in ipairs(Lighting:GetChildren()) do
+                pcall(function()
+                    if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
+                        effect.Enabled = true
+                    end
+                end)
+            end
+            
+            pcall(function()
+                if Workspace:FindFirstChildOfClass("Terrain") then
+                    Workspace.Terrain.WaterWaveSize = 0.15
+                    Workspace.Terrain.WaterWaveSpeed = 10
+                    Workspace.Terrain.WaterReflectance = 1
+                    Workspace.Terrain.WaterTransparency = 0.3
+                    Workspace.Terrain.Decoration = true
+                end
+            end)
+            
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                pcall(function()
+                    -- Devolver texturas SmoothPlastic a Plastic estándar
+                    if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then
+                        v.Material = Enum.Material.Plastic
+                        v.CastShadow = true
+                    elseif v:IsA("Texture") or v:IsA("Decal") then
+                        v.Transparency = 0 
+                    end
+                end)
+            end
+            
+            Rayfield:Notify({
+                Title = "✅ Entorno Restaurado",
+                Content = "Los gráficos han vuelto a la normalidad.",
+                Duration = 4,
+                Image = 4483362458,
             })
         end)
     end
@@ -2751,7 +2800,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con Sistema ANTI-LAG Externo (Corrección de Sincronización)
+-- 3. Menú de Outfits con Sistema ANTI-LAG Externo (CORREGIDO)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2759,7 +2808,6 @@ ExtraTab:CreateButton({
             local success, err = pcall(function()
                 local targetMenu = nil
                 
-                -- 1. Identificar el menú real sin importar dónde esté
                 if CharMenu then
                     targetMenu = CharMenu
                 else
@@ -2767,7 +2815,6 @@ ExtraTab:CreateButton({
                     local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
                     
                     if visualizerUI then
-                        -- Buscar a profundidad el texto "outfits" en minúsculas para no fallar
                         for _, frame in ipairs(visualizerUI:GetChildren()) do
                             if frame:IsA("Frame") then
                                 local title = frame:FindFirstChildWhichIsA("TextLabel", true)
@@ -2780,9 +2827,7 @@ ExtraTab:CreateButton({
                     end
                 end
 
-                -- 2. Aplicar lógica directa (si se encontró el menú)
                 if targetMenu then
-                    -- Leemos el estado ACTUAL de la UI y lo invertimos
                     local nuevoEstado = not targetMenu.Visible 
                     targetMenu.Visible = nuevoEstado
                     
@@ -2794,7 +2839,6 @@ ExtraTab:CreateButton({
                             Image = 4483362458,
                         })
                         
-                        if collectgarbage then collectgarbage("collect") end
                         task.wait(0.2) 
                         
                         if RefreshSavedCharactersGrid then
@@ -2852,7 +2896,7 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🔍 Visualizador Inteligente")
 
--- 5. Buscador PRO: Valida en Roblox, actualiza datos y envía al visualizador
+-- 5. Buscador PRO
 ExtraTab:CreateInput({
     Name = "👁️ Previsualizar Item por ID",
     PlaceholderText = "Pega el ID aquí para verificar...",
