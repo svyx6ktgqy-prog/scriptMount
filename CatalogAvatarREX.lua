@@ -2596,12 +2596,61 @@ local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
 -- ==========================================================
+-- 🔔 SISTEMA DE ALERTA NATIVA UNIFICADA (ROBLOX CORE)
+-- ==========================================================
+local function UniversalAlert(config)
+    local Title = config.Title or "Notificación"
+    local Text = config.Text or config.Content or ""
+    local Duration = config.Duration or 5
+    local Button1 = config.Button1
+    local Button2 = config.Button2
+    local Callback = config.Callback
+
+    -- Formato estándar usando la alerta nativa con los IDs personalizados requeridos
+    -- Textura cuadrada de perfil: 9322622699
+    -- Textura de verificado: 93631347041836
+    -- Nombre del personaje + Estructura solicitada
+    local formattedText = string.format(
+        "Perfil: rbxassetid://9322622699\nNombre: %s\nVerificado: rbxassetid://93631347041836\n--------------------\nAviso: %s",
+        Players.LocalPlayer.DisplayName,
+        Text
+    )
+
+    if Button1 then
+        local bindable = Instance.new("BindableFunction")
+        bindable.OnInvoke = function(respuesta)
+            if Callback then
+                pcall(function() Callback:Invoke(respuesta) end)
+            end
+        end
+        
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = Title,
+                Text = formattedText,
+                Duration = Duration,
+                Button1 = Button1,
+                Button2 = Button2,
+                Callback = bindable
+            })
+        end)
+    else
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = Title,
+                Text = formattedText,
+                Duration = Duration
+            })
+        end)
+    end
+end
+
+-- ==========================================================
 -- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
 
--- Diccionario Hash O(1) para identificación instantánea (100x más rápido que :IsA())
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
@@ -2611,54 +2660,40 @@ local TrashClasses = {
 -- ==========================================================
 -- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA + ANTI-CRASH DELTA)
 -- ==========================================================
-local currentEclipseTween = nil -- Manejador global para evitar superposición de animaciones
+local currentEclipseTween = nil
 
 local function ToggleEclipse(estado)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
     
     if estado then
-        -- 1. Creamos la UI solo si no existe (Reutilizamos para evitar memory leaks)
         if not eclipseUI then
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield (CoreGui) queda encima
+            eclipseUI.DisplayOrder = 9999
             
             local fondo = Instance.new("Frame")
             fondo.Name = "FondoNegro"
             fondo.Size = UDim2.new(1, 0, 1, 0)
             fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            fondo.BackgroundTransparency = 1 -- Empieza completamente invisible
+            fondo.BackgroundTransparency = 1
             fondo.Parent = eclipseUI
             eclipseUI.Parent = playerGui
         end
         
-        -- Bajamos la calidad gráfica del motor al mínimo absoluto
         pcall(function() settings().Rendering.QualityLevel = 1 end)
-        
-        -- Cancelamos cualquier cross-fade anterior para evitar glitches
         if currentEclipseTween then currentEclipseTween:Cancel() end
         
-        -- 2. CROSS-FADE IN: Animación suave hacia el negro total (0.5 segundos)
         currentEclipseTween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
         currentEclipseTween:Play()
-        
     else
         if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
-            -- Restauramos calidad gráfica
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
-            
-            -- Cancelamos cualquier cross-fade anterior
             if currentEclipseTween then currentEclipseTween:Cancel() end
             
-            -- 3. CROSS-FADE OUT: Desvanecimiento suave para revelar el mundo nuevamente
             currentEclipseTween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
             currentEclipseTween:Play()
-            
-            -- 🛑 NOTA IMPORTANTE PARA DELTA: No usamos :Destroy() aquí. 
-            -- Dejamos la UI viva pero invisible (Transparency = 1). 
-            -- Esto elimina el 100% de los crashes por Garbage Collection al abrir/cerrar rápido.
         end
     end
 end
@@ -2678,9 +2713,8 @@ if not getgenv().EclipseRenderHook then
                     pcall(function()
                         if self.ClassName == "Model" then
                             for _, v in ipairs(self:GetDescendants()) do
-                                local cName = v.ClassName -- Lectura directa en memoria
+                                local cName = v.ClassName
                                 
-                                -- 1. Optimización Geométrica
                                 if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
                                     v.CastShadow = false
                                     v.CanCollide = false
@@ -2688,13 +2722,11 @@ if not getgenv().EclipseRenderHook then
                                     v.CanQuery = false
                                     v.Anchored = true
                                     v.Massless = true
-                                    v.CustomPhysicalProperties = ZeroPhysics -- Usamos la variable global
+                                    v.CustomPhysicalProperties = ZeroPhysics
                                     pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
                                     if cName == "MeshPart" then
                                         pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
                                     end
-                                    
-                                -- 2. Apagado Cerebral del Humanoide
                                 elseif cName == "Humanoid" then
                                     v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                     v.RequiresNeck = false
@@ -2702,10 +2734,7 @@ if not getgenv().EclipseRenderHook then
                                     for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
                                         pcall(function() v:SetStateEnabled(state, false) end)
                                     end
-                                    
-                                -- 3. Destrucción instantánea por Diccionario Hash (O(1))
                                 elseif TrashClasses[cName] then
-                                    -- Si es Decal/Texture, solo destruimos si es invisible para no dañar las caras
                                     if (cName == "Decal" or cName == "Texture") then
                                         if v.Transparency == 1 then v:Destroy() end
                                     else
@@ -2733,18 +2762,18 @@ ExtraTab:CreateButton({
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(respuesta)
             if respuesta == "OK" then
-                Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista.", Duration = 3, Image = 4483362458})
+                UniversalAlert({Title = "⚙️ Optimizando...", Text = "Aplicando modo liso/minimalista.", Duration = 3})
                 task.spawn(function()
                     task.wait(0.5) 
                     pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
                     for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
                     pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false end end)
                     for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 elseif v:IsA("SurfaceAppearance") then v:Destroy() end end) end
-                    Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458})
+                    UniversalAlert({Title = "✅ Listo", Text = "Entorno liso al 100%.", Duration = 3})
                 end)
             end
         end
-        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⛔️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
+        UniversalAlert({Title = "⛔️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
     end
 })
 
@@ -2758,11 +2787,11 @@ ExtraTab:CreateButton({
                     pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
                     pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
                     for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then v.Material = Enum.Material.Plastic; v.CastShadow = true elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end end) end
-                    Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos a la normalidad.", Duration = 3, Image = 4483362458})
+                    UniversalAlert({Title = "✅ Restaurado", Text = "Gráficos a la normalidad.", Duration = 3})
                 end)
             end
         end
-        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
+        UniversalAlert({Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
     end
 })
 
@@ -2811,31 +2840,25 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        -- 1. ACTIVAMOS EL APAGÓN (El fondo se vuelve negro, los gráficos bajan al mínimo)
                         ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Desviando 100% de la GPU a la carga de avatares...", Duration = 2, Image = 4483362458})
+                        UniversalAlert({Title = "🌑 Modo Eclipse Activo", Text = "Desviando 100% de la GPU a la carga de avatares...", Duration = 2})
                         
                         if RefreshSavedCharactersGrid then
                             task.spawn(function()
-                                -- 2. Carga pesada con los recursos al máximo
                                 pcall(RefreshSavedCharactersGrid)
-                                
-                                -- 3. Esperamos dinámicamente a que termine el pico de lag (1.5s suele ser el punto dulce)
                                 task.wait(1.5)
-                                
-                                -- 4. LEVANTAMOS EL APAGÓN (El mundo vuelve a aparecer con una animación suave)
                                 ToggleEclipse(false)
-                                Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
+                                UniversalAlert({Title = "✅ Carga Completada", Text = "Avatares listos. Restaurando mundo.", Duration = 2})
                             end)
                         else
                             task.wait(1)
                             ToggleEclipse(false)
                         end
                     else
-                        ToggleEclipse(false) -- Por si acaso se cierra de golpe
+                        ToggleEclipse(false) 
                     end
                 else
-                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
+                    UniversalAlert({Title = "❌ UI No Encontrada", Text = "No se detectó el menú.", Duration = 3})
                 end
             end)
         end)
@@ -2877,12 +2900,12 @@ ExtraTab:CreateInput({
                     if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
                     if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis") end
                 end)
-                Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 3, Image = 4483362458})
+                UniversalAlert({Title = "Item Validado", Text = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 3})
             else
-                Rayfield:Notify({Title = "Item Inválido", Content = "El ID ingresado no existe o falló la red.", Duration = 4, Image = 4483362458})
+                UniversalAlert({Title = "Item Inválido", Text = "El ID ingresado no existe o falló la red.", Duration = 4})
             end
         else
-            Rayfield:Notify({Title = "Error de Entrada", Content = "Por favor, ingresa únicamente números válidos.", Duration = 3, Image = 4483362458})
+            UniversalAlert({Title = "Error de Entrada", Text = "Por favor, ingresa únicamente números válidos.", Duration = 3})
         end
     end
 })
