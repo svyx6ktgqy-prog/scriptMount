@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V10)
--- Escena de Dinero 3D + Lluvia de Billetes + Sistema de Estados
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V12)
+-- Escenografía Espaciada + Lluvia Realista (Límite 10) + Re-detección
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2442,7 +2442,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local Lighting = game:GetService("Lighting")
         local LocalPlayer = Players.LocalPlayer
 
-        -- Destrucción previa limpia
+        -- Destrucción previa limpia de previsualizaciones anteriores
         if Workspace:FindFirstChild("Kitty3DPreview") then
             Workspace.Kitty3DPreview:Destroy()
             task.wait() 
@@ -2494,7 +2494,6 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- Función auxiliar para cargar objetos 3D más rápido y limpio
         local SceneObjects = {}
         local function LoadAsset(id, name, offsetCFrame)
             task.spawn(function()
@@ -2511,32 +2510,34 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 1. CARGA DE ESCENOGRAFÍA MILLONARIA
+        -- 1. CARGA DE ESCENOGRAFÍA MILLONARIA (ESPACIADA)
         -- ==================================================
-        -- Base de Dinero (Campo)
+        -- Base de Dinero (Campo) en el centro
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, -0.2, 0))
-        -- Mesa
-        LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
-        -- Maletín
-        LoadAsset("9387964217", "Briefcase", CFrame.new(1.5, 2, 0) * CFrame.Angles(0, math.rad(25), 0))
-        -- Bolsa
-        LoadAsset("18303013374", "MoneyBag", CFrame.new(-1.5, 2, 0.5) * CFrame.Angles(0, math.rad(-15), 0))
-        -- Billetes Suelo
-        LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0.1, 2))
         
-        -- Cartel (Destacado)
-        LoadAsset("121348416036836", "KittySign", CFrame.new(4, 1.5, -1) * CFrame.Angles(0, math.rad(-25), 0))
+        -- Mesa central
+        LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
+        
+        -- Maletín a la derecha (Separado 3.5 studs)
+        LoadAsset("9387964217", "Briefcase", CFrame.new(3.5, 0.2, 0) * CFrame.Angles(0, math.rad(25), 0))
+        
+        -- Bolsa a la izquierda (Separada -3.5 studs)
+        LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0.2, 0) * CFrame.Angles(0, math.rad(-15), 0))
+        
+        -- Billetes en el suelo al frente
+        LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0.2, 3.5) * CFrame.Angles(0, math.rad(10), 0))
+        
+        -- Cartel atrás a la derecha
+        LoadAsset("121348416036836", "KittySign", CFrame.new(4, 1.5, -3) * CFrame.Angles(0, math.rad(-35), 0))
 
-        -- ==================================================
-        -- EFECTO: EXPLOSIÓN INICIAL DE PIEZAS
-        -- ==================================================
+        -- Chispas iniciales
         task.delay(0.65, function() 
             for i = 1, 10 do
                 local spark = Instance.new("Part")
                 spark.Size = Vector3.new(0.3, 0.3, 0.3)
                 spark.Position = spawnPos + Vector3.new(0, 2, 0)
                 spark.Material = Enum.Material.Neon
-                spark.Color = Color3.fromRGB(85, 255, 127) -- Verde dinero
+                spark.Color = Color3.fromRGB(85, 255, 127)
                 spark.Anchored = false; spark.CanCollide = false
                 spark.Parent = PreviewFolder
                 spark.Velocity = Vector3.new(math.random(-25, 25), math.random(20, 45), math.random(-25, 25))
@@ -2545,58 +2546,119 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- EFECTO: LLUVIA DE BILLETES CONSTANTE
+        -- EFECTO: LLUVIA DE BILLETES (REALISTA + LÍMITE)
         -- ==================================================
         local RainActive = true
+        local GroundedBills = {}
+        local AllRainBills = {}
+
         task.spawn(function()
             local success, rainObjs = pcall(function() return game:GetObjects("rbxassetid://439712421") end)
             local BillTemplate = nil
             if success and rainObjs and #rainObjs > 0 then
                 BillTemplate = rainObjs[1]
-                -- Preparar el billete para que caiga con físicas
-                if BillTemplate:IsA("Model") and BillTemplate.PrimaryPart then
-                    BillTemplate.PrimaryPart.Anchored = false
-                elseif BillTemplate:IsA("BasePart") then
-                    BillTemplate.Anchored = false
-                end
             end
 
-            -- Si no carga el asset, creamos un billete verde básico
             if not BillTemplate then
                 BillTemplate = Instance.new("Part")
-                BillTemplate.Size = Vector3.new(1, 0.1, 0.5)
+                BillTemplate.Size = Vector3.new(1.2, 0.1, 0.6)
                 BillTemplate.Color = Color3.fromRGB(85, 170, 127)
                 BillTemplate.Material = Enum.Material.SmoothPlastic
-                BillTemplate.Anchored = false
-                BillTemplate.CanCollide = false
+            end
+
+            local function GetSeparatedSpawnOffset()
+                local offset
+                local attempts = 0
+                repeat
+                    attempts += 1
+                    offset = Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))
+                    local tooClose = false
+                    local testPos = spawnPos + Vector3.new(offset.X, 0, offset.Z)
+                    
+                    for _, b in ipairs(GroundedBills) do
+                        if b.Parent and (Vector3.new(b.Position.X, 0, b.Position.Z) - Vector3.new(testPos.X, 0, testPos.Z)).Magnitude < 2.5 then
+                            tooClose = true
+                            break
+                        end
+                    end
+                until not tooClose or attempts > 10
+                return offset
             end
 
             while RainActive and PreviewFolder and PreviewFolder.Parent do
                 local bill = BillTemplate:Clone()
                 bill.Parent = PreviewFolder
+                table.insert(AllRainBills, bill)
                 
-                -- Aplicar físicas si es un modelo o part
                 for _, p in ipairs(bill:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        p.Anchored = false
-                        p.CanCollide = false
-                    end
+                    if p:IsA("BasePart") then p.Anchored = false; p.CanCollide = false end
                 end
-                if bill:IsA("BasePart") then
-                    bill.Anchored = false
-                    bill.CanCollide = false
-                    bill.CFrame = CFrame.new(spawnPos + Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))) * CFrame.Angles(math.random(), math.random(), math.random())
-                elseif bill:IsA("Model") then
-                    bill:PivotTo(CFrame.new(spawnPos + Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))) * CFrame.Angles(math.random(), math.random(), math.random()))
+                
+                local isModel = bill:IsA("Model")
+                local mainPart = isModel and bill.PrimaryPart or bill
+
+                if mainPart then
+                    mainPart.Anchored = false
+                    mainPart.CanCollide = false
+                    mainPart.AssemblyAngularVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
                 end
 
-                Debris:AddItem(bill, 4) -- Se elimina solo después de 4 segundos
-                task.wait(0.25) -- Frecuencia de la lluvia
+                local offset = GetSeparatedSpawnOffset()
+                local startCFrame = CFrame.new(spawnPos + offset) * CFrame.Angles(math.random(), math.random(), math.random())
+                
+                if isModel then bill:PivotTo(startCFrame) else bill.CFrame = startCFrame end
+
+                local fallConn
+                fallConn = RunService.Heartbeat:Connect(function()
+                    if not bill or not bill.Parent or not RainActive then 
+                        if fallConn then fallConn:Disconnect() end 
+                        return 
+                    end
+
+                    local currentPos = isModel and bill:GetPivot().Position or bill.Position
+                    
+                    local raycastParams = RaycastParams.new()
+                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    raycastParams.FilterDescendantsInstances = AllRainBills 
+                    
+                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), raycastParams)
+
+                    if result then
+                        fallConn:Disconnect()
+                        
+                        if isModel then
+                            for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true end end
+                            bill:PivotTo(CFrame.new(result.Position + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.random(0, 360), 0))
+                        else
+                            bill.Anchored = true
+                            bill.CFrame = CFrame.new(result.Position + Vector3.new(0, bill.Size.Y/2, 0)) * CFrame.Angles(0, math.random(0, 360), 0)
+                        end
+
+                        table.insert(GroundedBills, bill)
+
+                        if #GroundedBills > 10 then
+                            local oldBill = table.remove(GroundedBills, 1)
+                            if oldBill and oldBill.Parent then
+                                local tInfo = TweenInfo.new(0.5)
+                                if oldBill:IsA("Model") then
+                                    for _, p in ipairs(oldBill:GetDescendants()) do
+                                        if p:IsA("BasePart") then TweenService:Create(p, tInfo, {Transparency = 1}):Play() end
+                                    end
+                                else
+                                    TweenService:Create(oldBill, tInfo, {Transparency = 1}):Play()
+                                end
+                                Debris:AddItem(oldBill, 0.5)
+                            end
+                        end
+                    end
+                end)
+
+                task.wait(0.5)
             end
         end)
 
         -- ==================================================
-        -- 3. IMAGEN FLOTANTE (Encima de la mesa)
+        -- 3. IMAGEN FLOTANTE
         -- ==================================================
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
@@ -2625,7 +2687,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime += dt
-            -- Se eleva un poco más para estar sobre la mesa
             local basePos = spawnPos + Vector3.new(0, 7.5 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
@@ -2667,7 +2728,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                 bindable.OnInvoke = function(response)
                     if response == "Conseguir" then
                         if proximityConn then proximityConn:Disconnect() end
-                        RainActive = false -- Detenemos la lluvia
+                        RainActive = false 
                         
                         task.spawn(function()
                             if rotConnection then rotConnection:Disconnect() end
@@ -2716,10 +2777,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                                         end)
                                     end
 
-                                    -- Hundir toda la escenografía almacenada en la tabla SceneObjects
-                                    for _, sceneObj in ipairs(SceneObjects) do
-                                        SinkAndDestroy(sceneObj)
-                                    end
+                                    for _, sceneObj in ipairs(SceneObjects) do SinkAndDestroy(sceneObj) end
+                                    for _, b in ipairs(AllRainBills) do SinkAndDestroy(b) end
 
                                     if targetPanel then targetPanel.Visible = true
                                     elseif mainUI then
