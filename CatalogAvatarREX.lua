@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V22)
--- Detención Inteligente (Bounding Box) + Maleta en Mesa
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V23)
+-- Detención Inteligente (Bounding Box) + Override para Mesas Planas
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2520,7 +2520,6 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
         end
 
-        -- Asignamos la coordenada Y definitiva del suelo a todo el escenario
         spawnPos = Vector3.new(spawnPos.X, trueGroundY, spawnPos.Z)
 
         -- ==================================================
@@ -2557,10 +2556,11 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- DETENCIÓN INTELIGENTE AL CARGAR ASSETS
+        -- DETENCIÓN INTELIGENTE Y CARGA MODULAR
         -- ==================================================
         local SceneObjects = {}
-        local function LoadAsset(id, name, offsetCFrame)
+        -- Añadimos parámetros manualLift y skipDrop para props conflictivos
+        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop)
             task.spawn(function()
                 local success, objs = pcall(function() return game:GetObjects("rbxassetid://" .. id) end)
                 if success and objs and #objs > 0 then
@@ -2569,17 +2569,34 @@ ClickBtn.MouseButton1Click:Connect(function()
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
-                    -- CÁLCULO DE BOUNDING BOX: Encuentra el punto más bajo exacto del objeto
-                    local boundsCFrame, size = model:GetBoundingBox()
-                    local pivotY = model:GetPivot().Y
-                    local bottomY = boundsCFrame.Y - (size.Y / 2)
-                    local liftOffset = pivotY - bottomY -- Distancia para elevar y evitar que traspase
-                    
                     local baseCFrame = CFrame.new(spawnPos) * offsetCFrame
-                    -- Elevamos inteligentemente el modelo a su punto base
-                    local finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
+                    local finalCFrame
                     
-                    AnimateDrop(model, finalCFrame)
+                    if manualLift then
+                        -- Override manual: Útil para carteles o meshes 2D sin volumen
+                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + manualLift, baseCFrame.Z) * baseCFrame.Rotation
+                    else
+                        -- Cálculo Bounding Box dinámico
+                        local boundsCFrame, size = model:GetBoundingBox()
+                        local pivotY = model:GetPivot().Y
+                        local bottomY = boundsCFrame.Y - (size.Y / 2)
+                        local liftOffset = pivotY - bottomY 
+                        
+                        -- PROTECCIÓN: Si el modelo es plano o falla el cálculo, damos una altura segura por defecto
+                        if size.Y < 0.1 or liftOffset ~= liftOffset then
+                            liftOffset = 0.05
+                        end
+                        
+                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
+                    end
+                    
+                    -- Aplicamos la animación de caída o la instanciación directa
+                    if skipDrop then
+                        if model:IsA("Model") then model:PivotTo(finalCFrame) else model.CFrame = finalCFrame end
+                    else
+                        AnimateDrop(model, finalCFrame)
+                    end
+                    
                     table.insert(SceneObjects, model)
                 end
             end)
@@ -2588,19 +2605,17 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- ==================================================
         -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
-        -- Los objetos de suelo ahora se alinean con Y = 0 (el cálculo inteligente hace que descansen perfectos)
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
-        
-        -- 1. Mesa original (Intacta en el centro)
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         
-        -- 2. "Nueva Mesa" (El Cartel Kitty 121348416036836 colocado a un lado para que sea visible)
-        LoadAsset("121348416036836", "KittySignTable", CFrame.new(3.5, 0, -1.5) * CFrame.Angles(0, math.rad(-25), 0))
+        -- NUEVA MESA: Usamos manualLift = 0 (o ajústalo si lo quieres más alto) y skipDrop = true.
+        -- Esto ancla el cartel instantáneamente y evita que colapse por falta de físicas.
+        LoadAsset("121348416036836", "KittySignTable", CFrame.new(3.5, 0, -1.5) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
         
-        -- 3. Maletín colocado EXACTAMENTE sobre la "Nueva Mesa" (Mismas coordenadas X, Z, pero más alto en Y)
+        -- MALETÍN: Cae normalmente usando el bounding box inteligente
         LoadAsset("9387964217", "Briefcase", CFrame.new(3.5, 1.5, -1.5) * CFrame.Angles(0, math.rad(15), 0))
         
-        -- Resto de la decoración
+        -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
 
