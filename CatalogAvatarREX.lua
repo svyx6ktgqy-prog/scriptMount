@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN DEFINITIVA: ECLIPSE V2 + GARBAGE SWEEP 2.0 + ANTI-DEFORMIDADES)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE V2: SAFE-HOOK + TITILEO + 0 LAG)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2594,14 +2594,14 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 
 -- ==========================================================
 -- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) 
 
+-- Diccionario Hash O(1) para identificación instantánea
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
@@ -2609,7 +2609,7 @@ local TrashClasses = {
 }
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" V2 (CROSS-FADE + TITILEO)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA + TITILEO)
 -- ==========================================================
 local function ToggleEclipse(estado)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -2620,7 +2620,7 @@ local function ToggleEclipse(estado)
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 99999
+            eclipseUI.DisplayOrder = 9999 
             
             local fondo = Instance.new("Frame")
             fondo.Name = "FondoNegro"
@@ -2629,59 +2629,50 @@ local function ToggleEclipse(estado)
             fondo.BackgroundTransparency = 1
             fondo.Parent = eclipseUI
             
-            local textoCarga = Instance.new("TextLabel")
-            textoCarga.Name = "TextoCarga"
-            textoCarga.Size = UDim2.new(1, 0, 1, 0)
-            textoCarga.BackgroundTransparency = 1
-            textoCarga.Font = Enum.Font.GothamBold
-            textoCarga.Text = "SISTEMA ECLIPSE\nPROCESANDO ASSETS..."
-            textoCarga.TextColor3 = Color3.fromRGB(255, 255, 255)
-            textoCarga.TextSize = 24
-            textoCarga.TextTransparency = 1
-            textoCarga.Parent = fondo
+            local textoFlicker = Instance.new("TextLabel")
+            textoFlicker.Name = "TextoFlicker"
+            textoFlicker.Size = UDim2.new(1, 0, 1, 0)
+            textoFlicker.BackgroundTransparency = 1
+            textoFlicker.Font = Enum.Font.GothamBold
+            textoFlicker.Text = "SISTEMA ECLIPSE PROCESANDO..."
+            textoFlicker.TextColor3 = Color3.fromRGB(255, 255, 255)
+            textoFlicker.TextSize = 22
+            textoFlicker.TextTransparency = 1
+            textoFlicker.Parent = fondo
             
             eclipseUI.Parent = playerGui
         end
         
         local fondo = eclipseUI.FondoNegro
-        local texto = fondo.TextoCarga
+        local texto = fondo.TextoFlicker
         
-        -- Limpieza de RAM antes del apagón
-        pcall(function() collectgarbage("collect") end)
         pcall(function() settings().Rendering.QualityLevel = 1 end)
         
-        -- Cross-fade de ENTRADA
-        local tweenInFondo = TweenService:Create(fondo, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0})
-        local tweenInTexto = TweenService:Create(texto, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {TextTransparency = 0})
+        -- Cross-fade de ENTRADA suave
+        TweenService:Create(fondo, TweenInfo.new(0.4), {BackgroundTransparency = 0}):Play()
+        local tweenTextIn = TweenService:Create(texto, TweenInfo.new(0.4), {TextTransparency = 0.2})
+        tweenTextIn:Play()
         
-        tweenInFondo:Play()
-        tweenInTexto:Play()
-        tweenInFondo.Completed:Wait() -- Esperamos a que la pantalla esté negra para soltar el lag
-        
-        -- Efecto de TITILEO (Pulsación de respiración infinita)
-        local pulseInfo = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-        local tweenPulse = TweenService:Create(texto, pulseInfo, {TextTransparency = 0.6})
-        tweenPulse:Play()
+        -- TITILEO (Flickering loop en el texto para dar efecto de proceso)
+        tweenTextIn.Completed:Connect(function()
+            if eclipseUI and eclipseUI.Parent then
+                local pulseInfo = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+                TweenService:Create(texto, pulseInfo, {TextTransparency = 0.8}):Play()
+            end
+        end)
         
     else
         if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
-            local fondo = eclipseUI.FondoNegro
-            local texto = fondo:FindFirstChild("TextoCarga")
-            
-            -- Restauramos el motor
-            pcall(function() collectgarbage("collect") end)
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
             
-            -- Cross-fade de SALIDA
-            local tweenOutFondo = TweenService:Create(fondo, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {BackgroundTransparency = 1})
-            tweenOutFondo:Play()
+            -- Cross-fade de SALIDA (Desvanecimiento)
+            local fadeOutFondo = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.6), {BackgroundTransparency = 1})
+            local fadeOutTexto = TweenService:Create(eclipseUI.FondoNegro.TextoFlicker, TweenInfo.new(0.4), {TextTransparency = 1})
             
-            if texto then
-                local tweenOutTexto = TweenService:Create(texto, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {TextTransparency = 1})
-                tweenOutTexto:Play()
-            end
+            fadeOutFondo:Play()
+            fadeOutTexto:Play()
             
-            tweenOutFondo.Completed:Connect(function() 
+            fadeOutFondo.Completed:Connect(function() 
                 eclipseUI:Destroy() 
             end)
         end
@@ -2689,119 +2680,51 @@ local function ToggleEclipse(estado)
 end
 
 -- ==========================================================
--- 🛡️ MOTOR ECLIPSE (INTERCEPTOR DE DEFORMIDADES)
+-- 🛡️ MOTOR ECLIPSE (OBSERVADOR SEGURO - SIN CRASHEOS EN DELTA)
 -- ==========================================================
-if not getgenv().EclipseRenderHook then
-    getgenv().EclipseRenderHook = true
-    
-    local oldNewindex
-    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        if index == "Parent" and not checkcaller() then
-            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                
-                task.defer(function()
-                    pcall(function()
-                        if self.ClassName == "Model" then
-                            local descendants = self:GetDescendants()
-                            local count = 0
-                            
-                            for i = 1, #descendants do
-                                local v = descendants[i]
-                                local cName = v.ClassName
-                                
-                                -- 1. Optimizador de Geometría
-                                if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
-                                    v.CastShadow = false
-                                    v.CanCollide = false
-                                    v.CanTouch = false
-                                    v.CanQuery = false
-                                    v.Anchored = true
-                                    v.Massless = true
-                                    v.CustomPhysicalProperties = ZeroPhysics
-                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
-                                    if cName == "MeshPart" then
-                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
-                                    end
-                                    
-                                -- 2. Ropa en Capas (Layered Clothing)
-                                elseif cName == "WrapLayer" or cName == "WrapTarget" then
-                                    pcall(function() v.Enabled = true end) 
-                                    
-                                -- 3. Huesos y Articulaciones (Evita T-Pose o rotura)
-                                elseif cName == "Motor6D" or cName == "Bone" then
-                                    pcall(function() v.Enabled = true end)
-                                    
-                                -- 4. Humanoide (Cerebro)
-                                elseif cName == "Humanoid" then
-                                    v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-                                    v.RequiresNeck = false
-                                    pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
-                                        pcall(function() v:SetStateEnabled(state, false) end)
-                                    end
-                                    
-                                -- 5. Basurero Hash O(1)
-                                elseif TrashClasses[cName] then
-                                    if (cName == "Decal" or cName == "Texture") then
-                                        if v.Transparency == 1 then v:Destroy() end
-                                    else
-                                        v:Destroy()
-                                    end
-                                end
-                                
-                                count = count + 1
-                                -- Micro-yield cada 100 partes para evitar Crash
-                                if count % 100 == 0 then
-                                    RunService.RenderStepped:Wait()
-                                end
-                            end
-                        end
-                    end)
-                end)
+local function ApplyOptimizations(part)
+    pcall(function()
+        local cName = part.ClassName
+        if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
+            part.CastShadow = false; part.CanCollide = false; part.CanTouch = false; part.CanQuery = false
+            part.Anchored = true; part.Massless = true; part.CustomPhysicalProperties = ZeroPhysics
+            pcall(function() part.CollisionFidelity = Enum.CollisionFidelity.Box end)
+            if cName == "MeshPart" then pcall(function() part.RenderFidelity = Enum.RenderFidelity.Performance end) end
+        elseif cName == "Humanoid" then
+            part.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None; part.RequiresNeck = false
+            pcall(function() part:ChangeState(Enum.HumanoidStateType.Dead) end)
+            for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do pcall(function() part:SetStateEnabled(state, false) end) end
+        elseif TrashClasses[cName] then
+            if (cName == "Decal" or cName == "Texture") then
+                if part.Transparency == 1 then part:Destroy() end
+            else
+                part:Destroy()
             end
         end
-        return oldNewindex(self, index, value)
     end)
 end
 
--- ==========================================================
--- 🧹 SISTEMA DE LIMPIEZA DE CACHÉ (GARBAGE SWEEP 2.0)
--- ==========================================================
-local function ClearOldAvatars(menu)
-    if not menu then return end
+-- Solo vigilamos el menú de Outfits, evitando tocar el CoreGui de Rayfield
+local function SafeMenuObserver(menu)
+    if not menu or menu:FindFirstChild("OptiWatcher") then return end
     
-    local deletedCount = 0
-    for _, obj in ipairs(menu:GetDescendants()) do
-        if obj:IsA("ViewportFrame") then
-            for _, child in ipairs(obj:GetChildren()) do
-                if child:IsA("Model") or child:IsA("WorldModel") then
-                    -- Desarmar deformaciones y uniones
-                    for _, sub in ipairs(child:GetDescendants()) do
-                        if sub:IsA("Motor6D") or sub:IsA("Bone") or sub:IsA("WrapLayer") or sub:IsA("WrapTarget") or sub:IsA("Weld") or sub:IsA("Attachment") then
-                            game:GetService("Debris"):AddItem(sub, 0)
-                        end
-                    end
-                    -- Eliminar cascarón
-                    game:GetService("Debris"):AddItem(child, 0)
-                    deletedCount = deletedCount + 1
+    local marker = Instance.new("BoolValue")
+    marker.Name = "OptiWatcher"
+    marker.Parent = menu
+    
+    -- Cada vez que el juego añade un Avatar (Model) al menú de guardado, lo optimizamos inmediatamente
+    menu.DescendantAdded:Connect(function(v)
+        if v:IsA("Model") then
+            task.defer(function()
+                for _, part in ipairs(v:GetDescendants()) do
+                    ApplyOptimizations(part)
                 end
-            end
-            
-            if obj.CurrentCamera then
-                game:GetService("Debris"):AddItem(obj.CurrentCamera, 0)
-                obj.CurrentCamera = nil
-            end
+            end)
         end
-    end
-    
-    if deletedCount > 0 then
-        pcall(function() collectgarbage("collect") end)
-    end
+    end)
 end
+-- ==========================================================
 
--- ==========================================================
--- 🎛️ CREACIÓN DE UI EN RAYFIELD
--- ==========================================================
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
@@ -2890,36 +2813,24 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        -- 1. ACTIVAMOS EL APAGÓN
                         ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 Eclipse Activo", Content = "Limpiando caché antigua...", Duration = 1.5, Image = 4483362458})
+                        Rayfield:Notify({Title = "🌑 Eclipse Activo", Content = "Redirigiendo recursos de GPU...", Duration = 2, Image = 4483362458})
                         
-                        task.spawn(function()
-                            -- 2. LIMPIEZA DE CACHÉ AGRESIVA QUIRÚRGICA
-                            ClearOldAvatars(targetMenu)
-                            task.wait(0.1)
-                            
-                            if RefreshSavedCharactersGrid then
-                                -- 3. CARGA DE NUEVOS AVATARES
+                        -- Activamos el observador seguro para que no haya lag al cargar, sin romper Rayfield
+                        SafeMenuObserver(targetMenu)
+                        
+                        if RefreshSavedCharactersGrid then
+                            task.spawn(function()
                                 pcall(RefreshSavedCharactersGrid)
-                                
-                                -- 4. ESPERA DINÁMICA
-                                task.wait(0.8) 
-                                
-                                -- 5. LEVANTAMOS EL APAGÓN
+                                task.wait(1.5)
                                 ToggleEclipse(false)
-                            else
-                                task.wait(0.5)
-                                ToggleEclipse(false)
-                            end
-                        end)
-                    else
-                        -- LIMPIEZA INMEDIATA AL CERRAR
-                        task.spawn(function()
-                            ClearOldAvatars(targetMenu)
+                            end)
+                        else
+                            task.wait(1)
                             ToggleEclipse(false)
-                            Rayfield:Notify({Title = "🧹 Caché Limpia", Content = "Memoria de avatares liberada.", Duration = 2, Image = 4483362458})
-                        end)
+                        end
+                    else
+                        ToggleEclipse(false)
                     end
                 else
                     Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
