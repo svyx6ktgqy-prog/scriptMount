@@ -2606,7 +2606,7 @@ local function UniversalAlert(config)
             -- EL COMPROMISO NATIVO:
             -- Ponemos el nombre del jugador y un emoji de verificado a la derecha.
             local alertData = {
-                Title = Players.LocalPlayer.DisplayName .. " ✅",
+                Title = Players.LocalPlayer.DisplayName .. " 💬",
                 Text = rawText,
                 Icon = "rbxassetid://9322622699", -- Vuelve tu icono de perfil a la izquierda
                 Duration = config.Duration or 5
