@@ -2693,7 +2693,7 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🔍 Visualizador Inteligente")
 
--- 4. Buscador PRO: Valida en Roblox y lo envía al visualizador
+-- 4. Buscador PRO: Valida en Roblox, actualiza datos y envía al visualizador
 ExtraTab:CreateInput({
     Name = "👁️ Previsualizar Item por ID",
     PlaceholderText = "Pega el ID aquí para verificar...",
@@ -2708,11 +2708,20 @@ ExtraTab:CreateInput({
             end)
 
             if success and itemInfo then
-                -- ENVIAR AL VISUALIZADOR REAL
+                -- ENVIAR AL VISUALIZADOR REAL Y SOBREESCRIBIR DATOS
                 pcall(function()
-                    -- Llamamos a la función global UpdateVisualizer que pre-declaramos antes
+                    -- Novedad: Actualizamos la tabla CurrentData desde aquí antes de llamar al visualizador
+                    if CurrentData then
+                        CurrentData.Id = tostring(itemID)
+                        CurrentData.Price = tostring(itemInfo.PriceInRobux or 0)
+                        if itemInfo.Name then 
+                            CurrentData.Name = itemInfo.Name 
+                        end
+                    end
+
+                    -- Llamamos a la función global UpdateVisualizer tal como estaba
                     if UpdateVisualizer then
-                        local price = itemInfo.PriceInRobux or "Gratis"
+                        local price = itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis"
                         UpdateVisualizer(itemID, price)
                     end
                 end)
