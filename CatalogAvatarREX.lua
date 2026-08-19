@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V8)
--- Limpieza Segura + Ocultar Paneles + Objetos se mantienen al Rechazar
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V10)
+-- Escena de Dinero 3D + Lluvia de Billetes + Sistema de Estados
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2442,10 +2442,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         local Lighting = game:GetService("Lighting")
         local LocalPlayer = Players.LocalPlayer
 
-        -- Destrucción total previa y limpieza de físicas residuales de selecciones pasadas
+        -- Destrucción previa limpia
         if Workspace:FindFirstChild("Kitty3DPreview") then
             Workspace.Kitty3DPreview:Destroy()
-            task.wait() -- Pequeño respiro para que Roblox limpie memoria y colisiones
+            task.wait() 
         end
 
         local PreviewFolder = Instance.new("Folder")
@@ -2459,11 +2459,12 @@ ClickBtn.MouseButton1Click:Connect(function()
         local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
         -- ==================================================
-        -- FUNCIÓN: CAÍDA PERFECTA Y PARADA
+        -- FUNCIONES DE FÍSICAS Y CAÍDA
         -- ==================================================
-        local function AnimateDrop(model, targetCFrame)
+        local function AnimateDrop(model, targetCFrame, dropHeight)
+            dropHeight = dropHeight or 25
             local cfValue = Instance.new("CFrameValue")
-            cfValue.Value = targetCFrame + Vector3.new(0, 25, 0)
+            cfValue.Value = targetCFrame + Vector3.new(0, dropHeight, 0)
             model:PivotTo(cfValue.Value)
             
             local dropTween = TweenService:Create(cfValue, TweenInfo.new(0.65, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Value = targetCFrame})
@@ -2484,93 +2485,128 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         local function LockPhysics(obj)
             if obj:IsA("BasePart") then
-                obj.Anchored = true
-                obj.CanCollide = false
-                obj.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                obj.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                obj.Anchored = true; obj.CanCollide = false
             end
             for _, p in ipairs(obj:GetDescendants()) do
                 if p:IsA("BasePart") then
-                    p.Anchored = true
-                    p.CanCollide = false
-                    p.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                    p.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                    p.Anchored = true; p.CanCollide = false
                 end
             end
         end
 
-        -- ==================================================
-        -- 1. BALDOSA (Objeto Principal)
-        -- ==================================================
-        local tileSuccess, tileObjs = pcall(function() return game:GetObjects("rbxassetid://4699539638") end)
-        local Tile = nil
-        if tileSuccess and tileObjs and #tileObjs > 0 then
-            Tile = tileObjs[1]:Clone()
-            Tile.Name = "KittyTile"
-            Tile.Parent = PreviewFolder
-            LockPhysics(Tile)
-            AnimateDrop(Tile, CFrame.new(spawnPos))
-        else
-            Tile = Instance.new("Part")
-            Tile.Size = Vector3.new(6, 0.4, 6)
-            Tile.Material = Enum.Material.SmoothPlastic
-            Tile.Color = Color3.fromRGB(180, 180, 180)
-            Tile.Anchored = true
-            Tile.CanCollide = false
-            Tile.Parent = PreviewFolder
-            AnimateDrop(Tile, CFrame.new(spawnPos))
+        -- Función auxiliar para cargar objetos 3D más rápido y limpio
+        local SceneObjects = {}
+        local function LoadAsset(id, name, offsetCFrame)
+            task.spawn(function()
+                local success, objs = pcall(function() return game:GetObjects("rbxassetid://" .. id) end)
+                if success and objs and #objs > 0 then
+                    local model = objs[1]:Clone()
+                    model.Name = name
+                    model.Parent = PreviewFolder
+                    LockPhysics(model)
+                    AnimateDrop(model, CFrame.new(spawnPos) * offsetCFrame)
+                    table.insert(SceneObjects, model)
+                end
+            end)
         end
 
         -- ==================================================
-        -- 2. CARTEL
+        -- 1. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
-        local signSuccess, signObjs = pcall(function() return game:GetObjects("rbxassetid://121348416036836") end)
-        local Sign = nil
-        if signSuccess and signObjs and #signObjs > 0 then
-            Sign = signObjs[1]:Clone()
-            Sign.Name = "KittySign"
-            Sign.Parent = PreviewFolder
-            LockPhysics(Sign)
-            local signTarget = CFrame.new(spawnPos + Vector3.new(4, 1.5, 0)) * CFrame.Angles(0, math.rad(-25), 0)
-            AnimateDrop(Sign, signTarget)
-        end
+        -- Base de Dinero (Campo)
+        LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, -0.2, 0))
+        -- Mesa
+        LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
+        -- Maletín
+        LoadAsset("9387964217", "Briefcase", CFrame.new(1.5, 2, 0) * CFrame.Angles(0, math.rad(25), 0))
+        -- Bolsa
+        LoadAsset("18303013374", "MoneyBag", CFrame.new(-1.5, 2, 0.5) * CFrame.Angles(0, math.rad(-15), 0))
+        -- Billetes Suelo
+        LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0.1, 2))
+        
+        -- Cartel (Destacado)
+        LoadAsset("121348416036836", "KittySign", CFrame.new(4, 1.5, -1) * CFrame.Angles(0, math.rad(-25), 0))
 
         -- ==================================================
-        -- EFECTO: EXPLOSIÓN DE PIEZAS DE MADERA
+        -- EFECTO: EXPLOSIÓN INICIAL DE PIEZAS
         -- ==================================================
         task.delay(0.65, function() 
-            for i = 1, 14 do
-                local wood = Instance.new("Part")
-                wood.Size = Vector3.new(math.random(3,6)/10, math.random(3,6)/10, math.random(3,6)/10)
-                wood.Position = spawnPos + Vector3.new(0, 1.5, 0)
-                wood.Material = Enum.Material.Wood
-                wood.Color = Color3.fromRGB(110, 75, 45) 
-                wood.Anchored = false
-                wood.CanCollide = true
-                wood.Parent = PreviewFolder
-                
-                wood.Velocity = Vector3.new(math.random(-25, 25), math.random(20, 45), math.random(-25, 25))
-                wood.RotVelocity = Vector3.new(math.random(-20, 20), math.random(-20, 20), math.random(-20, 20))
-                
-                Debris:AddItem(wood, 2.5)
+            for i = 1, 10 do
+                local spark = Instance.new("Part")
+                spark.Size = Vector3.new(0.3, 0.3, 0.3)
+                spark.Position = spawnPos + Vector3.new(0, 2, 0)
+                spark.Material = Enum.Material.Neon
+                spark.Color = Color3.fromRGB(85, 255, 127) -- Verde dinero
+                spark.Anchored = false; spark.CanCollide = false
+                spark.Parent = PreviewFolder
+                spark.Velocity = Vector3.new(math.random(-25, 25), math.random(20, 45), math.random(-25, 25))
+                Debris:AddItem(spark, 1.5)
             end
         end)
 
         -- ==================================================
-        -- 3. IMAGEN FLOTANTE
+        -- EFECTO: LLUVIA DE BILLETES CONSTANTE
+        -- ==================================================
+        local RainActive = true
+        task.spawn(function()
+            local success, rainObjs = pcall(function() return game:GetObjects("rbxassetid://439712421") end)
+            local BillTemplate = nil
+            if success and rainObjs and #rainObjs > 0 then
+                BillTemplate = rainObjs[1]
+                -- Preparar el billete para que caiga con físicas
+                if BillTemplate:IsA("Model") and BillTemplate.PrimaryPart then
+                    BillTemplate.PrimaryPart.Anchored = false
+                elseif BillTemplate:IsA("BasePart") then
+                    BillTemplate.Anchored = false
+                end
+            end
+
+            -- Si no carga el asset, creamos un billete verde básico
+            if not BillTemplate then
+                BillTemplate = Instance.new("Part")
+                BillTemplate.Size = Vector3.new(1, 0.1, 0.5)
+                BillTemplate.Color = Color3.fromRGB(85, 170, 127)
+                BillTemplate.Material = Enum.Material.SmoothPlastic
+                BillTemplate.Anchored = false
+                BillTemplate.CanCollide = false
+            end
+
+            while RainActive and PreviewFolder and PreviewFolder.Parent do
+                local bill = BillTemplate:Clone()
+                bill.Parent = PreviewFolder
+                
+                -- Aplicar físicas si es un modelo o part
+                for _, p in ipairs(bill:GetDescendants()) do
+                    if p:IsA("BasePart") then
+                        p.Anchored = false
+                        p.CanCollide = false
+                    end
+                end
+                if bill:IsA("BasePart") then
+                    bill.Anchored = false
+                    bill.CanCollide = false
+                    bill.CFrame = CFrame.new(spawnPos + Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))) * CFrame.Angles(math.random(), math.random(), math.random())
+                elseif bill:IsA("Model") then
+                    bill:PivotTo(CFrame.new(spawnPos + Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))) * CFrame.Angles(math.random(), math.random(), math.random()))
+                end
+
+                Debris:AddItem(bill, 4) -- Se elimina solo después de 4 segundos
+                task.wait(0.25) -- Frecuencia de la lluvia
+            end
+        end)
+
+        -- ==================================================
+        -- 3. IMAGEN FLOTANTE (Encima de la mesa)
         -- ==================================================
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
         ImagePart.Size = Vector3.new(5, 5, 0.15)
-        ImagePart.Anchored = true
-        ImagePart.CanCollide = false
-        ImagePart.Transparency = 1
-        ImagePart.Parent = PreviewFolder
+        ImagePart.Anchored = true; ImagePart.CanCollide = false
+        ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
 
         local SurfaceFront = Instance.new("SurfaceGui")
         SurfaceFront.Face = Enum.NormalId.Front
-        SurfaceFront.AlwaysOnTop = true
-        SurfaceFront.Parent = ImagePart
+        SurfaceFront.AlwaysOnTop = true; SurfaceFront.Parent = ImagePart
 
         local ImgFront = Instance.new("ImageLabel")
         ImgFront.Size = UDim2.new(1, 0, 1, 0)
@@ -2579,8 +2615,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         ImgFront.Parent = SurfaceFront
 
         local SurfaceBack = SurfaceFront:Clone()
-        SurfaceBack.Face = Enum.NormalId.Back
-        SurfaceBack.Parent = ImagePart
+        SurfaceBack.Face = Enum.NormalId.Back; SurfaceBack.Parent = ImagePart
 
         local rotConnection
         local floatTime = 0
@@ -2590,28 +2625,28 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime += dt
-            local basePos = spawnPos + Vector3.new(0, 6.0 + math.sin(floatTime * 1.8) * 0.4, 0)
+            -- Se eleva un poco más para estar sobre la mesa
+            local basePos = spawnPos + Vector3.new(0, 7.5 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
 
         -- ==================================================
-        -- DETECCIÓN (Solo si te acercas)
+        -- DETECCIÓN (Sistema de Estados)
         -- ==================================================
-        local alreadyPrompted = false
+        local promptState = "Waiting" 
         local proximityConn
 
         proximityConn = RunService.Heartbeat:Connect(function()
-            if alreadyPrompted or not ImagePart or not ImagePart.Parent then
+            if not ImagePart or not ImagePart.Parent then
                 if proximityConn then proximityConn:Disconnect() end
                 return
             end
 
             local dist = (hrp.Position - spawnPos).Magnitude
-            if dist <= 8.5 then
-                alreadyPrompted = true
-                if proximityConn then proximityConn:Disconnect() end
+            
+            if dist <= 8.5 and promptState == "Waiting" then
+                promptState = "Prompting"
 
-                -- Ocultar paneles internos para el efecto
                 local mainUI = ClickBtn:FindFirstAncestorOfClass("ScreenGui")
                 local targetPanel = mainUI and (mainUI:FindFirstChild("MainFrame") or mainUI:FindFirstChild("Container") or mainUI:FindFirstChild("CatalogFrame"))
                 
@@ -2631,6 +2666,9 @@ ClickBtn.MouseButton1Click:Connect(function()
                 local bindable = Instance.new("BindableFunction")
                 bindable.OnInvoke = function(response)
                     if response == "Conseguir" then
+                        if proximityConn then proximityConn:Disconnect() end
+                        RainActive = false -- Detenemos la lluvia
+                        
                         task.spawn(function()
                             if rotConnection then rotConnection:Disconnect() end
                             ImagePart.Anchored = true 
@@ -2648,7 +2686,6 @@ ClickBtn.MouseButton1Click:Connect(function()
 
                                 local t = math.clamp((tick() - startTime) / duration, 0, 1)
                                 local ease = t * t * (3 - 2 * t)
-
                                 local snake = math.sin(t * 15) * (1 - t) * 2.5
                                 local targetPos = head.Position + Vector3.new(snake, 0, 0)
                                 
@@ -2679,12 +2716,12 @@ ClickBtn.MouseButton1Click:Connect(function()
                                         end)
                                     end
 
-                                    SinkAndDestroy(Tile)
-                                    SinkAndDestroy(Sign)
+                                    -- Hundir toda la escenografía almacenada en la tabla SceneObjects
+                                    for _, sceneObj in ipairs(SceneObjects) do
+                                        SinkAndDestroy(sceneObj)
+                                    end
 
-                                    -- Restauramos la visibilidad de los paneles de la UI
-                                    if targetPanel then
-                                        targetPanel.Visible = true
+                                    if targetPanel then targetPanel.Visible = true
                                     elseif mainUI then
                                         for _, child in ipairs(mainUI:GetChildren()) do
                                             if child:IsA("GuiObject") then child.Visible = true end
@@ -2698,16 +2735,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                             end)
                         end)
                     else
-                        -- SE MANTIENEN LOS OBJETOS AL RECHAZAR
-                        -- Restauramos solo la visibilidad de los paneles de la UI y quitamos el blur
-                        if targetPanel then
-                            targetPanel.Visible = true
-                        elseif mainUI then
-                            for _, child in ipairs(mainUI:GetChildren()) do
-                                if child:IsA("GuiObject") then child.Visible = true end
-                            end
-                        end
                         if blurEffect then blurEffect:Destroy() end
+                        promptState = "Cooldown"
                     end
                 end
 
@@ -2722,6 +2751,9 @@ ClickBtn.MouseButton1Click:Connect(function()
                         Callback = bindable
                     })
                 end)
+                
+            elseif dist > 11.5 and promptState == "Cooldown" then
+                promptState = "Waiting"
             end
         end)
     end)
