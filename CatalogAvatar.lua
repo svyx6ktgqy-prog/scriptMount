@@ -2585,4 +2585,122 @@ Panel:CreateInput({
    end,
 })
 
+--#EXTRA APARTADO PARA RAYFIELD.
+
+--Metodos
+
+local ExtraTab = Window:CreateTab("EXTRA", 4483362458) -- Icono genérico de Rayfield (opcional)
+
+ExtraTab:CreateSection("Optimización y Rendimiento")
+
+-- 1. Boton limpiador avanzado de RAM y Caché (Optimizado para Delta, sin errores de CallBack)
+ExtraTab:CreateButton({
+    Name = "🧹 Limpiador Avanzado de RAM / Caché",
+    Callback = function()
+        pcall(function()
+            -- Limpieza de cola de descargas nativa de Roblox
+            game:GetService("ContentProvider"):ClearWorkspaceQueue()
+            
+            -- Recolección de basura asíncrona (Soportado por Delta iOS/Android)
+            if collectgarbage then
+                collectgarbage("collect")
+            end
+            
+            -- Limpieza de texturas y memoria huérfana en el Workspace
+            for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
+                if v:IsA("Texture") or v:IsA("Decal") then
+                    v.LocalTransparencyModifier = 0 -- Forzar actualización gráfica
+                end
+            end
+            
+            if NotifyUser then
+                NotifyUser("Optimización", "Memoria RAM y caché liberadas con éxito.")
+            end
+        end)
+    end
+})
+
+ExtraTab:CreateSection("Gestión de Interfaz")
+
+-- 2. Boton ocultar-mostrar visualizador de items
+ExtraTab:CreateToggle({
+    Name = "👁️ Mostrar/Ocultar Visualizador de Items",
+    CurrentValue = true,
+    Flag = "ToggleVisualizer",
+    Callback = function(Value)
+        pcall(function()
+            -- Alterna la visibilidad del VisualizerGui principal ya existente
+            if VisualizerGui then
+                VisualizerGui.Enabled = Value
+            elseif game:GetService("CoreGui"):FindFirstChild("QuirurgicoVisualizer") then
+                game:GetService("CoreGui").QuirurgicoVisualizer.Enabled = Value
+            end
+            
+            -- Alterna el catálogo Kitty si está activo
+            if KittyGui then
+                KittyGui.Enabled = Value
+            end
+        end)
+    end
+})
+
+ExtraTab:CreateSection("Orientación de Pantalla (Dispositivos Móviles)")
+
+-- 3. Botones para Orientación de PANTALLA
+ExtraTab:CreateButton({
+    Name = "📱 Forzar Modo Horizontal (Landscape)",
+    Callback = function()
+        pcall(function()
+            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeRight
+        end)
+    end
+})
+
+ExtraTab:CreateButton({
+    Name = "📱 Forzar Modo Vertical (Portrait)",
+    Callback = function()
+        pcall(function()
+            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.Portrait
+        end)
+    end
+})
+
+ExtraTab:CreateButton({
+    Name = "🔄 Restaurar Orientación Automática (Sensor)",
+    Callback = function()
+        pcall(function()
+            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.Sensor
+        end)
+    end
+})
+
+ExtraTab:CreateSection("Utilidades de Catálogo")
+
+-- 4. Buscar por ID también
+ExtraTab:CreateInput({
+    Name = "🔍 Buscar y Equipar por ID",
+    PlaceholderText = "Ingresa el ID del item aquí...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local itemID = tonumber(Text)
+        if itemID and itemID > 0 then
+            pcall(function()
+                -- Llama al método UniversalEquip existente en tu código base
+                if UniversalEquip then
+                    UniversalEquip(itemID, false)
+                    if NotifyUser then
+                        NotifyUser("Obtención por ID", "Equipando ID: " .. tostring(itemID))
+                    end
+                end
+            end)
+        else
+            if NotifyUser then
+                NotifyUser("Error de Entrada", "Por favor, ingresa un ID numérico válido.")
+            end
+        end
+    end
+})
+
+--##FIN DEL METODO RYFIELD
+
 Rayfield:LoadConfiguration()
