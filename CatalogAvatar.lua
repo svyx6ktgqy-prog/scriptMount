@@ -2665,9 +2665,6 @@ ExtraTab:CreateButton({
                                 end
                             end)
                         end
-                        
-                        -- NOTA: Se eliminó collectgarbage() porque Roblox Luau lo bloquea y genera crash.
-                        -- La memoria se liberará sola al destruir las texturas.
                     end)
 
                     if success then
@@ -2709,64 +2706,93 @@ ExtraTab:CreateButton({
     end
 })
 
--- NUEVO BOTÓN: Restaurar a la Normalidad
+-- NUEVO BOTÓN: Restaurar a la Normalidad (AHORA CON ALERTA DE CONFIRMACIÓN)
 ExtraTab:CreateButton({
     Name = "🌍 Restaurar Entorno (Normalidad)",
     Callback = function()
-        Rayfield:Notify({
-            Title = "🌍 Restaurando...",
-            Content = "Devolviendo luces, sombras y texturas base...",
-            Duration = 3,
-            Image = 4483362458,
-        })
         
-        task.spawn(function()
-            pcall(function()
-                Lighting.GlobalShadows = true
-                Lighting.Brightness = 2 
-                Lighting.EnvironmentDiffuseScale = 1
-                Lighting.EnvironmentSpecularScale = 1
-                Lighting.ShadowSoftness = 0.2
-                Lighting.FogEnd = 100000 
-            end)
-            
-            for _, effect in ipairs(Lighting:GetChildren()) do
-                pcall(function()
-                    if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
-                        effect.Enabled = true
+        local bindable = Instance.new("BindableFunction")
+        bindable.OnInvoke = function(respuesta)
+            if respuesta == "OK" then
+                
+                Rayfield:Notify({
+                    Title = "🌍 Restaurando...",
+                    Content = "Devolviendo luces, sombras y texturas base...",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
+                
+                task.spawn(function()
+                    pcall(function()
+                        Lighting.GlobalShadows = true
+                        Lighting.Brightness = 2 
+                        Lighting.EnvironmentDiffuseScale = 1
+                        Lighting.EnvironmentSpecularScale = 1
+                        Lighting.ShadowSoftness = 0.2
+                        Lighting.FogEnd = 100000 
+                    end)
+                    
+                    for _, effect in ipairs(Lighting:GetChildren()) do
+                        pcall(function()
+                            if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
+                                effect.Enabled = true
+                            end
+                        end)
                     end
-                end)
-            end
-            
-            pcall(function()
-                if Workspace:FindFirstChildOfClass("Terrain") then
-                    Workspace.Terrain.WaterWaveSize = 0.15
-                    Workspace.Terrain.WaterWaveSpeed = 10
-                    Workspace.Terrain.WaterReflectance = 1
-                    Workspace.Terrain.WaterTransparency = 0.3
-                    Workspace.Terrain.Decoration = true
-                end
-            end)
-            
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                pcall(function()
-                    -- Devolver texturas SmoothPlastic a Plastic estándar
-                    if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then
-                        v.Material = Enum.Material.Plastic
-                        v.CastShadow = true
-                    elseif v:IsA("Texture") or v:IsA("Decal") then
-                        v.Transparency = 0 
+                    
+                    pcall(function()
+                        if Workspace:FindFirstChildOfClass("Terrain") then
+                            Workspace.Terrain.WaterWaveSize = 0.15
+                            Workspace.Terrain.WaterWaveSpeed = 10
+                            Workspace.Terrain.WaterReflectance = 1
+                            Workspace.Terrain.WaterTransparency = 0.3
+                            Workspace.Terrain.Decoration = true
+                        end
+                    end)
+                    
+                    for _, v in ipairs(Workspace:GetDescendants()) do
+                        pcall(function()
+                            -- Devolver texturas SmoothPlastic a Plastic estándar
+                            if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then
+                                v.Material = Enum.Material.Plastic
+                                v.CastShadow = true
+                            elseif v:IsA("Texture") or v:IsA("Decal") then
+                                v.Transparency = 0 
+                            end
+                        end)
                     end
+                    
+                    Rayfield:Notify({
+                        Title = "✅ Entorno Restaurado",
+                        Content = "Los gráficos han vuelto a la normalidad.",
+                        Duration = 4,
+                        Image = 4483362458,
+                    })
                 end)
+                
+            else
+                -- Si el usuario presiona "Cancelar"
+                Rayfield:Notify({
+                    Title = "❌ Acción Cancelada",
+                    Content = "No se restauraron los gráficos.",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
             end
-            
-            Rayfield:Notify({
-                Title = "✅ Entorno Restaurado",
-                Content = "Los gráficos han vuelto a la normalidad.",
-                Duration = 4,
-                Image = 4483362458,
+        end
+
+        -- Llamada a la alerta nativa de Roblox
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "⚠️ ¿Restaurar Gráficos?",
+                Text = "¿Deseas volver a los gráficos originales (con texturas y sombras)?",
+                Duration = 10,
+                Button1 = "OK",
+                Button2 = "Cancelar",
+                Callback = bindable
             })
         end)
+        
     end
 })
 
@@ -2800,7 +2826,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con Sistema ANTI-LAG Externo (CORREGIDO)
+-- 3. Menú de Outfits con Sistema ANTI-LAG Externo (CORREGIDO Y AUTOMATIZADO)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2843,7 +2869,42 @@ ExtraTab:CreateButton({
                         
                         if RefreshSavedCharactersGrid then
                             task.defer(function()
+                                -- Llamamos a la función original
                                 pcall(RefreshSavedCharactersGrid)
+                                
+                                -- ==========================================================
+                                -- FIX ANTI-LAG: INTERCEPCIÓN Y REEMPLAZO (SIN TOCAR CÓDIGO EXTRA)
+                                -- ==========================================================
+                                task.wait(0.1) -- Damos un breve respiro para que las cards se rendericen
+                                
+                                pcall(function()
+                                    -- Escaneamos todo dentro del menú buscando los 3D (ViewportFrame)
+                                    for _, item in ipairs(targetMenu:GetDescendants()) do
+                                        if item:IsA("ViewportFrame") then
+                                            local Card = item.Parent
+                                            item:Destroy() -- Eliminamos el culpable del Lag
+                                            
+                                            -- Prevenimos duplicados si se actualiza varias veces
+                                            if not Card:FindFirstChild("AntiLagPlaceholder") then
+                                                local Placeholder = Instance.new("ImageLabel")
+                                                Placeholder.Name = "AntiLagPlaceholder"
+                                                Placeholder.Size = UDim2.new(1, -10, 0, 75)
+                                                Placeholder.Position = UDim2.new(0, 5, 0, 5)
+                                                Placeholder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                                                Placeholder.Image = "rbxassetid://132859920937628" -- Ícono de Ropa/Catálogo
+                                                Placeholder.ScaleType = Enum.ScaleType.Fit
+                                                Placeholder.BackgroundTransparency = 0
+                                                Placeholder.ZIndex = 33
+                                                Placeholder.Parent = Card
+                                                
+                                                local PCorner = Instance.new("UICorner")
+                                                PCorner.CornerRadius = UDim.new(0, 6)
+                                                PCorner.Parent = Placeholder
+                                            end
+                                        end
+                                    end
+                                end)
+                                -- ==========================================================
                             end)
                         end
                     end
