@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V21)
--- Animación Órbita + Absorción | Fix Decorativos en suelo
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V22)
+-- Detención Inteligente (Bounding Box) + Maleta en Mesa
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2494,6 +2494,36 @@ ClickBtn.MouseButton1Click:Connect(function()
         local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
         -- ==================================================
+        -- ESCANEO DE SUELO UNIFICADO (Solo se hace una vez)
+        -- ==================================================
+        local rayOrigin = spawnPos + Vector3.new(0, 50, 0)
+        local ignoreList = {char, PreviewFolder}
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        
+        local trueGroundY = spawnPos.Y 
+        
+        for i = 1, 10 do
+            raycastParams.FilterDescendantsInstances = ignoreList
+            local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+            
+            if result then
+                local inst = result.Instance
+                if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                    table.insert(ignoreList, inst)
+                else
+                    trueGroundY = result.Position.Y
+                    break
+                end
+            else
+                break
+            end
+        end
+
+        -- Asignamos la coordenada Y definitiva del suelo a todo el escenario
+        spawnPos = Vector3.new(spawnPos.X, trueGroundY, spawnPos.Z)
+
+        -- ==================================================
         -- FUNCIONES DE FÍSICAS Y CAÍDA
         -- ==================================================
         local function AnimateDrop(model, targetCFrame, dropHeight)
@@ -2526,6 +2556,9 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
         end
 
+        -- ==================================================
+        -- DETENCIÓN INTELIGENTE AL CARGAR ASSETS
+        -- ==================================================
         local SceneObjects = {}
         local function LoadAsset(id, name, offsetCFrame)
             task.spawn(function()
@@ -2536,35 +2569,16 @@ ClickBtn.MouseButton1Click:Connect(function()
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
-                    local baseTargetCFrame = CFrame.new(spawnPos) * offsetCFrame
-                    local rayOrigin = baseTargetCFrame.Position + Vector3.new(0, 50, 0)
+                    -- CÁLCULO DE BOUNDING BOX: Encuentra el punto más bajo exacto del objeto
+                    local boundsCFrame, size = model:GetBoundingBox()
+                    local pivotY = model:GetPivot().Y
+                    local bottomY = boundsCFrame.Y - (size.Y / 2)
+                    local liftOffset = pivotY - bottomY -- Distancia para elevar y evitar que traspase
                     
-                    local ignoreList = {char, PreviewFolder}
-                    local raycastParams = RaycastParams.new()
-                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    local baseCFrame = CFrame.new(spawnPos) * offsetCFrame
+                    -- Elevamos inteligentemente el modelo a su punto base
+                    local finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
                     
-                    -- FIX: Salvavidas por si el raycast no toca nada, asume la altura del jugador.
-                    local trueGroundY = spawnPos.Y 
-                    
-                    for i = 1, 10 do
-                        raycastParams.FilterDescendantsInstances = ignoreList
-                        local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
-                        
-                        if result then
-                            local inst = result.Instance
-                            if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
-                                table.insert(ignoreList, inst)
-                            else
-                                -- FIX: +0.4 extra de elevación para que no se entierren los maletines/dinero.
-                                trueGroundY = result.Position.Y + 0.4 
-                                break
-                            end
-                        else
-                            break
-                        end
-                    end
-                    
-                    local finalCFrame = CFrame.new(baseTargetCFrame.X, trueGroundY + offsetCFrame.Y, baseTargetCFrame.Z) * baseTargetCFrame.Rotation
                     AnimateDrop(model, finalCFrame)
                     table.insert(SceneObjects, model)
                 end
@@ -2574,12 +2588,16 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- ==================================================
         -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
-        LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, -0.2, 0))
+        -- Los objetos de suelo ahora se alinean con Y = 0 (el cálculo inteligente hace que descansen perfectos)
+        LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
-        LoadAsset("9387964217", "Briefcase", CFrame.new(3.5, 0.2, 0) * CFrame.Angles(0, math.rad(25), 0))
-        LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0.2, 0) * CFrame.Angles(0, math.rad(-15), 0))
-        LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0.2, 3.5) * CFrame.Angles(0, math.rad(10), 0))
-        LoadAsset("121348416036836", "KittySign", CFrame.new(4, 1.5, -3) * CFrame.Angles(0, math.rad(-35), 0))
+        
+        -- Trasladada a la mesa: X = 1.2 (un lado), Y = 2.7 (altura aproximada de la superficie de la mesa)
+        LoadAsset("9387964217", "Briefcase", CFrame.new(1.2, 2.7, 0) * CFrame.Angles(0, math.rad(25), 0))
+        
+        LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
+        LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
+        LoadAsset("121348416036836", "KittySign", CFrame.new(4, 0, -3) * CFrame.Angles(0, math.rad(-35), 0))
 
         task.delay(0.65, function() 
             for i = 1, 10 do
@@ -2783,7 +2801,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                             
                             local head = char:FindFirstChild("Head") or hrp
                             local startTime = tick()
-                            local duration = 1.8 -- Aumentado para dar tiempo a la órbita
+                            local duration = 1.8 
                             local startPos = ImagePart.Position
 
                             local attractConn
@@ -2793,14 +2811,11 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 local t = math.clamp((tick() - startTime) / duration, 0, 1)
                                 local ease = t * t * (3 - 2 * t) 
                                 
-                                -- FASE 1: Órbita circular que se va cerrando
-                                -- Da 2.5 vueltas (math.pi * 5) a medida que se acerca
                                 local angle = ease * math.pi * 5 
                                 local radius = 7 * (1 - ease) 
                                 
                                 local orbitPos = head.Position + Vector3.new(math.cos(angle) * radius, (1 - ease) * 1.5, math.sin(angle) * radius)
                                 
-                                -- FASE 2: Animación clásica de comer/snake al final
                                 local snake = 0
                                 if t > 0.6 then
                                     local snakeT = (t - 0.6) / 0.4
@@ -2808,11 +2823,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 end
                                 
                                 local finalTarget = orbitPos + (head.CFrame.RightVector * snake)
-                                
-                                -- Transición fluida desde su base hasta la órbita
                                 local newPos = startPos:Lerp(finalTarget, ease)
                                 
-                                -- Giro dinámico loco mientras es atraído
                                 ImagePart.CFrame = CFrame.new(newPos) * CFrame.Angles(0, tick() * 15, math.sin(tick() * 10) * 0.5)
 
                                 if t >= 1 then
