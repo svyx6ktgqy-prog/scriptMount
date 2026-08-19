@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V13)
--- Animación suave protegida + Fix de ScreenGui en Rechazo
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V14)
+-- Solución al Menú Roto (ToggleUI Inteligente) + Sintaxis Clásica
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2443,31 +2443,40 @@ ClickBtn.MouseButton1Click:Connect(function()
         local LocalPlayer = Players.LocalPlayer
 
         -- ==================================================
-        -- CONTROL DEL SCREENGUI (NUEVO FIX)
+        -- CONTROL DEL SCREENGUI (NUEVO FIX INTELIGENTE)
         -- ==================================================
         local function ToggleUI(visible)
             local mainUI = ClickBtn:FindFirstAncestorOfClass("ScreenGui")
-            local targetPanel = mainUI and (mainUI:FindFirstChild("MainFrame") or mainUI:FindFirstChild("Container") or mainUI:FindFirstChild("CatalogFrame"))
+            if not mainUI then return end
+
+            -- Buscamos nombres comunes
+            local targetPanel = mainUI:FindFirstChild("MainFrame") or mainUI:FindFirstChild("Container") or mainUI:FindFirstChild("CatalogFrame")
             
+            -- Si no se llama así, el script rastrea hacia arriba desde el botón
+            -- para encontrar el panel exacto que lo contiene, sin tocar otros botones (como el de abrir menú).
+            if not targetPanel then
+                local current = ClickBtn
+                while current and current.Parent and current.Parent ~= mainUI do
+                    current = current.Parent
+                end
+                if current and current:IsA("GuiObject") then
+                    targetPanel = current
+                end
+            end
+
             if targetPanel then
                 targetPanel.Visible = visible
-            elseif mainUI then
-                for _, child in ipairs(mainUI:GetChildren()) do
-                    if child:IsA("GuiObject") then child.Visible = visible end
-                end
             end
         end
 
         -- ==================================================
         -- 1. LIMPIEZA SEGURA DE PREVIEWS ANTERIORES
         -- ==================================================
-        -- Solo borramos la preview activa, ignorando las que ya se están hundiendo
         for _, child in ipairs(Workspace:GetChildren()) do
             if child.Name == "Kitty3DPreview" then
                 child:Destroy()
             end
         end
-        -- Asegurarnos de limpiar Blurs huérfanos
         for _, child in ipairs(Lighting:GetChildren()) do
             if child.Name == "KittyPreviewBlur" then
                 child:Destroy()
@@ -2561,7 +2570,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. EFECTO: LLUVIA DE BILLETES (REALISTA + LÍMITE)
+        -- 3. EFECTO: LLUVIA DE BILLETES
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2583,7 +2592,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                 local offset
                 local attempts = 0
                 repeat
-                    attempts += 1
+                    attempts = attempts + 1
                     offset = Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))
                     local tooClose = false
                     local testPos = spawnPos + Vector3.new(offset.X, 0, offset.Z)
@@ -2695,7 +2704,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                 rotConnection:Disconnect()
                 return
             end
-            floatTime += dt
+            floatTime = floatTime + dt
             local basePos = spawnPos + Vector3.new(0, 7.5 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
@@ -2716,7 +2725,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             
             if dist <= 8.5 and promptState == "Waiting" then
                 promptState = "Prompting"
-                ToggleUI(false) -- Escondemos UI de forma segura
+                ToggleUI(false)
 
                 local blurEffect = Instance.new("BlurEffect")
                 blurEffect.Name = "KittyPreviewBlur"
@@ -2729,7 +2738,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                         if proximityConn then proximityConn:Disconnect() end
                         RainActive = false 
                         
-                        -- NUEVO: Renombramos la carpeta para que NO se borre de golpe si elige otro item rápido
                         if PreviewFolder and PreviewFolder.Parent then
                             PreviewFolder.Name = "Kitty3DPreview_Sinking"
                         end
@@ -2784,7 +2792,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     for _, sceneObj in ipairs(SceneObjects) do SinkAndDestroy(sceneObj) end
                                     for _, b in ipairs(AllRainBills) do SinkAndDestroy(b) end
 
-                                    -- Eliminamos el folder completamente luego de que todo se hunda
                                     task.delay(1.5, function()
                                         if PreviewFolder and PreviewFolder.Parent then
                                             PreviewFolder:Destroy()
@@ -2792,7 +2799,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     end)
 
                                     if blurEffect then blurEffect:Destroy() end
-                                    ToggleUI(true) -- Restablecemos UI tras aceptar
+                                    ToggleUI(true) 
 
                                     UpdateVisualizer(item.id, item.price or "Gratis")
                                     NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
@@ -2801,7 +2808,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                         end)
                     else
                         if blurEffect then blurEffect:Destroy() end
-                        ToggleUI(true) -- FIX: Restablecemos UI inmediatamente tras rechazar
+                        ToggleUI(true) 
                         promptState = "Cooldown"
                     end
                 end
