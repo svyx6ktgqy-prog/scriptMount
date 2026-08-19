@@ -2585,23 +2585,17 @@ Panel:CreateInput({
    end,
 })
 
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN OMEGA: ECLIPSE + COLA ASÍNCRONA + ANTI-LAG PARA DELTA)
+
 -- ==========================================================
--- 🚀 INICIO DEL APARTADO EXTRA: OPTIMIZACIÓN OMEGA (DELTA SAFE)
+-- 🚀 MICRO-OPTIMIZACIONES LUA (PUNTEROS DIRECTOS PARA VELOCIDAD)
 -- ==========================================================
-
-if not Window then
-    warn("⚠️ [ERROR CRÍTICO]: La variable 'Window' no existe. Pega esto DEBAJO de Rayfield:CreateWindow.")
-    return
-end
-
-local ExtraTab = Window:CreateTab("⚡ OPTIMIZACIÓN", 4483362458)
-
--- Punteros y Servicios
 local task_spawn, task_wait, task_defer = task.spawn, task.wait, task.defer
 local pcall, typeof, ipairs, tonumber, tostring = pcall, typeof, ipairs, tonumber, tostring
 local table_insert, table_remove = table.insert, table.remove
 local math_min = math.min
 
+local game = game
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -2612,9 +2606,14 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
-local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
 
+-- ==========================================================
+-- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
+-- ==========================================================
+local ItemCache = {}
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez
+
+-- Diccionario Hash O(1) AMPLIADO (Aniquilación de Ropa 3D, Huesos y Efectos)
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
@@ -2622,7 +2621,9 @@ local TrashClasses = {
     WrapLayer = true, WrapTarget = true, IKControl = true, Bone = true, Attachment = true
 }
 
--- Cola de Procesamiento Asíncrono
+-- ==========================================================
+-- ⚙️ SISTEMA OMEGA: COLA DE PROCESAMIENTO ASÍNCRONO
+-- ==========================================================
 local ViewportQueue = {}
 local IsProcessingQueue = false
 
@@ -2638,6 +2639,7 @@ local function ProcessQueue()
                 local model = table_remove(ViewportQueue, 1)
                 
                 if typeof(model) == "Instance" and model.Parent then
+                    -- OPTIMIZACIÓN NUEVA: Zero-Shading Viewport
                     if model.Parent.ClassName == "ViewportFrame" then
                         pcall(function()
                             model.Parent.LightColor = Color3.new(1, 1, 1)
@@ -2650,6 +2652,7 @@ local function ProcessQueue()
                         for _, v in ipairs(model:GetDescendants()) do
                             local cName = v.ClassName 
                             
+                            -- 1. Optimización Geométrica
                             if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
                                 v.CastShadow = false
                                 v.CanCollide = false
@@ -2662,11 +2665,18 @@ local function ProcessQueue()
                                 if cName == "MeshPart" then
                                     pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
                                 end
+                                
+                            -- 2. Apagado Cerebral del Humanoide (NUEVO: EvaluateStateMachine)
                             elseif cName == "Humanoid" then
                                 v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                 v.RequiresNeck = false
                                 pcall(function() v.EvaluateStateMachine = false end)
                                 pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+                                    pcall(function() v:SetStateEnabled(state, false) end)
+                                end
+                                
+                            -- 3. Destrucción instantánea por Diccionario Hash (O(1))
                             elseif TrashClasses[cName] then
                                 if (cName == "Decal" or cName == "Texture") then
                                     if v.Transparency == 1 then v:Destroy() end
@@ -2685,11 +2695,11 @@ local function ProcessQueue()
     end)
 end
 
--- Sistema Eclipse Seguro
+-- ==========================================================
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA)
+-- ==========================================================
 local function ToggleEclipse(estado)
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
-    if not playerGui then return end 
-    
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
     local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
     
     if estado then
@@ -2707,6 +2717,7 @@ local function ToggleEclipse(estado)
             fondo.Parent = eclipseUI
             eclipseUI.Parent = playerGui
         end
+        
         pcall(function() settings().Rendering.QualityLevel = 1 end)
         eclipseUI.FondoNegro.BackgroundTransparency = 0
     else
@@ -2714,63 +2725,100 @@ local function ToggleEclipse(estado)
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
             local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.4), {BackgroundTransparency = 1})
             tween:Play()
-            tween.Completed:Wait() 
-            if eclipseUI then eclipseUI:Destroy() end
+            tween.Completed:Connect(function() eclipseUI:Destroy() end)
         end
     end
 end
 
--- Motor de Intercepción Protegido (Seguro para Delta)
-if not getgenv().UltimateRenderHook then
-    getgenv().UltimateRenderHook = true
-    getgenv().BlockHeavyRenders = false 
+-- ==========================================================
+-- 🛡️ MOTOR ECLIPSE / SINGULARIDAD (INTERCEPTOR COMPATIBLE CON DELTA)
+-- Nota: Se ha quitado newcclosure para evitar cuelgues en Delta.
+-- ==========================================================
+if not getgenv().EclipseRenderHook then
+    getgenv().EclipseRenderHook = true
     
-    pcall(function()
-        local oldNewindex
-        oldNewindex = hookmetamethod(game, "__newindex", newcclosure(function(self, index, value)
-            if getgenv().BlockHeavyRenders and index == "Parent" and not checkcaller() then
-                if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                    task_defer(function()
-                        if typeof(self) == "Instance" and self.ClassName == "Model" then
-                            table_insert(ViewportQueue, self)
-                            ProcessQueue()
-                        end
-                    end)
-                end
+    local oldNewindex
+    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
+        if index == "Parent" and not checkcaller() then
+            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+                task_spawn(function()
+                    if typeof(self) == "Instance" and self.ClassName == "Model" then
+                        table_insert(ViewportQueue, self)
+                        ProcessQueue()
+                    end
+                end)
             end
-            return oldNewindex(self, index, value)
-        end))
+        end
+        return oldNewindex(self, index, value)
     end)
 end
 
--- Elementos de la Pestaña
-ExtraTab:CreateSection("⚡ Rendimiento Extremo del Mapa")
+-- ==========================================================
+-- ⚙️ UI RAYFIELD
+-- ==========================================================
+local ExtraTab = Window:CreateTab("⚡ EXTRA / OPTIMIZACIÓN", 4483362458)
+
+ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Extrema y Ping Óptimo",
     Callback = function()
-        pcall(function()
-            Lighting.GlobalShadows = false
-            Lighting.Brightness = 0
-            Lighting.FogEnd = 9e9
-            Rayfield:Notify({Title = "✅ Listo", Content = "Entorno optimizado.", Duration = 3, Image = 4483362458})
-        end)
+        local bindable = Instance.new("BindableFunction")
+        bindable.OnInvoke = function(respuesta)
+            if respuesta == "OK" then
+                Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista.", Duration = 3, Image = 4483362458})
+                task_spawn(function()
+                    task_wait(0.5) 
+                    pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
+                    for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
+                    pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false end end)
+                    for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 elseif v:IsA("SurfaceAppearance") then v:Destroy() end end) end
+                    pcall(function() collectgarbage("collect") end) 
+                    Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458})
+                end)
+            end
+        end
+        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
     end
 })
 
 ExtraTab:CreateButton({
     Name = "🌍 Restaurar Entorno (Normalidad)",
     Callback = function()
+        local bindable = Instance.new("BindableFunction")
+        bindable.OnInvoke = function(respuesta)
+            if respuesta == "OK" then
+                task_spawn(function()
+                    pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
+                    pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
+                    for _, v in ipairs(Workspace:GetDescendants()) do pcall(function() if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then v.Material = Enum.Material.Plastic; v.CastShadow = true elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end end) end
+                    Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos a la normalidad.", Duration = 3, Image = 4483362458})
+                end)
+            end
+        end
+        pcall(function() StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable}) end)
+    end
+})
+
+ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
+
+ExtraTab:CreateToggle({
+    Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
+    CurrentValue = false,
+    Flag = "ToggleItemVisualizer",
+    Callback = function(Value)
         pcall(function()
-            Lighting.GlobalShadows = true
-            Lighting.Brightness = 2
-            Lighting.FogEnd = 100000
-            Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos normales.", Duration = 3, Image = 4483362458})
+            if Container then Container.Visible = Value
+            else
+                local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+                local visualizerUI = CoreGui:FindFirstChild("VisualizadorItemGUI") or playerGui:FindFirstChild("VisualizadorItemGUI")
+                if visualizerUI then if visualizerUI:IsA("ScreenGui") then visualizerUI.Enabled = Value else visualizerUI.Visible = Value end end
+            end
         end)
     end
 })
 
-ExtraTab:CreateSection("👔 Gestor de Outfits Dinámico")
+ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
@@ -2778,8 +2826,8 @@ ExtraTab:CreateButton({
         task_spawn(function()
             local success, err = pcall(function()
                 local targetMenu = nil
-                if CharMenu then 
-                    targetMenu = CharMenu
+                
+                if CharMenu then targetMenu = CharMenu
                 else
                     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
                     local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
@@ -2787,10 +2835,7 @@ ExtraTab:CreateButton({
                         for _, frame in ipairs(visualizerUI:GetChildren()) do
                             if frame:IsA("Frame") then
                                 local title = frame:FindFirstChildWhichIsA("TextLabel", true)
-                                if title and string.find(string.lower(title.Text), "outfits") then 
-                                    targetMenu = frame 
-                                    break 
-                                end
+                                if title and string.find(string.lower(title.Text), "outfits") then targetMenu = frame break end
                             end
                         end
                     end
@@ -2798,32 +2843,83 @@ ExtraTab:CreateButton({
 
                 if targetMenu then
                     targetMenu.Visible = not targetMenu.Visible 
+                    
                     if targetMenu.Visible then
                         ToggleEclipse(true)
-                        getgenv().BlockHeavyRenders = true
-                        Rayfield:Notify({Title = "🌑 OMEGA ACTIVO", Content = "Procesando avatares...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🌑 OMEGA ACTIVO", Content = "Desviando GPU y CPU a los avatares...", Duration = 2, Image = 4483362458})
                         
                         if RefreshSavedCharactersGrid then
-                            pcall(RefreshSavedCharactersGrid)
+                            task_spawn(function()
+                                pcall(RefreshSavedCharactersGrid)
+                                
+                                -- ESPERA DINÁMICA (No más esperas fijas, espera a que termine la cola de optimización)
+                                local waitCycles = 0
+                                while IsProcessingQueue and waitCycles < 15 do
+                                    task_wait(0.2)
+                                    waitCycles = waitCycles + 1
+                                end
+                                
+                                task_wait(0.1) 
+                                ToggleEclipse(false)
+                                Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
+                            end)
+                        else
+                            task_wait(1)
+                            ToggleEclipse(false)
                         end
-                        task_wait(1)
-                        getgenv().BlockHeavyRenders = false
-                        ToggleEclipse(false)
-                        Rayfield:Notify({Title = "✅ COMPLETO", Content = "Optimizado con éxito.", Duration = 2, Image = 4483362458})
                     else
-                        getgenv().BlockHeavyRenders = false
                         ToggleEclipse(false) 
                     end
                 else
-                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "Menú de outfits no detectado.", Duration = 3, Image = 4483362458})
+                    Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
                 end
             end)
-            if not success then
-                getgenv().BlockHeavyRenders = false
-                ToggleEclipse(false)
-                warn("Error: ", err)
-            end
         end)
+    end
+})
+
+ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
+
+local function SetOrientation(orientation) pcall(function() LocalPlayer.PlayerGui.ScreenOrientation = orientation end) end
+ExtraTab:CreateButton({Name = "➡️ Forzar Horizontal (Derecha)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end})
+ExtraTab:CreateButton({Name = "⬅️ Forzar Horizontal (Izquierda)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end})
+ExtraTab:CreateButton({Name = "⬆️ Forzar Vertical (Portrait)", Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end})
+ExtraTab:CreateButton({Name = "🔄 Sensor Horizontal Automático", Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end})
+ExtraTab:CreateButton({Name = "🌐 Sensor Libre (Rotación Total)", Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end})
+
+ExtraTab:CreateSection("🔍 Visualizador Inteligente (Con Caché)")
+
+ExtraTab:CreateInput({
+    Name = "👁️ Previsualizar Item por ID",
+    PlaceholderText = "Pega el ID aquí para verificar...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local itemID = tonumber(Text)
+        if itemID and itemID > 0 then
+            
+            local itemInfo
+            if ItemCache[itemID] then
+                itemInfo = ItemCache[itemID]
+            else
+                local success, data = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
+                if success and data then
+                    itemInfo = data
+                    ItemCache[itemID] = data 
+                end
+            end
+
+            if itemInfo then
+                pcall(function()
+                    if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
+                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis") end
+                end)
+                Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 3, Image = 4483362458})
+            else
+                Rayfield:Notify({Title = "Item Inválido", Content = "El ID ingresado no existe o falló la red.", Duration = 4, Image = 4483362458})
+            end
+        else
+            Rayfield:Notify({Title = "Error de Entrada", Content = "Por favor, ingresa únicamente números válidos.", Duration = 3, Image = 4483362458})
+        end
     end
 })
 
