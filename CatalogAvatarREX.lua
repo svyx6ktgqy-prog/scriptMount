@@ -2423,10 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V6)
--- Distancia Corregida + Anclaje Absoluto (Anti-Caídas) 
--- + Flotante + Explosión + Notificación Nativa "Infinita"
--- + Ocultar Interfaz + Desenfoque de Cámara
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V8)
+-- Limpieza Segura + Ocultar Paneles + Objetos se mantienen al Rechazar
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2444,8 +2442,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         local Lighting = game:GetService("Lighting")
         local LocalPlayer = Players.LocalPlayer
 
+        -- Destrucción total previa y limpieza de físicas residuales de selecciones pasadas
         if Workspace:FindFirstChild("Kitty3DPreview") then
             Workspace.Kitty3DPreview:Destroy()
+            task.wait() -- Pequeño respiro para que Roblox limpie memoria y colisiones
         end
 
         local PreviewFolder = Instance.new("Folder")
@@ -2455,7 +2455,6 @@ ClickBtn.MouseButton1Click:Connect(function()
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
         
-        -- FIX: Aparece mucho más lejos (14 studs) y se ajusta la altura al nivel de los pies (aprox Y - 3)
         local rawPos = hrp.Position + (hrp.CFrame.LookVector * 14)
         local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
@@ -2472,25 +2471,30 @@ ClickBtn.MouseButton1Click:Connect(function()
             
             local conn
             conn = cfValue.Changed:Connect(function(newCf)
-                model:PivotTo(newCf)
+                if model and model.Parent then
+                    model:PivotTo(newCf)
+                end
             end)
             
             dropTween.Completed:Connect(function()
-                conn:Disconnect()
-                cfValue:Destroy()
+                if conn then conn:Disconnect() end
+                if cfValue then cfValue:Destroy() end
             end)
         end
 
-        -- FIX: Función maestra para congelar TODAS las físicas, incluyendo la pieza raíz
         local function LockPhysics(obj)
             if obj:IsA("BasePart") then
                 obj.Anchored = true
                 obj.CanCollide = false
+                obj.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                obj.AssemblyAngularVelocity = Vector3.new(0,0,0)
             end
             for _, p in ipairs(obj:GetDescendants()) do
                 if p:IsA("BasePart") then
                     p.Anchored = true
                     p.CanCollide = false
+                    p.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    p.AssemblyAngularVelocity = Vector3.new(0,0,0)
                 end
             end
         end
@@ -2504,10 +2508,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             Tile = tileObjs[1]:Clone()
             Tile.Name = "KittyTile"
             Tile.Parent = PreviewFolder
-            
-            LockPhysics(Tile) -- Congelamos absolutamente todo
-            
-            -- FIX: Forzamos que caiga totalmente plano (CFrame sin ángulos raros)
+            LockPhysics(Tile)
             AnimateDrop(Tile, CFrame.new(spawnPos))
         else
             Tile = Instance.new("Part")
@@ -2521,7 +2522,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARTEL (Al lado del objeto y siempre de pie)
+        -- 2. CARTEL
         -- ==================================================
         local signSuccess, signObjs = pcall(function() return game:GetObjects("rbxassetid://121348416036836") end)
         local Sign = nil
@@ -2529,10 +2530,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             Sign = signObjs[1]:Clone()
             Sign.Name = "KittySign"
             Sign.Parent = PreviewFolder
-            
-            LockPhysics(Sign) -- Congelamos absolutamente todo
-            
-            -- FIX: Rotación forzada para estar de pie y un poco ladeado hacia adentro
+            LockPhysics(Sign)
             local signTarget = CFrame.new(spawnPos + Vector3.new(4, 1.5, 0)) * CFrame.Angles(0, math.rad(-25), 0)
             AnimateDrop(Sign, signTarget)
         end
@@ -2592,7 +2590,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime += dt
-            -- Ajustado a +6 studs desde el nivel del suelo para que resalte
             local basePos = spawnPos + Vector3.new(0, 6.0 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
@@ -2614,9 +2611,17 @@ ClickBtn.MouseButton1Click:Connect(function()
                 alreadyPrompted = true
                 if proximityConn then proximityConn:Disconnect() end
 
-                -- 🔥 ALTERNATIVA 2: Ocultamos la UI Principal y agregamos Desenfoque
+                -- Ocultar paneles internos para el efecto
                 local mainUI = ClickBtn:FindFirstAncestorOfClass("ScreenGui")
-                if mainUI then mainUI.Enabled = false end
+                local targetPanel = mainUI and (mainUI:FindFirstChild("MainFrame") or mainUI:FindFirstChild("Container") or mainUI:FindFirstChild("CatalogFrame"))
+                
+                if targetPanel then
+                    targetPanel.Visible = false
+                elseif mainUI then
+                    for _, child in ipairs(mainUI:GetChildren()) do
+                        if child:IsA("GuiObject") then child.Visible = false end
+                    end
+                end
 
                 local blurEffect = Instance.new("BlurEffect")
                 blurEffect.Name = "KittyPreviewBlur"
@@ -2677,8 +2682,14 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     SinkAndDestroy(Tile)
                                     SinkAndDestroy(Sign)
 
-                                    -- 🔥 Restauramos la UI y quitamos el desenfoque
-                                    if mainUI then mainUI.Enabled = true end
+                                    -- Restauramos la visibilidad de los paneles de la UI
+                                    if targetPanel then
+                                        targetPanel.Visible = true
+                                    elseif mainUI then
+                                        for _, child in ipairs(mainUI:GetChildren()) do
+                                            if child:IsA("GuiObject") then child.Visible = true end
+                                        end
+                                    end
                                     if blurEffect then blurEffect:Destroy() end
 
                                     UpdateVisualizer(item.id, item.price or "Gratis")
@@ -2687,11 +2698,15 @@ ClickBtn.MouseButton1Click:Connect(function()
                             end)
                         end)
                     else
-                        if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end
-                        if rotConnection then rotConnection:Disconnect() end
-                        
-                        -- 🔥 Restauramos la UI y quitamos el desenfoque si cancela
-                        if mainUI then mainUI.Enabled = true end
+                        -- SE MANTIENEN LOS OBJETOS AL RECHAZAR
+                        -- Restauramos solo la visibilidad de los paneles de la UI y quitamos el blur
+                        if targetPanel then
+                            targetPanel.Visible = true
+                        elseif mainUI then
+                            for _, child in ipairs(mainUI:GetChildren()) do
+                                if child:IsA("GuiObject") then child.Visible = true end
+                            end
+                        end
                         if blurEffect then blurEffect:Destroy() end
                     end
                 end
