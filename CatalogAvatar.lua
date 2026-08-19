@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - ALTERNATIVA 2)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2597,38 +2597,65 @@ local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
--- 1. Limpieza Profunda (NUEVA VERSIÓN EXTREMA - Anti-Crash para iPhone/Delta)
+-- 1. Limpieza Profunda (VERSIÓN EXTREMA PLUS+ - Ping Óptimo y Minimalista)
 ExtraTab:CreateButton({
-    Name = "🧹 Limpieza Profunda de RAM / Caché",
+    Name = "🧹 Limpieza Extrema y Ping Óptimo",
     Callback = function()
-        -- Medimos la memoria inicial (gcinfo devuelve KB, lo pasamos a MB)
         local ramAntes = math.floor(gcinfo() / 1024)
         
-        -- 1ra Alerta: Avisamos al usuario para que no toque nada
+        -- 1ra Alerta (NUEVA): Precaución antes de aplicar los cambios bruscos
         Rayfield:Notify({
-            Title = "⚠️ Limpieza Iniciada",
-            Content = "Optimizando memoria profunda. El juego puede pausarse 1 segundo...",
-            Duration = 3,
+            Title = "⚠️ PRECAUCIÓN: Limpieza Extrema",
+            Content = "Aplicando modo liso/minimalista. No toques nada, el juego se pausará 1-2 segundos...",
+            Duration = 4,
             Image = 4483362458,
         })
         
-        -- Separamos la limpieza en un hilo distinto para evitar que Delta se cierre (Crash)
         task.spawn(function()
-            task.wait(0.5) -- Damos tiempo a que se dibuje la notificación en pantalla
+            task.wait(1) -- Tiempo prudente para que el usuario lea la advertencia
             
             local success, err = pcall(function()
                 -- Limpiar cola de descargas
                 game:GetService("ContentProvider"):ClearWorkspaceQueue()
                 
-                -- Bajar calidad de físicas ocultas (Agua y Sombras) muy pesado en iPhone
+                -- APAGÓN VISUAL (Optimización de Ping y FPS)
+                Lighting.GlobalShadows = false
+                Lighting.Brightness = 0
+                Lighting.EnvironmentDiffuseScale = 0
+                Lighting.EnvironmentSpecularScale = 0
+                Lighting.ShadowSoftness = 0
+                Lighting.FogEnd = 9e9 -- Eliminar niebla por completo
+                
+                -- Apagar Post-Procesados pesados
+                for _, effect in ipairs(Lighting:GetChildren()) do
+                    if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("Atmosphere") then
+                        effect.Enabled = false
+                    end
+                end
+                
+                -- Neutralizar Terreno
                 if Workspace:FindFirstChildOfClass("Terrain") then
                     Workspace.Terrain.WaterWaveSize = 0
                     Workspace.Terrain.WaterWaveSpeed = 0
                     Workspace.Terrain.WaterReflectance = 0
+                    Workspace.Terrain.WaterTransparency = 1
+                    Workspace.Terrain.Decoration = false
                 end
-                Lighting.GlobalShadows = false
                 
-                -- Recolector de basura agresivo escalonado (Evita picos de lag)
+                -- FORZAR MODO LISO (Minimalista 100% estricto)
+                for _, v in ipairs(Workspace:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        v.Material = Enum.Material.SmoothPlastic
+                        v.Reflectance = 0
+                        v.CastShadow = false
+                    elseif v:IsA("Texture") or v:IsA("Decal") then
+                        v.Transparency = 1 
+                    elseif v:IsA("SurfaceAppearance") then
+                        v:Destroy() -- Eliminar Shaders 3D/PBR destructores de RAM
+                    end
+                end
+
+                -- Recolector de basura ultra-agresivo (Escalonado)
                 if collectgarbage then
                     collectgarbage("collect")
                     task.wait(0.1)
@@ -2636,25 +2663,25 @@ ExtraTab:CreateButton({
                     task.wait(0.1)
                     collectgarbage("collect") 
                 end
-                
-                -- Apagar texturas innecesarias en caché visual
-                for _, v in ipairs(Workspace:GetDescendants()) do
-                    if v:IsA("Texture") or v:IsA("Decal") then
-                        v.LocalTransparencyModifier = 1 
-                    end
-                end
             end)
 
             local ramDespues = math.floor(gcinfo() / 1024)
             local ramLiberada = ramAntes - ramDespues
-            if ramLiberada < 0 then ramLiberada = 0 end -- Evitar números negativos por fluctuación
+            if ramLiberada < 0 then ramLiberada = 0 end 
 
             if success then
-                -- 2da Alerta: Resultado exitoso con datos exactos
+                -- 2da Alerta: Resultado exitoso
                 Rayfield:Notify({
-                    Title = "✅ Optimización Completada",
-                    Content = "Sistema estable. Se liberaron aprox. " .. ramLiberada .. " MB de RAM.",
+                    Title = "✅ Modo Competitivo Activado",
+                    Content = "Entorno liso y ping optimizado. RAM liberada: " .. ramLiberada .. " MB.",
                     Duration = 5,
+                    Image = 4483362458,
+                })
+            else
+                Rayfield:Notify({
+                    Title = "❌ Error Menor",
+                    Content = "Se aplicó parcialmente la optimización.",
+                    Duration = 3,
                     Image = 4483362458,
                 })
             end
@@ -2664,7 +2691,7 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
 
--- 2. Mostrar/Ocultar Visualizador conectado a tu UI real
+-- 2. Mostrar/Ocultar Visualizador
 ExtraTab:CreateToggle({
     Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
     CurrentValue = false,
@@ -2692,41 +2719,40 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits Guardados convertido a BOTÓN con Sistema ANTI-LAG 100%
-local estadoMenuOutfits = false -- Variable local para simular el interruptor
+-- 3. Menú de Outfits con Sistema ANTI-LAG Externo (Controlado desde aquí)
+local estadoMenuOutfits = false 
 
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
-        estadoMenuOutfits = not estadoMenuOutfits -- Alternamos el estado
+        estadoMenuOutfits = not estadoMenuOutfits 
         
-        -- SISTEMA ANTI-LAG: Desviamos la carga pesada fuera del hilo principal
         task.spawn(function()
             local success = pcall(function()
-                -- Notificamos que está cargando para que el usuario sepa que no está congelado
                 if estadoMenuOutfits then
                     Rayfield:Notify({
                         Title = "⏳ Cargando Personajes...",
-                        Content = "Iniciando protección Anti-Lag. Espera un momento.",
+                        Content = "Iniciando protección Anti-Lag para miniaturas. Espera un momento.",
                         Duration = 2,
                         Image = 4483362458,
                     })
+                    
+                    -- Limpieza preventiva rápida antes de abrir el menú pesado
+                    if collectgarbage then collectgarbage("collect") end
                 end
 
-                task.wait(0.15) -- Micro-pausa vital para que el procesador respire
+                task.wait(0.2) -- Pausa ampliada para asimilar la limpieza previa
 
                 if CharMenu then
                     CharMenu.Visible = estadoMenuOutfits
                     
                     if estadoMenuOutfits and RefreshSavedCharactersGrid then
-                        -- task.defer ejecuta la función pesada en la cola secundaria de Roblox
-                        -- Esto evita que los modelos y animaciones congelen la pantalla al renderizarse
+                        -- Usamos task.defer para encolar la renderización del Viewport de forma segura
                         task.defer(function()
                             pcall(RefreshSavedCharactersGrid)
                         end)
                     end
                 else
-                    -- Método de respaldo si CharMenu no es global
                     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
                     local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
                     
@@ -2749,7 +2775,7 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
 
--- 4. Orientación de Pantalla (Sintaxis directa y segura)
+-- 4. Orientación de Pantalla 
 local function SetOrientation(orientation)
     pcall(function()
         Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation
