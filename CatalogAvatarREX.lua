@@ -2603,9 +2603,11 @@ local function UniversalAlert(config)
         pcall(function()
             local rawText = config.Text or config.Content or ""
             
-            -- Estructura solicitada: Nombre + Verificado + Aviso
+            -- SOLUCIÓN: Condensamos Nombre y Verificado en una sola línea.
+            -- Eliminamos el ID de textura del texto (ya que Roblox no renderiza imágenes ahí, solo emojis).
+            -- Esto evita que el layout corte tu mensaje real ('rawText').
             local formattedText = string.format(
-                "👤 Nombre: %s\n✅ Verificado: 93631347041836\n──────────────\n%s",
+                "👤 Nombre: %s | ✅ Verificado\n%s",
                 Players.LocalPlayer.DisplayName,
                 rawText
             )
@@ -2817,7 +2819,6 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        -- Fondo negro removido para evitar cierres o interrupciones.
                         UniversalAlert({Title = "📁 Menú de Outfits", Text = "Cargando avatares guardados...", Duration = 2})
                         
                         if RefreshSavedCharactersGrid then
