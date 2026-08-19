@@ -2590,14 +2590,19 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- ==================================================
         -- Los objetos de suelo ahora se alinean con Y = 0 (el cálculo inteligente hace que descansen perfectos)
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
+        
+        -- 1. Mesa original (Intacta en el centro)
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         
-        -- Trasladada a la mesa: X = 1.2 (un lado), Y = 2.7 (altura aproximada de la superficie de la mesa)
-        LoadAsset("9387964217", "Briefcase", CFrame.new(1.2, 2.7, 0) * CFrame.Angles(0, math.rad(25), 0))
+        -- 2. "Nueva Mesa" (El Cartel Kitty 121348416036836 colocado a un lado para que sea visible)
+        LoadAsset("121348416036836", "KittySignTable", CFrame.new(3.5, 0, -1.5) * CFrame.Angles(0, math.rad(-25), 0))
         
+        -- 3. Maletín colocado EXACTAMENTE sobre la "Nueva Mesa" (Mismas coordenadas X, Z, pero más alto en Y)
+        LoadAsset("9387964217", "Briefcase", CFrame.new(3.5, 1.5, -1.5) * CFrame.Angles(0, math.rad(15), 0))
+        
+        -- Resto de la decoración
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
-        LoadAsset("121348416036836", "KittySign", CFrame.new(4, 0, -3) * CFrame.Angles(0, math.rad(-35), 0))
 
         task.delay(0.65, function() 
             for i = 1, 10 do
