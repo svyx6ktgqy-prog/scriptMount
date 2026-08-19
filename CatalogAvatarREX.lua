@@ -2609,13 +2609,16 @@ local TrashClasses = {
 }
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA + ANTI-CRASH DELTA)
 -- ==========================================================
+local currentEclipseTween = nil -- Manejador global para evitar superposición de animaciones
+
 local function ToggleEclipse(estado)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
     
     if estado then
+        -- 1. Creamos la UI solo si no existe (Reutilizamos para evitar memory leaks)
         if not eclipseUI then
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
@@ -2626,7 +2629,7 @@ local function ToggleEclipse(estado)
             fondo.Name = "FondoNegro"
             fondo.Size = UDim2.new(1, 0, 1, 0)
             fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            fondo.BackgroundTransparency = 1
+            fondo.BackgroundTransparency = 1 -- Empieza completamente invisible
             fondo.Parent = eclipseUI
             eclipseUI.Parent = playerGui
         end
@@ -2634,17 +2637,28 @@ local function ToggleEclipse(estado)
         -- Bajamos la calidad gráfica del motor al mínimo absoluto
         pcall(function() settings().Rendering.QualityLevel = 1 end)
         
-        -- Oscurecemos instantáneamente
-        eclipseUI.FondoNegro.BackgroundTransparency = 0
+        -- Cancelamos cualquier cross-fade anterior para evitar glitches
+        if currentEclipseTween then currentEclipseTween:Cancel() end
+        
+        -- 2. CROSS-FADE IN: Animación suave hacia el negro total (0.5 segundos)
+        currentEclipseTween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+        currentEclipseTween:Play()
+        
     else
         if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
             -- Restauramos calidad gráfica
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
             
-            -- Desvanecimiento suave para que luzca profesional
-            local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-            tween:Play()
-            tween.Completed:Connect(function() eclipseUI:Destroy() end)
+            -- Cancelamos cualquier cross-fade anterior
+            if currentEclipseTween then currentEclipseTween:Cancel() end
+            
+            -- 3. CROSS-FADE OUT: Desvanecimiento suave para revelar el mundo nuevamente
+            currentEclipseTween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+            currentEclipseTween:Play()
+            
+            -- 🛑 NOTA IMPORTANTE PARA DELTA: No usamos :Destroy() aquí. 
+            -- Dejamos la UI viva pero invisible (Transparency = 1). 
+            -- Esto elimina el 100% de los crashes por Garbage Collection al abrir/cerrar rápido.
         end
     end
 end
