@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - RENDERIZADO 3D ULTRA)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PLUS++ ESTADO: CERO FÍSICAS / CERO LAG)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2593,27 +2593,48 @@ local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
+local RunService = game:GetService("RunService")
 
 -- ==========================================================
--- 🛡️ MOTOR DE OPTIMIZACIÓN 3D (RENDERIZADO ULTRA RÁPIDO)
+-- 🛡️ MOTOR DE DESFRAGMENTACIÓN 3D (ANULADOR DE FÍSICAS PLUS++)
 -- ==========================================================
-if not getgenv().FastRenderHookActive then
-    getgenv().FastRenderHookActive = true
+if not getgenv().PlusPlusRenderHook then
+    getgenv().PlusPlusRenderHook = true
     
     local oldNewindex
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        -- Si un objeto 3D está entrando al menú (ViewportFrame), lo optimizamos al vuelo
+        -- Si un objeto está siendo asignado a un ViewportFrame (Menú 3D)
         if not checkcaller() and index == "Parent" and typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+            
             task.spawn(function()
                 pcall(function()
-                    if self:IsA("Model") or self:IsA("BasePart") then
-                        -- Desactivamos cálculos pesados sin borrar el modelo visual
-                        for _, part in ipairs(self:GetDescendants()) do
-                            if part:IsA("BasePart") then
-                                part.CastShadow = false -- Adiós lag de sombras
-                            elseif part:IsA("Humanoid") then
-                                part.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-                                part:ChangeState(Enum.HumanoidStateType.Dead) -- Evita que el CPU calcule físicas de un modelo estático
+                    if self:IsA("Model") then
+                        -- ⚠️ EL VERDADERO ANTI-LAG: Momificamos el modelo 3D
+                        for _, v in ipairs(self:GetDescendants()) do
+                            
+                            -- 1. Eliminamos cálculos de entorno y colisión (Boost de CPU)
+                            if v:IsA("BasePart") then
+                                v.CastShadow = false
+                                v.CanCollide = false
+                                v.CanTouch = false
+                                v.CanQuery = false
+                                v.Anchored = true
+                                v.Massless = true
+                                v.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)
+                                
+                            -- 2. Apagamos el "Cerebro" del Avatar (El Humanoide causa el 90% del lag)
+                            elseif v:IsA("Humanoid") then
+                                v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                                v.RequiresNeck = false
+                                -- Desactivamos absolutamente todos los estados físicos del personaje
+                                local states = Enum.HumanoidStateType:GetEnumItems()
+                                for _, state in ipairs(states) do
+                                    pcall(function() v:SetStateEnabled(state, false) end)
+                                end
+                                
+                            -- 3. Aniquilamos todo lo que intente moverse
+                            elseif v:IsA("Animator") or v:IsA("Animation") or v:IsA("Script") or v:IsA("LocalScript") then
+                                v:Destroy()
                             end
                         end
                     end
@@ -2688,11 +2709,10 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits (CON APERTURA ASÍNCRONA PARA 0 LAG)
+-- 3. Menú de Outfits (ANTI-STUTTER PLUS++)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
-        -- task.spawn crea un hilo paralelo, evitando que el click en el botón congele tu juego
         task.spawn(function()
             local success, err = pcall(function()
                 local targetMenu = nil
@@ -2715,11 +2735,14 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        Rayfield:Notify({Title = "🚀 Menú Acelerado", Content = "Cargando renderizados 3D optimizados...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🚀 Carga PLUS++", Content = "Físicas desactivadas. Renderizando en frío.", Duration = 2, Image = 4483362458})
                         
                         if RefreshSavedCharactersGrid then
-                            -- task.defer ejecuta la carga pesada en el fondo (ESTA ES LA VERDADERA MAGIA)
-                            task.defer(function() pcall(RefreshSavedCharactersGrid) end)
+                            -- Usamos spawn para no interrumpir el hilo principal, 
+                            -- permitiendo que tu juego fluya mientras se arma el menú en segundo plano.
+                            task.spawn(function() 
+                                pcall(RefreshSavedCharactersGrid) 
+                            end)
                         end
                     end
                 else
