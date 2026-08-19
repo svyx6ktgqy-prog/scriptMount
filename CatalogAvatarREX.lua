@@ -2423,8 +2423,9 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V3)
--- Drop Controlado + Madera + Imagen Baja + Imán Real + Entierro
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V5)
+-- Flotante Más Grande + Caída de Pie + Cartel al Lado 
+-- + Explosión de Madera Limpia + Notificación Nativa "Infinita"
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2455,10 +2456,13 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- Posición base en el suelo
         local spawnPos = hrp.Position + hrp.CFrame.LookVector * 7
 
-        -- Función para animar caídas limpias desde el cielo
+        -- ==================================================
+        -- FUNCIÓN: CAÍDA PERFECTA Y PARADA (No cae de lado)
+        -- ==================================================
         local function AnimateDrop(model, targetCFrame)
             local cfValue = Instance.new("CFrameValue")
-            cfValue.Value = targetCFrame * CFrame.new(0, 25, 0) -- Aparece a 25 studs de altura
+            -- Sumamos 25 studs hacia arriba manteniendo la rotación exacta del target
+            cfValue.Value = targetCFrame + Vector3.new(0, 25, 0)
             model:PivotTo(cfValue.Value)
             
             local dropTween = TweenService:Create(cfValue, TweenInfo.new(0.65, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Value = targetCFrame})
@@ -2476,7 +2480,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 1. BALDOSA (Caída animada, sin romperse)
+        -- 1. BALDOSA (Objeto Principal)
         -- ==================================================
         local tileSuccess, tileObjs = pcall(function() return game:GetObjects("rbxassetid://4699539638") end)
         local Tile = nil
@@ -2486,7 +2490,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             Tile.Parent = PreviewFolder
             for _, p in ipairs(Tile:GetDescendants()) do
                 if p:IsA("BasePart") then
-                    p.Anchored = true -- Fix: Anclado para que no se desarme
+                    p.Anchored = true
                     p.CanCollide = false
                 end
             end
@@ -2503,7 +2507,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARTEL (Pose predefinida de pie)
+        -- 2. CARTEL (Al lado del objeto y siempre de pie)
         -- ==================================================
         local signSuccess, signObjs = pcall(function() return game:GetObjects("rbxassetid://121348416036836") end)
         local Sign = nil
@@ -2518,39 +2522,39 @@ ClickBtn.MouseButton1Click:Connect(function()
                 end
             end
             
-            -- Fix: Pose perfecta, un poco a la derecha, de pie y ligeramente girado
-            local signTarget = CFrame.new(spawnPos + Vector3.new(2.8, 1.5, 0)) * CFrame.Angles(0, math.rad(-25), 0)
+            -- Posición: Desplazado a la derecha (+4 en X), 1.5 studs elevado (para que clave de pie), y rotado levemente hacia adentro.
+            local signTarget = CFrame.new(spawnPos + Vector3.new(4, 1.5, 0)) * CFrame.Angles(0, math.rad(-25), 0)
             AnimateDrop(Sign, signTarget)
         end
 
         -- ==================================================
-        -- EFECTO: TROZOS DE MADERA AL ATERRIZAR
+        -- EFECTO: EXPLOSIÓN DE PIEZAS DE MADERA (Sin ramas)
         -- ==================================================
-        task.delay(0.65, function() -- Se ejecuta justo cuando terminan de caer
-            for i = 1, 8 do
+        task.delay(0.65, function() 
+            for i = 1, 14 do
                 local wood = Instance.new("Part")
-                wood.Size = Vector3.new(0.4, 0.2, math.random(4, 8) / 10)
-                wood.Position = spawnPos + Vector3.new(math.random(-2, 2), 0.5, math.random(-2, 2))
+                wood.Size = Vector3.new(math.random(3,6)/10, math.random(3,6)/10, math.random(3,6)/10)
+                wood.Position = spawnPos + Vector3.new(0, 1.5, 0) -- Aparecen desde el centro del impacto
                 wood.Material = Enum.Material.Wood
-                wood.Color = Color3.fromRGB(110, 75, 45) -- Color madera oscura
+                wood.Color = Color3.fromRGB(110, 75, 45) 
                 wood.Anchored = false
                 wood.CanCollide = true
                 wood.Parent = PreviewFolder
                 
-                -- Fuerza aleatoria para que salten por los aires
-                wood.Velocity = Vector3.new(math.random(-15, 15), math.random(15, 30), math.random(-15, 15))
-                wood.RotVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
+                -- Explosión física en todas direcciones
+                wood.Velocity = Vector3.new(math.random(-25, 25), math.random(20, 45), math.random(-25, 25))
+                wood.RotVelocity = Vector3.new(math.random(-20, 20), math.random(-20, 20), math.random(-20, 20))
                 
-                Debris:AddItem(wood, 2.5) -- Se borran solos tras 2.5 seg
+                Debris:AddItem(wood, 2.5)
             end
         end)
 
         -- ==================================================
-        -- 3. IMAGEN FLOTANTE (Más cerca del suelo)
+        -- 3. IMAGEN FLOTANTE (Más Grande y Más Alta)
         -- ==================================================
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
-        ImagePart.Size = Vector3.new(2.8, 2.8, 0.15)
+        ImagePart.Size = Vector3.new(5, 5, 0.15)
         ImagePart.Anchored = true
         ImagePart.CanCollide = false
         ImagePart.Transparency = 1
@@ -2579,13 +2583,13 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime += dt
-            -- Fix: Altura reducida de 3.5 a 2.0 para que quede más cerca de la losa
-            local basePos = spawnPos + Vector3.new(0, 2.0 + math.sin(floatTime * 1.8) * 0.35, 0)
+            -- Se asegura de estar a 5 studs de altura, claramente por encima del Tile 3D
+            local basePos = spawnPos + Vector3.new(0, 5.0 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
 
         -- ==================================================
-        -- DETECCIÓN + ALERTA NATIVA
+        -- DETECCIÓN + NOTIFICACIÓN NATIVA "INFINITA"
         -- ==================================================
         local alreadyPrompted = false
         local proximityConn
@@ -2597,25 +2601,20 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
 
             local dist = (hrp.Position - spawnPos).Magnitude
-            if dist <= 6.5 then
+            if dist <= 8.5 then
                 alreadyPrompted = true
                 if proximityConn then proximityConn:Disconnect() end
 
                 local bindable = Instance.new("BindableFunction")
                 bindable.OnInvoke = function(response)
                     if response == "Conseguir" then
-                        -- ==================================================
-                        -- IMÁN FIXEADO (Se ve la animación serpenteante)
-                        -- ==================================================
                         task.spawn(function()
                             if rotConnection then rotConnection:Disconnect() end
-                            
-                            -- IMPORTANTE: Mantenemos Anchored = true para que la gravedad no arruine la animación
                             ImagePart.Anchored = true 
                             
                             local head = char:FindFirstChild("Head") or hrp
                             local startTime = tick()
-                            local duration = 1.2 -- Lo hacemos un poco más rápido (satisfactorio)
+                            local duration = 1.2 
 
                             local attractConn
                             attractConn = RunService.RenderStepped:Connect(function()
@@ -2625,7 +2624,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 end
 
                                 local t = math.clamp((tick() - startTime) / duration, 0, 1)
-                                local ease = t * t * (3 - 2 * t) -- Smoothstep
+                                local ease = t * t * (3 - 2 * t)
 
                                 local snake = math.sin(t * 15) * (1 - t) * 2.5
                                 local targetPos = head.Position + Vector3.new(snake, 0, 0)
@@ -2637,29 +2636,20 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     attractConn:Disconnect()
                                     ImagePart:Destroy()
 
-                                    -- ==================================================
-                                    -- ANIMACIÓN DE ENTIERRO (Sinking Glitch)
-                                    -- ==================================================
                                     local function SinkAndDestroy(obj)
                                         if not obj then return end
                                         task.spawn(function()
-                                            for i = 1, 20 do -- Baja más veces (entierro más profundo)
+                                            for i = 1, 20 do 
                                                 if not obj.Parent then break end
-                                                
                                                 if obj:IsA("Model") then
                                                     obj:PivotTo(obj:GetPivot() * CFrame.new(0, -0.35, 0))
                                                 elseif obj:IsA("BasePart") then
                                                     obj.CFrame = obj.CFrame * CFrame.new(0, -0.35, 0)
                                                 end
-                                                
                                                 for _, p in ipairs(obj:GetDescendants()) do
-                                                    if p:IsA("BasePart") then
-                                                        p.Transparency = math.clamp(p.Transparency + 0.06, 0, 1)
-                                                    end
+                                                    if p:IsA("BasePart") then p.Transparency = math.clamp(p.Transparency + 0.06, 0, 1) end
                                                 end
-                                                if obj:IsA("BasePart") then
-                                                    obj.Transparency = math.clamp(obj.Transparency + 0.06, 0, 1)
-                                                end
+                                                if obj:IsA("BasePart") then obj.Transparency = math.clamp(obj.Transparency + 0.06, 0, 1) end
                                                 task.wait(0.03)
                                             end
                                             if obj and obj.Parent then obj:Destroy() end
@@ -2685,20 +2675,12 @@ ClickBtn.MouseButton1Click:Connect(function()
                         Title = item.name,
                         Text = "¿Quieres conseguir este ítem?",
                         Icon = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150",
-                        Duration = 12,
+                        Duration = 9999999, -- Tiempo masivo para que no desaparezca sola
                         Button1 = "Conseguir",
                         Button2 = "Rechazar",
                         Callback = bindable
                     })
                 end)
-            end
-        end)
-
-        task.delay(45, function()
-            if PreviewFolder and PreviewFolder.Parent and not alreadyPrompted then
-                PreviewFolder:Destroy()
-                if rotConnection then rotConnection:Disconnect() end
-                if proximityConn then proximityConn:Disconnect() end
             end
         end)
     end)
