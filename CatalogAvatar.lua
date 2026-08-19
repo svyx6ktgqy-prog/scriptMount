@@ -2591,39 +2591,74 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
--- 1. Limpieza Profunda (Segura para Delta sin romper hilos)
+-- 1. Limpieza Profunda (NUEVA VERSIÓN EXTREMA - Anti-Crash para iPhone/Delta)
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Profunda de RAM / Caché",
     Callback = function()
-        local success, err = pcall(function()
-            game:GetService("ContentProvider"):ClearWorkspaceQueue()
+        -- Medimos la memoria inicial (gcinfo devuelve KB, lo pasamos a MB)
+        local ramAntes = math.floor(gcinfo() / 1024)
+        
+        -- 1ra Alerta: Avisamos al usuario para que no toque nada
+        Rayfield:Notify({
+            Title = "⚠️ Limpieza Iniciada",
+            Content = "Optimizando memoria profunda. El juego puede pausarse 1 segundo...",
+            Duration = 3,
+            Image = 4483362458,
+        })
+        
+        -- Separamos la limpieza en un hilo distinto para evitar que Delta se cierre (Crash)
+        task.spawn(function()
+            task.wait(0.5) -- Damos tiempo a que se dibuje la notificación en pantalla
             
-            if collectgarbage then
-                collectgarbage("collect")
-                task.wait(0.1)
-                collectgarbage("collect") 
-            end
-            
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v:IsA("Texture") or v:IsA("Decal") then
-                    v.LocalTransparencyModifier = 0 
+            local success, err = pcall(function()
+                -- Limpiar cola de descargas
+                game:GetService("ContentProvider"):ClearWorkspaceQueue()
+                
+                -- Bajar calidad de físicas ocultas (Agua y Sombras) muy pesado en iPhone
+                if Workspace:FindFirstChildOfClass("Terrain") then
+                    Workspace.Terrain.WaterWaveSize = 0
+                    Workspace.Terrain.WaterWaveSpeed = 0
+                    Workspace.Terrain.WaterReflectance = 0
                 end
+                Lighting.GlobalShadows = false
+                
+                -- Recolector de basura agresivo escalonado (Evita picos de lag)
+                if collectgarbage then
+                    collectgarbage("collect")
+                    task.wait(0.1)
+                    collectgarbage("collect") 
+                    task.wait(0.1)
+                    collectgarbage("collect") 
+                end
+                
+                -- Apagar texturas innecesarias en caché visual
+                for _, v in ipairs(Workspace:GetDescendants()) do
+                    if v:IsA("Texture") or v:IsA("Decal") then
+                        v.LocalTransparencyModifier = 1 
+                    end
+                end
+            end)
+
+            local ramDespues = math.floor(gcinfo() / 1024)
+            local ramLiberada = ramAntes - ramDespues
+            if ramLiberada < 0 then ramLiberada = 0 end -- Evitar números negativos por fluctuación
+
+            if success then
+                -- 2da Alerta: Resultado exitoso con datos exactos
+                Rayfield:Notify({
+                    Title = "✅ Optimización Completada",
+                    Content = "Sistema estable. Se liberaron aprox. " .. ramLiberada .. " MB de RAM.",
+                    Duration = 5,
+                    Image = 4483362458,
+                })
             end
         end)
-
-        if success then
-            Rayfield:Notify({
-                Title = "Optimización Completada",
-                Content = "Memoria RAM y caché liberadas con éxito.",
-                Duration = 4,
-                Image = 4483362458,
-            })
-        end
     end
 })
 
@@ -2632,15 +2667,13 @@ ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
 -- 2. Mostrar/Ocultar Visualizador conectado a tu UI real
 ExtraTab:CreateToggle({
     Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
-    CurrentValue = false, -- Empieza apagado por defecto
+    CurrentValue = false,
     Flag = "ToggleItemVisualizer",
     Callback = function(Value)
         pcall(function()
-            -- Priorizamos interactuar directamente con tu variable 'Container' si están en el mismo script
             if Container then
                 Container.Visible = Value
             else
-                -- Método de respaldo por si están en scripts separados
                 local targetVisualizerName = "VisualizadorItemGUI" 
                 local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
                 local visualizerUI = CoreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
@@ -2659,38 +2692,57 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Mostrar/Ocultar el Menú de Trajes Guardados (CharMenu)
-ExtraTab:CreateToggle({
+-- 3. Menú de Outfits Guardados convertido a BOTÓN con Sistema ANTI-LAG 100%
+local estadoMenuOutfits = false -- Variable local para simular el interruptor
+
+ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
-    CurrentValue = false,
-    Flag = "ToggleCharMenu",
-    Callback = function(Value)
-        pcall(function()
-            -- Priorizamos la variable real 'CharMenu' descubierta en tu código
-            if CharMenu then
-                CharMenu.Visible = Value
-                -- Refrescamos la UI si se abre, tal como lo hace tu botón original
-                if Value and RefreshSavedCharactersGrid then
-                    RefreshSavedCharactersGrid()
+    Callback = function()
+        estadoMenuOutfits = not estadoMenuOutfits -- Alternamos el estado
+        
+        -- SISTEMA ANTI-LAG: Desviamos la carga pesada fuera del hilo principal
+        task.spawn(function()
+            local success = pcall(function()
+                -- Notificamos que está cargando para que el usuario sepa que no está congelado
+                if estadoMenuOutfits then
+                    Rayfield:Notify({
+                        Title = "⏳ Cargando Personajes...",
+                        Content = "Iniciando protección Anti-Lag. Espera un momento.",
+                        Duration = 2,
+                        Image = 4483362458,
+                    })
                 end
-            else
-                -- Método de respaldo avanzado buscando en la interfaz gráfica
-                local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-                local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
-                
-                if visualizerUI then
-                    for _, frame in ipairs(visualizerUI:GetChildren()) do
-                        if frame:IsA("Frame") then
-                            local title = frame:FindFirstChildWhichIsA("TextLabel")
-                            -- Validamos por el texto exacto que le diste a tu UI
-                            if title and string.find(title.Text, "OUTFITS GUARDADOS") then
-                                frame.Visible = Value
-                                break
+
+                task.wait(0.15) -- Micro-pausa vital para que el procesador respire
+
+                if CharMenu then
+                    CharMenu.Visible = estadoMenuOutfits
+                    
+                    if estadoMenuOutfits and RefreshSavedCharactersGrid then
+                        -- task.defer ejecuta la función pesada en la cola secundaria de Roblox
+                        -- Esto evita que los modelos y animaciones congelen la pantalla al renderizarse
+                        task.defer(function()
+                            pcall(RefreshSavedCharactersGrid)
+                        end)
+                    end
+                else
+                    -- Método de respaldo si CharMenu no es global
+                    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+                    local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
+                    
+                    if visualizerUI then
+                        for _, frame in ipairs(visualizerUI:GetChildren()) do
+                            if frame:IsA("Frame") then
+                                local title = frame:FindFirstChildWhichIsA("TextLabel")
+                                if title and string.find(title.Text, "OUTFITS GUARDADOS") then
+                                    frame.Visible = estadoMenuOutfits
+                                    break
+                                end
                             end
                         end
                     end
                 end
-            end
+            end)
         end)
     end
 })
@@ -2740,15 +2792,12 @@ ExtraTab:CreateInput({
         local itemID = tonumber(Text)
         
         if itemID and itemID > 0 then
-            -- Validación en los servidores de Roblox
             local success, itemInfo = pcall(function()
                 return MarketplaceService:GetProductInfo(itemID)
             end)
 
             if success and itemInfo then
-                -- ENVIAR AL VISUALIZADOR REAL Y SOBREESCRIBIR DATOS
                 pcall(function()
-                    -- Novedad: Actualizamos la tabla CurrentData desde aquí antes de llamar al visualizador
                     if CurrentData then
                         CurrentData.Id = tostring(itemID)
                         CurrentData.Price = tostring(itemInfo.PriceInRobux or 0)
@@ -2757,14 +2806,12 @@ ExtraTab:CreateInput({
                         end
                     end
 
-                    -- Llamamos a la función global UpdateVisualizer tal como estaba
                     if UpdateVisualizer then
                         local price = itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis"
                         UpdateVisualizer(itemID, price)
                     end
                 end)
 
-                -- Notificación PRO mostrando el nombre real del ítem encontrado
                 Rayfield:Notify({
                     Title = "Item Validado",
                     Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"),
@@ -2772,7 +2819,6 @@ ExtraTab:CreateInput({
                     Image = 4483362458,
                 })
             else
-                -- El ID no existe en Roblox o está borrado
                 Rayfield:Notify({
                     Title = "Item Inválido",
                     Content = "El ID ingresado no existe en el catálogo de Roblox.",
