@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V14)
--- Solución al Menú Roto (ToggleUI Inteligente) + Sintaxis Clásica
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V15)
+-- Patas de mesa + Ocultar todo el UI + No forzar apertura
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2443,29 +2443,19 @@ ClickBtn.MouseButton1Click:Connect(function()
         local LocalPlayer = Players.LocalPlayer
 
         -- ==================================================
-        -- CONTROL DEL SCREENGUI (NUEVO FIX INTELIGENTE)
+        -- CONTROL DEL SCREENGUI (NUEVO FIX DEFINITIVO)
         -- ==================================================
-        local function ToggleUI(visible)
+        local function HideAllFrames()
             local mainUI = ClickBtn:FindFirstAncestorOfClass("ScreenGui")
             if not mainUI then return end
 
-            -- Buscamos nombres comunes
-            local targetPanel = mainUI:FindFirstChild("MainFrame") or mainUI:FindFirstChild("Container") or mainUI:FindFirstChild("CatalogFrame")
-            
-            -- Si no se llama así, el script rastrea hacia arriba desde el botón
-            -- para encontrar el panel exacto que lo contiene, sin tocar otros botones (como el de abrir menú).
-            if not targetPanel then
-                local current = ClickBtn
-                while current and current.Parent and current.Parent ~= mainUI do
-                    current = current.Parent
+            -- Recorre TODOS los elementos de la interfaz principal.
+            -- Si es un Frame (Catálogo, Visualizador antiguo, etc.) y está visible, lo oculta.
+            -- NO lo volveremos a abrir automáticamente al final para evitar que te moleste.
+            for _, child in ipairs(mainUI:GetChildren()) do
+                if (child:IsA("Frame") or child:IsA("ScrollingFrame")) and child.Visible then
+                    child.Visible = false
                 end
-                if current and current:IsA("GuiObject") then
-                    targetPanel = current
-                end
-            end
-
-            if targetPanel then
-                targetPanel.Visible = visible
             end
         end
 
@@ -2501,7 +2491,12 @@ ClickBtn.MouseButton1Click:Connect(function()
             dropHeight = dropHeight or 25
             local cfValue = Instance.new("CFrameValue")
             cfValue.Value = targetCFrame + Vector3.new(0, dropHeight, 0)
-            model:PivotTo(cfValue.Value)
+            
+            if model:IsA("Model") then
+                model:PivotTo(cfValue.Value)
+            else
+                model.CFrame = cfValue.Value
+            end
             
             local dropTween = TweenService:Create(cfValue, TweenInfo.new(0.65, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Value = targetCFrame})
             dropTween:Play()
@@ -2509,7 +2504,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             local conn
             conn = cfValue.Changed:Connect(function(newCf)
                 if model and model.Parent then
-                    model:PivotTo(newCf)
+                    if model:IsA("Model") then model:PivotTo(newCf) else model.CFrame = newCf end
                 end
             end)
             
@@ -2546,7 +2541,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
+        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA + PATAS
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, -0.2, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
@@ -2554,6 +2549,31 @@ ClickBtn.MouseButton1Click:Connect(function()
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0.2, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0.2, 3.5) * CFrame.Angles(0, math.rad(10), 0))
         LoadAsset("121348416036836", "KittySign", CFrame.new(4, 1.5, -3) * CFrame.Angles(0, math.rad(-35), 0))
+
+        -- Generar las 4 patas negras para que la mesa no flote
+        task.delay(0.2, function()
+            local legOffsets = {
+                Vector3.new(2.6, 1.4, 1.6),
+                Vector3.new(-2.6, 1.4, 1.6),
+                Vector3.new(2.6, 1.4, -1.6),
+                Vector3.new(-2.6, 1.4, -1.6)
+            }
+            
+            for _, offset in ipairs(legOffsets) do
+                local leg = Instance.new("Part")
+                leg.Name = "TableLeg"
+                leg.Size = Vector3.new(0.3, 2.8, 0.3)
+                leg.Color = Color3.fromRGB(15, 15, 15) -- Negro
+                leg.Material = Enum.Material.Wood
+                leg.Anchored = true
+                leg.CanCollide = false
+                leg.Parent = PreviewFolder
+                
+                -- Las animamos cayendo igual que el resto
+                AnimateDrop(leg, CFrame.new(spawnPos + offset))
+                table.insert(SceneObjects, leg)
+            end
+        end)
 
         task.delay(0.65, function() 
             for i = 1, 10 do
@@ -2725,7 +2745,9 @@ ClickBtn.MouseButton1Click:Connect(function()
             
             if dist <= 8.5 and promptState == "Waiting" then
                 promptState = "Prompting"
-                ToggleUI(false)
+                
+                -- Ocultamos todos los menús visibles
+                HideAllFrames()
 
                 local blurEffect = Instance.new("BlurEffect")
                 blurEffect.Name = "KittyPreviewBlur"
@@ -2799,8 +2821,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     end)
 
                                     if blurEffect then blurEffect:Destroy() end
-                                    ToggleUI(true) 
-
+                                    
+                                    -- ¡OJO! Ya no hay ToggleUI(true) aquí. El catálogo se queda CERRADO.
                                     UpdateVisualizer(item.id, item.price or "Gratis")
                                     NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
                                 end
@@ -2808,7 +2830,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                         end)
                     else
                         if blurEffect then blurEffect:Destroy() end
-                        ToggleUI(true) 
+                        -- ¡OJO! Ya no hay ToggleUI(true) aquí. El catálogo se queda CERRADO.
                         promptState = "Cooldown"
                     end
                 end
@@ -2831,6 +2853,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
     end)
 end)
+
 -- ==========================================================
 -- FIN MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
 -- ==========================================================
