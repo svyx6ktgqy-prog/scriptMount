@@ -2594,19 +2594,44 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 
+-- ==========================================================
+-- 🛡️ MOTOR DE INTERCEPCIÓN DE RED (ANTI-YIELD HOOK)
+-- ==========================================================
+-- Esto engaña al juego para que no descargue datos pesados de internet
+if not getgenv().NetworkHooked then
+    getgenv().NetworkHooked = true
+    getgenv().BlockAvatarDownloads = false
+    
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        if getgenv().BlockAvatarDownloads and not checkcaller() then
+            local method = getnamecallmethod()
+            
+            -- Si el juego intenta descargar ropa o el modelo del servidor, devolvemos cascarones vacíos al instante
+            if method == "GetHumanoidDescriptionFromOutfitId" or method == "GetHumanoidDescriptionFromUserId" then
+                return Instance.new("HumanoidDescription")
+            elseif method == "CreateHumanoidModelFromOutfitId" or method == "GetCharacterAppearanceAsync" or method == "LoadCharacterAppearance" then
+                return Instance.new("Model")
+            elseif method == "ApplyDescription" then
+                return -- Bloqueamos la aplicación pesada de ropa
+            end
+        end
+        return oldNamecall(self, ...)
+    end)
+end
+-- ==========================================================
+
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
--- 1. Limpieza Profunda (CORREGIDA - SIN ERROR DE COLLECTGARBAGE)
+-- 1. Limpieza Profunda
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Extrema y Ping Óptimo",
     Callback = function()
-        
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(respuesta)
             if respuesta == "OK" then
-                
                 Rayfield:Notify({
                     Title = "⚙️ Optimizando...",
                     Content = "Aplicando modo liso/minimalista. Espera un momento.",
@@ -2616,10 +2641,7 @@ ExtraTab:CreateButton({
                 
                 task.spawn(function()
                     task.wait(0.5) 
-                    
                     local success, err = pcall(function()
-                        
-                        -- APAGÓN VISUAL PROTEGIDO
                         pcall(function()
                             Lighting.GlobalShadows = false
                             Lighting.Brightness = 0
@@ -2629,7 +2651,6 @@ ExtraTab:CreateButton({
                             Lighting.FogEnd = 9e9 
                         end)
                         
-                        -- Apagar Post-Procesados
                         for _, effect in ipairs(Lighting:GetChildren()) do
                             pcall(function()
                                 if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
@@ -2640,7 +2661,6 @@ ExtraTab:CreateButton({
                             end)
                         end
                         
-                        -- Neutralizar Terreno
                         pcall(function()
                             if Workspace:FindFirstChildOfClass("Terrain") then
                                 Workspace.Terrain.WaterWaveSize = 0
@@ -2651,7 +2671,6 @@ ExtraTab:CreateButton({
                             end
                         end)
                         
-                        -- FORZAR MODO LISO
                         for _, v in ipairs(Workspace:GetDescendants()) do
                             pcall(function()
                                 if v:IsA("BasePart") then
@@ -2668,40 +2687,13 @@ ExtraTab:CreateButton({
                     end)
 
                     if success then
-                        Rayfield:Notify({
-                            Title = "✅ Modo Competitivo Activado",
-                            Content = "Entorno liso al 100%. Ping y FPS optimizados.",
-                            Duration = 5,
-                            Image = 4483362458,
-                        })
-                    else
-                        Rayfield:Notify({
-                            Title = "❌ Error en Limpieza",
-                            Content = "Detalle: " .. tostring(err),
-                            Duration = 5,
-                            Image = 4483362458,
-                        })
+                        Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100%.", Duration = 3, Image = 4483362458})
                     end
                 end)
-            else
-                Rayfield:Notify({
-                    Title = "❌ Acción Cancelada",
-                    Content = "No se aplicaron los cambios de optimización.",
-                    Duration = 3,
-                    Image = 4483362458,
-                })
             end
         end
-
         pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "⚠️ ¿Modo Extremo?",
-                Text = "El mapa perderá texturas para dar FPS máximos. ¿Continuar?",
-                Duration = 10,
-                Button1 = "OK",
-                Button2 = "Cancelar",
-                Callback = bindable
-            })
+            StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Modo Extremo?", Text = "El mapa perderá texturas. ¿Continuar?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
         end)
     end
 })
@@ -2709,18 +2701,9 @@ ExtraTab:CreateButton({
 ExtraTab:CreateButton({
     Name = "🌍 Restaurar Entorno (Normalidad)",
     Callback = function()
-        
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(respuesta)
             if respuesta == "OK" then
-                
-                Rayfield:Notify({
-                    Title = "🌍 Restaurando...",
-                    Content = "Devolviendo luces, sombras y texturas base...",
-                    Duration = 3,
-                    Image = 4483362458,
-                })
-                
                 task.spawn(function()
                     pcall(function()
                         Lighting.GlobalShadows = true
@@ -2759,36 +2742,13 @@ ExtraTab:CreateButton({
                             end
                         end)
                     end
-                    
-                    Rayfield:Notify({
-                        Title = "✅ Entorno Restaurado",
-                        Content = "Los gráficos han vuelto a la normalidad.",
-                        Duration = 4,
-                        Image = 4483362458,
-                    })
+                    Rayfield:Notify({Title = "✅ Restaurado", Content = "Gráficos a la normalidad.", Duration = 3, Image = 4483362458})
                 end)
-                
-            else
-                Rayfield:Notify({
-                    Title = "❌ Acción Cancelada",
-                    Content = "No se restauraron los gráficos.",
-                    Duration = 3,
-                    Image = 4483362458,
-                })
             end
         end
-
         pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "⚠️ ¿Restaurar Gráficos?",
-                Text = "¿Deseas volver a los gráficos originales (con texturas y sombras)?",
-                Duration = 10,
-                Button1 = "OK",
-                Button2 = "Cancelar",
-                Callback = bindable
-            })
+            StarterGui:SetCore("SendNotification", {Title = "⚠️ ¿Restaurar?", Text = "¿Deseas volver a los gráficos originales?", Duration = 10, Button1 = "OK", Button2 = "Cancelar", Callback = bindable})
         end)
-        
     end
 })
 
@@ -2821,7 +2781,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con INTERCEPTOR AGRESIVO EXTERNO (0 LAG)
+-- 3. Menú de Outfits con BLOQUEO DE RED + INTERCEPTOR VISUAL
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2854,30 +2814,26 @@ ExtraTab:CreateButton({
                     
                     if nuevoEstado then
                         Rayfield:Notify({
-                            Title = "⏳ Interceptando 3D...",
-                            Content = "Bloqueando carga de avatares para evitar lag.",
+                            Title = "🚀 Carga Ultra Rápida",
+                            Content = "Interceptando descargas de Roblox para 0 lag.",
                             Duration = 2,
                             Image = 4483362458,
                         })
                         
-                        -- ==========================================================
-                        -- INTERCEPTOR AGRESIVO (EXTERNO)
-                        -- ==========================================================
+                        -- ACTIVAMOS EL BLOQUEO DE DESCARGAS (HOOK)
+                        getgenv().BlockAvatarDownloads = true
+                        
+                        -- Interceptor visual por si algo se escapa
                         if not targetMenu:GetAttribute("RadarActivo") then
                             targetMenu:SetAttribute("RadarActivo", true)
                             
                             local function NeutralizarDescarga(item)
-                                -- 1. Si intenta meter un modelo 3D (Avatar), lo fulminamos antes de que descargue la ropa
                                 if item:IsA("Model") or item:IsA("Humanoid") or item:IsA("WorldModel") then
-                                    pcall(function()
-                                        item:Destroy()
-                                    end)
+                                    pcall(function() item:Destroy() end)
                                 end
                                 
-                                -- 2. Si crea el cuadro 3D, lo apagamos para que no consuma GPU y ponemos la foto
                                 if item:IsA("ViewportFrame") then
-                                    item.Visible = false -- Apaga el motor de renderizado de este frame
-                                    
+                                    item.Visible = false
                                     task.defer(function()
                                         local Card = item.Parent
                                         if Card and not Card:FindFirstChild("AntiLagPlaceholder") then
@@ -2900,23 +2856,24 @@ ExtraTab:CreateButton({
                                 end
                             end
 
-                            -- Conectamos el interceptor
                             targetMenu.DescendantAdded:Connect(NeutralizarDescarga)
-                            
-                            -- Limpieza de seguridad por si ya había algo
                             for _, item in ipairs(targetMenu:GetDescendants()) do
                                 NeutralizarDescarga(item)
                             end
                         end
-                        -- ==========================================================
 
-                        task.wait(0.1) 
-                        
+                        -- Ejecutamos la función original (ahora bloqueada por el hook)
                         if RefreshSavedCharactersGrid then
                             task.defer(function()
                                 pcall(RefreshSavedCharactersGrid)
                             end)
                         end
+                        
+                        -- Apagamos el bloqueo de red después de 1 segundo para no romper tu juego principal
+                        task.delay(1, function()
+                            getgenv().BlockAvatarDownloads = false
+                        end)
+                        
                     end
                 else
                     Rayfield:Notify({
@@ -2934,35 +2891,14 @@ ExtraTab:CreateButton({
 ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
 
 local function SetOrientation(orientation)
-    pcall(function()
-        Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation
-    end)
+    pcall(function() Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation end)
 end
 
-ExtraTab:CreateButton({
-    Name = "➡️ Forzar Horizontal (Derecha)",
-    Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end
-})
-
-ExtraTab:CreateButton({
-    Name = "⬅️ Forzar Horizontal (Izquierda)",
-    Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end
-})
-
-ExtraTab:CreateButton({
-    Name = "⬆️ Forzar Vertical (Portrait)",
-    Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end
-})
-
-ExtraTab:CreateButton({
-    Name = "🔄 Sensor Horizontal Automático",
-    Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end
-})
-
-ExtraTab:CreateButton({
-    Name = "🌐 Sensor Libre (Rotación Total)",
-    Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end
-})
+ExtraTab:CreateButton({Name = "➡️ Forzar Horizontal (Derecha)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end})
+ExtraTab:CreateButton({Name = "⬅️ Forzar Horizontal (Izquierda)", Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end})
+ExtraTab:CreateButton({Name = "⬆️ Forzar Vertical (Portrait)", Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end})
+ExtraTab:CreateButton({Name = "🔄 Sensor Horizontal Automático", Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end})
+ExtraTab:CreateButton({Name = "🌐 Sensor Libre (Rotación Total)", Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end})
 
 ExtraTab:CreateSection("🔍 Visualizador Inteligente")
 
@@ -2972,49 +2908,26 @@ ExtraTab:CreateInput({
     RemoveTextAfterFocusLost = false,
     Callback = function(Text)
         local itemID = tonumber(Text)
-        
         if itemID and itemID > 0 then
-            local success, itemInfo = pcall(function()
-                return MarketplaceService:GetProductInfo(itemID)
-            end)
-
+            local success, itemInfo = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
             if success and itemInfo then
                 pcall(function()
                     if CurrentData then
                         CurrentData.Id = tostring(itemID)
                         CurrentData.Price = tostring(itemInfo.PriceInRobux or 0)
-                        if itemInfo.Name then 
-                            CurrentData.Name = itemInfo.Name 
-                        end
+                        if itemInfo.Name then CurrentData.Name = itemInfo.Name end
                     end
-
                     if UpdateVisualizer then
                         local price = itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis"
                         UpdateVisualizer(itemID, price)
                     end
                 end)
-
-                Rayfield:Notify({
-                    Title = "Item Validado",
-                    Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"),
-                    Duration = 4,
-                    Image = 4483362458,
-                })
+                Rayfield:Notify({Title = "Item Validado", Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"), Duration = 4, Image = 4483362458})
             else
-                Rayfield:Notify({
-                    Title = "Item Inválido",
-                    Content = "El ID ingresado no existe en el catálogo de Roblox.",
-                    Duration = 4,
-                    Image = 4483362458,
-                })
+                Rayfield:Notify({Title = "Item Inválido", Content = "El ID ingresado no existe.", Duration = 4, Image = 4483362458})
             end
         else
-            Rayfield:Notify({
-                Title = "Error de Entrada",
-                Content = "Por favor, ingresa únicamente números válidos.",
-                Duration = 3,
-                Image = 4483362458,
-            })
+            Rayfield:Notify({Title = "Error de Entrada", Content = "Por favor, ingresa únicamente números válidos.", Duration = 3, Image = 4483362458})
         end
     end
 })
