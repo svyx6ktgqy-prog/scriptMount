@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + HASH DICTIONARY O(1) + ANTI-REFLOW UI)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + CROSSFADE + HASH O(1) + 0 LAG)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2594,56 +2594,103 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 -- ==========================================================
 -- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
 
--- Diccionario Hash O(1) DEFINITIVO
+-- Diccionario Hash O(1) DEFINITIVO (Todo lo que no sea geometría pura o uniones vitales muere aquí)
 local TrashClasses = {
+    -- Scripts & Lógica
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, ModuleScript = true,
+    
+    -- Audio y Efectos Visuales Especiales
     Sound = true, ParticleEmitter = true, Trail = true, Fire = true, 
     Smoke = true, Sparkles = true, Beam = true, Highlight = true, ForceField = true,
+    
+    -- Texturas 2D (Se evalúan antes de destruir)
     Decal = true, Texture = true,
+    
+    -- Deformación, Huesos y Ropa 3D
     WrapLayer = true, WrapTarget = true, IKControl = true, Bone = true, Attachment = true,
+    
+    -- Luces Dinámicas (Consumen muchísimo renderizado)
     PointLight = true, SpotLight = true, SurfaceLight = true,
+    
+    -- Interacción inútil en Viewports
     ProximityPrompt = true, ClickDetector = true, BillboardGui = true, SurfaceGui = true,
+    
+    -- Físicas innecesarias (No se toca Weld ni Motor6D para no desarmar el avatar)
     SpringConstraint = true, RopeConstraint = true, RodConstraint = true
 }
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO CON CROSSFADE Y TITILEO)
 -- ==========================================================
+local eclipseActive = false
+
 local function ToggleEclipse(estado)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
     
     if estado then
+        eclipseActive = true
         if not eclipseUI then
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999
+            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield queda encima
             
             local fondo = Instance.new("Frame")
             fondo.Name = "FondoNegro"
             fondo.Size = UDim2.new(1, 0, 1, 0)
             fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            fondo.BackgroundTransparency = 1
+            fondo.BackgroundTransparency = 1 -- Inicia transparente para el Crossfade
             fondo.Parent = eclipseUI
             eclipseUI.Parent = playerGui
         end
+        
+        -- Bajamos la calidad gráfica del motor al mínimo absoluto
         pcall(function() settings().Rendering.QualityLevel = 1 end)
-        eclipseUI.FondoNegro.BackgroundTransparency = 0
+        
+        local fondo = eclipseUI:FindFirstChild("FondoNegro")
+        if fondo then
+            -- 1. CROSSFADE DE ENTRADA
+            local tweenEntrada = TweenService:Create(fondo, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+            tweenEntrada:Play()
+            
+            -- 2. TITILEO SUAVE (Simula procesamiento)
+            tweenEntrada.Completed:Connect(function()
+                if eclipseActive and fondo then
+                    local tweenTitilar = TweenService:Create(
+                        fondo, 
+                        TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), 
+                        {BackgroundTransparency = 0.25}
+                    )
+                    tweenTitilar:Play()
+                end
+            end)
+        end
     else
+        eclipseActive = false
         if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
+            -- Restauramos calidad gráfica
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
-            local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-            tween:Play()
-            tween.Completed:Connect(function() eclipseUI:Destroy() end)
+            
+            -- 3. CROSSFADE DE SALIDA (Anula automáticamente el titileo)
+            local fondo = eclipseUI.FondoNegro
+            local tweenSalida = TweenService:Create(fondo, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+            tweenSalida:Play()
+            
+            tweenSalida.Completed:Connect(function()
+                if not eclipseActive and eclipseUI then
+                    eclipseUI:Destroy()
+                end
+            end)
         end
     end
 end
@@ -2659,6 +2706,7 @@ if not getgenv().EclipseRenderHook then
         if index == "Parent" and not checkcaller() then
             if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
                 
+                -- ILUMINACIÓN PLANA: Desactivar sombras del contenedor ViewportFrame
                 pcall(function()
                     value.LightColor = Color3.new(1, 1, 1)
                     value.Ambient = Color3.new(1, 1, 1)
@@ -2668,9 +2716,13 @@ if not getgenv().EclipseRenderHook then
                 task.spawn(function()
                     pcall(function()
                         if self.ClassName == "Model" then
+                            -- NUEVA OPTIMIZACIÓN: Evita que el motor calcule distancias de cámara en avatares
+                            pcall(function() self.LevelOfDetail = Enum.ModelLevelOfDetail.Disabled end)
+                            
                             for _, v in ipairs(self:GetDescendants()) do
                                 local cName = v.ClassName
                                 
+                                -- 1. Optimización Geométrica Total
                                 if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
                                     v.CastShadow = false
                                     v.CanCollide = false
@@ -2680,9 +2732,13 @@ if not getgenv().EclipseRenderHook then
                                     v.Massless = true
                                     v.Reflectance = 0
                                     v.CustomPhysicalProperties = ZeroPhysics
-                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
-                                    if cName == "MeshPart" then pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end) end
                                     
+                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
+                                    if cName == "MeshPart" then
+                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
+                                    end
+                                    
+                                -- 2. Lobotomía del Humanoide
                                 elseif cName == "Humanoid" then
                                     v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                     v.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
@@ -2690,8 +2746,11 @@ if not getgenv().EclipseRenderHook then
                                     v.BreakJointsOnDeath = false
                                     pcall(function() v.EvaluateStateMachine = false end)
                                     pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do pcall(function() v:SetStateEnabled(state, false) end) end
+                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+                                        pcall(function() v:SetStateEnabled(state, false) end)
+                                    end
                                     
+                                -- 3. Destrucción instantánea por Diccionario Hash O(1)
                                 elseif TrashClasses[cName] then
                                     if (cName == "Decal" or cName == "Texture") then
                                         if v.Transparency == 1 then v:Destroy() end
@@ -2708,7 +2767,6 @@ if not getgenv().EclipseRenderHook then
         return oldNewindex(self, index, value)
     end)
 end
-
 -- ==========================================================
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
@@ -2790,7 +2848,7 @@ ExtraTab:CreateToggle({
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
 ExtraTab:CreateButton({
-    Name = "📁 Mostrar/Ocultar Menú de Outfits (Optimizado)",
+    Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
         task.spawn(function()
             local success, err = pcall(function()
@@ -2815,47 +2873,24 @@ ExtraTab:CreateButton({
                     
                     if targetMenu.Visible then
                         ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 Eclipse & Carga Rápida", Content = "Inyectando pancartas sin Layout Lag...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Procesando avatares con máxima prioridad...", Duration = 2, Image = 4483362458})
                         
-                        -- MEJORA: ANTI-REFLOW LAG Y POOLING
-                        local targetScroll = targetMenu:FindFirstChildWhichIsA("ScrollingFrame", true)
-                        if targetScroll then
-                            targetScroll.Visible = false -- Congelamos recálculos visuales de la cuadrícula
-                        end
-
-                        if RefreshSavedCharactersGrid then
-                            task.spawn(function()
+                        task.spawn(function()
+                            -- OPTIMIZACIÓN PRE-CARGA: Vaciamos la memoria RAM antes de inyectar los modelos
+                            pcall(function() collectgarbage("collect") end)
+                            
+                            if RefreshSavedCharactersGrid then
                                 pcall(RefreshSavedCharactersGrid)
-                                
-                                task.wait(1.5) -- Esperamos que terminen de inyectarse los botones
-                                
-                                -- MEJORA: APLICACIÓN DE PARÁMETROS EFICACES A PANCARTAS
-                                if targetScroll then
-                                    for _, ui in ipairs(targetScroll:GetDescendants()) do
-                                        local uiClass = ui.ClassName
-                                        if uiClass == "ImageLabel" or uiClass == "ImageButton" then
-                                            ui.ResampleMode = Enum.ResamplerMode.Pixelated -- Evita el lag de interpolado
-                                        end
-                                        if uiClass == "TextButton" or uiClass == "ImageButton" then
-                                            ui.AutoButtonColor = false -- Elimina el lag de hover al pasar el ratón por muchos
-                                        end
-                                        if uiClass == "UIStroke" then
-                                            ui.Thickness = 1 -- Mitigación de carga geométrica de bordes
-                                        end
-                                    end
-                                    targetScroll.InterpolateScroll = false
-                                    targetScroll.Visible = true -- 1 solo recálculo matemático de la cuadrícula
-                                end
-                                
-                                pcall(function() collectgarbage("collect") end) -- Liberamos RAM de la carga masiva
-                                ToggleEclipse(false)
-                                Rayfield:Notify({Title = "✅ Menú Listo", Content = "Outfits renderizados con 0 Reflow Lag.", Duration = 2, Image = 4483362458})
-                            end)
-                        else
-                            task.wait(1)
-                            if targetScroll then targetScroll.Visible = true end
+                            end
+                            
+                            task.wait(1.5) -- Tiempo prudente para permitir que los Viewports carguen su contenido
+                            
+                            -- OPTIMIZACIÓN POST-CARGA: Destruimos rastros de texturas o instancias huérfanas en RAM
+                            pcall(function() collectgarbage("collect") end)
+                            
                             ToggleEclipse(false)
-                        end
+                            Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
+                        end)
                     else
                         ToggleEclipse(false)
                     end
