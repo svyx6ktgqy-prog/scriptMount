@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V15)
--- Patas de mesa + Ocultar todo el UI + No forzar apertura
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V16)
+-- Físicas congeladas pre-spawn + Ocultar UI Universal + Sin Patas
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2443,18 +2443,21 @@ ClickBtn.MouseButton1Click:Connect(function()
         local LocalPlayer = Players.LocalPlayer
 
         -- ==================================================
-        -- CONTROL DEL SCREENGUI (NUEVO FIX DEFINITIVO)
+        -- CONTROL DEL SCREENGUI (BARRIDO UNIVERSAL)
         -- ==================================================
         local function HideAllFrames()
-            local mainUI = ClickBtn:FindFirstAncestorOfClass("ScreenGui")
-            if not mainUI then return end
+            local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+            if not PlayerGui then return end
 
-            -- Recorre TODOS los elementos de la interfaz principal.
-            -- Si es un Frame (Catálogo, Visualizador antiguo, etc.) y está visible, lo oculta.
-            -- NO lo volveremos a abrir automáticamente al final para evitar que te moleste.
-            for _, child in ipairs(mainUI:GetChildren()) do
-                if (child:IsA("Frame") or child:IsA("ScrollingFrame")) and child.Visible then
-                    child.Visible = false
+            -- Ahora busca en TODOS los ScreenGuis del jugador
+            for _, gui in ipairs(PlayerGui:GetChildren()) do
+                if gui:IsA("ScreenGui") then
+                    for _, child in ipairs(gui:GetChildren()) do
+                        -- Si es un panel/marco y está visible, lo oculta.
+                        if (child:IsA("Frame") or child:IsA("ScrollingFrame")) and child.Visible then
+                            child.Visible = false
+                        end
+                    end
                 end
             end
         end
@@ -2532,8 +2535,10 @@ ClickBtn.MouseButton1Click:Connect(function()
                 if success and objs and #objs > 0 then
                     local model = objs[1]:Clone()
                     model.Name = name
-                    model.Parent = PreviewFolder
-                    LockPhysics(model)
+                    -- FIX CLAVE: Congelar físicas ANTES de meterlo al Workspace para evitar explosiones
+                    LockPhysics(model) 
+                    model.Parent = PreviewFolder 
+                    
                     AnimateDrop(model, CFrame.new(spawnPos) * offsetCFrame)
                     table.insert(SceneObjects, model)
                 end
@@ -2541,7 +2546,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA + PATAS
+        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA (SIN PATAS)
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, -0.2, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
@@ -2549,31 +2554,6 @@ ClickBtn.MouseButton1Click:Connect(function()
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0.2, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0.2, 3.5) * CFrame.Angles(0, math.rad(10), 0))
         LoadAsset("121348416036836", "KittySign", CFrame.new(4, 1.5, -3) * CFrame.Angles(0, math.rad(-35), 0))
-
-        -- Generar las 4 patas negras para que la mesa no flote
-        task.delay(0.2, function()
-            local legOffsets = {
-                Vector3.new(2.6, 1.4, 1.6),
-                Vector3.new(-2.6, 1.4, 1.6),
-                Vector3.new(2.6, 1.4, -1.6),
-                Vector3.new(-2.6, 1.4, -1.6)
-            }
-            
-            for _, offset in ipairs(legOffsets) do
-                local leg = Instance.new("Part")
-                leg.Name = "TableLeg"
-                leg.Size = Vector3.new(0.3, 2.8, 0.3)
-                leg.Color = Color3.fromRGB(15, 15, 15) -- Negro
-                leg.Material = Enum.Material.Wood
-                leg.Anchored = true
-                leg.CanCollide = false
-                leg.Parent = PreviewFolder
-                
-                -- Las animamos cayendo igual que el resto
-                AnimateDrop(leg, CFrame.new(spawnPos + offset))
-                table.insert(SceneObjects, leg)
-            end
-        end)
 
         task.delay(0.65, function() 
             for i = 1, 10 do
@@ -2746,7 +2726,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             if dist <= 8.5 and promptState == "Waiting" then
                 promptState = "Prompting"
                 
-                -- Ocultamos todos los menús visibles
+                -- Ocultamos todos los menús visibles usando el nuevo barrido universal
                 HideAllFrames()
 
                 local blurEffect = Instance.new("BlurEffect")
@@ -2822,7 +2802,6 @@ ClickBtn.MouseButton1Click:Connect(function()
 
                                     if blurEffect then blurEffect:Destroy() end
                                     
-                                    -- ¡OJO! Ya no hay ToggleUI(true) aquí. El catálogo se queda CERRADO.
                                     UpdateVisualizer(item.id, item.price or "Gratis")
                                     NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
                                 end
@@ -2830,7 +2809,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                         end)
                     else
                         if blurEffect then blurEffect:Destroy() end
-                        -- ¡OJO! Ya no hay ToggleUI(true) aquí. El catálogo se queda CERRADO.
                         promptState = "Cooldown"
                     end
                 end
