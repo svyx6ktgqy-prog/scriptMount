@@ -2657,9 +2657,47 @@ ExtraTab:CreateToggle({
     end
 })
 
+ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
+
+-- 3. Mostrar/Ocultar el Menú de Trajes Guardados (CharMenu)
+ExtraTab:CreateToggle({
+    Name = "📁 Mostrar/Ocultar Menú de Outfits",
+    CurrentValue = false,
+    Flag = "ToggleCharMenu",
+    Callback = function(Value)
+        pcall(function()
+            -- Priorizamos la variable real 'CharMenu' descubierta en tu código
+            if CharMenu then
+                CharMenu.Visible = Value
+                -- Refrescamos la UI si se abre, tal como lo hace tu botón original
+                if Value and RefreshSavedCharactersGrid then
+                    RefreshSavedCharactersGrid()
+                end
+            else
+                -- Método de respaldo avanzado buscando en la interfaz gráfica
+                local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+                local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
+                
+                if visualizerUI then
+                    for _, frame in ipairs(visualizerUI:GetChildren()) do
+                        if frame:IsA("Frame") then
+                            local title = frame:FindFirstChildWhichIsA("TextLabel")
+                            -- Validamos por el texto exacto que le diste a tu UI
+                            if title and string.find(title.Text, "OUTFITS GUARDADOS") then
+                                frame.Visible = Value
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+})
+
 ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
 
--- 3. Orientación de Pantalla (Sintaxis directa y segura)
+-- 4. Orientación de Pantalla (Sintaxis directa y segura)
 local function SetOrientation(orientation)
     pcall(function()
         Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation
@@ -2693,7 +2731,7 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🔍 Visualizador Inteligente")
 
--- 4. Buscador PRO: Valida en Roblox, actualiza datos y envía al visualizador
+-- 5. Buscador PRO: Valida en Roblox, actualiza datos y envía al visualizador
 ExtraTab:CreateInput({
     Name = "👁️ Previsualizar Item por ID",
     PlaceholderText = "Pega el ID aquí para verificar...",
