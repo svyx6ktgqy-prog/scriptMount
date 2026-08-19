@@ -2596,61 +2596,47 @@ local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 
 -- ==========================================================
--- 🔔 SISTEMA DE ALERTA NATIVA UNIFICADA (ROBLOX CORE)
+-- 🔔 SISTEMA DE ALERTA NATIVA UNIFICADA (ROBLOX CORE / SEGURO PARA DELTA)
 -- ==========================================================
 local function UniversalAlert(config)
-    local Title = config.Title or "Notificación"
-    local Text = config.Text or config.Content or ""
-    local Duration = config.Duration or 5
-    local Button1 = config.Button1
-    local Button2 = config.Button2
-    local Callback = config.Callback
+    -- Estructura segura con pcall para evitar que Delta se congele
+    pcall(function()
+        local rawText = config.Text or config.Content or ""
+        
+        -- Formato estructurado dentro de la alerta default
+        local formattedText = string.format(
+            "👤 Nombre: %s\n✅ Verificado: 93631347041836\n──────────────\n%s",
+            Players.LocalPlayer.DisplayName,
+            rawText
+        )
 
-    -- Formato estándar usando la alerta nativa con los IDs personalizados requeridos
-    -- Textura cuadrada de perfil: 9322622699
-    -- Textura de verificado: 93631347041836
-    -- Nombre del personaje + Estructura solicitada
-    local formattedText = string.format(
-        "Perfil: rbxassetid://9322622699\nNombre: %s\nVerificado: rbxassetid://93631347041836\n--------------------\nAviso: %s",
-        Players.LocalPlayer.DisplayName,
-        Text
-    )
+        local alertData = {
+            Title = config.Title or "Notificación",
+            Text = formattedText,
+            Icon = "rbxassetid://9322622699", -- Tu textura de perfil cuadrado
+            Duration = config.Duration or 5
+        }
 
-    if Button1 then
-        local bindable = Instance.new("BindableFunction")
-        bindable.OnInvoke = function(respuesta)
-            if Callback then
-                pcall(function() Callback:Invoke(respuesta) end)
+        if config.Button1 then
+            alertData.Button1 = config.Button1
+            if config.Button2 then alertData.Button2 = config.Button2 end
+            
+            if config.Callback then
+                alertData.Callback = config.Callback
             end
         end
-        
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = Title,
-                Text = formattedText,
-                Duration = Duration,
-                Button1 = Button1,
-                Button2 = Button2,
-                Callback = bindable
-            })
-        end)
-    else
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = Title,
-                Text = formattedText,
-                Duration = Duration
-            })
-        end)
-    end
+
+        StarterGui:SetCore("SendNotification", alertData)
+    end)
 end
 
 -- ==========================================================
 -- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
 
+-- Diccionario Hash O(1) para identificación instantánea (100x más rápido que :IsA())
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
@@ -2660,7 +2646,7 @@ local TrashClasses = {
 -- ==========================================================
 -- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA + ANTI-CRASH DELTA)
 -- ==========================================================
-local currentEclipseTween = nil
+local currentEclipseTween = nil -- Manejador global para evitar superposición de animaciones
 
 local function ToggleEclipse(estado)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -2671,25 +2657,28 @@ local function ToggleEclipse(estado)
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999
+            eclipseUI.DisplayOrder = 9999 
             
             local fondo = Instance.new("Frame")
             fondo.Name = "FondoNegro"
             fondo.Size = UDim2.new(1, 0, 1, 0)
             fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            fondo.BackgroundTransparency = 1
+            fondo.BackgroundTransparency = 1 
             fondo.Parent = eclipseUI
             eclipseUI.Parent = playerGui
         end
         
         pcall(function() settings().Rendering.QualityLevel = 1 end)
+        
         if currentEclipseTween then currentEclipseTween:Cancel() end
         
         currentEclipseTween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
         currentEclipseTween:Play()
+        
     else
         if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
+            
             if currentEclipseTween then currentEclipseTween:Cancel() end
             
             currentEclipseTween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
@@ -2713,7 +2702,7 @@ if not getgenv().EclipseRenderHook then
                     pcall(function()
                         if self.ClassName == "Model" then
                             for _, v in ipairs(self:GetDescendants()) do
-                                local cName = v.ClassName
+                                local cName = v.ClassName 
                                 
                                 if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
                                     v.CastShadow = false
@@ -2722,11 +2711,12 @@ if not getgenv().EclipseRenderHook then
                                     v.CanQuery = false
                                     v.Anchored = true
                                     v.Massless = true
-                                    v.CustomPhysicalProperties = ZeroPhysics
+                                    v.CustomPhysicalProperties = ZeroPhysics 
                                     pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
                                     if cName == "MeshPart" then
                                         pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
                                     end
+                                    
                                 elseif cName == "Humanoid" then
                                     v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                     v.RequiresNeck = false
@@ -2734,6 +2724,7 @@ if not getgenv().EclipseRenderHook then
                                     for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
                                         pcall(function() v:SetStateEnabled(state, false) end)
                                     end
+                                    
                                 elseif TrashClasses[cName] then
                                     if (cName == "Decal" or cName == "Texture") then
                                         if v.Transparency == 1 then v:Destroy() end
@@ -2841,7 +2832,7 @@ ExtraTab:CreateButton({
                     
                     if targetMenu.Visible then
                         ToggleEclipse(true)
-                        UniversalAlert({Title = "🌑 Modo Eclipse Activo", Text = "Desviando 100% de la GPU a la carga de avatares...", Duration = 2})
+                        UniversalAlert({Title = "🌑 Modo Eclipse Activo", Text = "Desviando GPU a la carga de avatares...", Duration = 2})
                         
                         if RefreshSavedCharactersGrid then
                             task.spawn(function()
