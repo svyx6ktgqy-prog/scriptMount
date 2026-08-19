@@ -2422,13 +2422,276 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Text = ""
                 ClickBtn.Parent = Card
                 
-                ClickBtn.MouseButton1Click:Connect(function()
-                    CurrentData.Id = tostring(item.id)
-                    CurrentData.Name = item.name
-                    CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
-                    CurrentData.ItemType = item.itemType or "Asset"
-                    UpdateVisualizer(item.id, item.price or "Gratis")
+                -- ==========================================================
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
+-- 3D Quantum Drop + Baldosa + Cartel + Imagen Flotante Rotativa
+-- + Alerta Nativa + Atracción Magnética Serpenteante
+-- ==========================================================
+ClickBtn.MouseButton1Click:Connect(function()
+    -- Guardamos datos del ítem seleccionado
+    CurrentData.Id = tostring(item.id)
+    CurrentData.Name = item.name
+    CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
+    CurrentData.ItemType = item.itemType or "Asset"
+
+    -- ======================================================
+    -- SISTEMA 3D PREVIEW (CAÍDA CUÁNTICA + BALDOSA + CARTEL)
+    -- ======================================================
+    task.spawn(function()
+        local Workspace = game:GetService("Workspace")
+        local Players = game:GetService("Players")
+        local TweenService = game:GetService("TweenService")
+        local RunService = game:GetService("RunService")
+        local Debris = game:GetService("Debris")
+        local StarterGui = game:GetService("StarterGui")
+        local LocalPlayer = Players.LocalPlayer
+
+        -- Limpieza de previews anteriores
+        if Workspace:FindFirstChild("Kitty3DPreview") then
+            Workspace.Kitty3DPreview:Destroy()
+        end
+
+        local PreviewFolder = Instance.new("Folder")
+        PreviewFolder.Name = "Kitty3DPreview"
+        PreviewFolder.Parent = Workspace
+
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        local spawnPos = hrp.Position + hrp.CFrame.LookVector * 8 + Vector3.new(0, 12, 0)
+
+        -- ==================================================
+        -- 1. BALDOSA (Asset 4699539638) - cae del cielo
+        -- ==================================================
+        local tileSuccess, tileObjs = pcall(function()
+            return game:GetObjects("rbxassetid://4699539638")
+        end)
+
+        local Tile = nil
+        if tileSuccess and tileObjs and #tileObjs > 0 then
+            Tile = tileObjs[1]:Clone()
+            Tile.Name = "KittyTile"
+            Tile.Parent = PreviewFolder
+
+            -- Forzar físicas naturales
+            for _, p in ipairs(Tile:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    p.Anchored = false
+                    p.CanCollide = true
+                    p.Massless = false
+                end
+            end
+            if Tile:IsA("Model") and Tile.PrimaryPart then
+                Tile:SetPrimaryPartCFrame(CFrame.new(spawnPos))
+            elseif Tile:IsA("BasePart") then
+                Tile.CFrame = CFrame.new(spawnPos)
+            end
+        else
+            -- Fallback simple
+            Tile = Instance.new("Part")
+            Tile.Name = "KittyTile"
+            Tile.Size = Vector3.new(6, 0.4, 6)
+            Tile.Material = Enum.Material.SmoothPlastic
+            Tile.Color = Color3.fromRGB(180, 180, 180)
+            Tile.Anchored = false
+            Tile.CanCollide = true
+            Tile.CFrame = CFrame.new(spawnPos)
+            Tile.Parent = PreviewFolder
+        end
+
+        -- ==================================================
+        -- 2. CARTEL (Asset 121348416036836) - cae acostado y se levanta
+        -- ==================================================
+        local signSuccess, signObjs = pcall(function()
+            return game:GetObjects("rbxassetid://121348416036836")
+        end)
+
+        local Sign = nil
+        if signSuccess and signObjs and #signObjs > 0 then
+            Sign = signObjs[1]:Clone()
+            Sign.Name = "KittySign"
+            Sign.Parent = PreviewFolder
+
+            for _, p in ipairs(Sign:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    p.Anchored = false
+                    p.CanCollide = true
+                end
+            end
+
+            -- Posición inicial: cae acostado un poco más lejos
+            local signSpawn = spawnPos + Vector3.new(3.5, 8, 0)
+            if Sign:IsA("Model") and Sign.PrimaryPart then
+                Sign:SetPrimaryPartCFrame(CFrame.new(signSpawn) * CFrame.Angles(math.rad(90), 0, 0))
+            elseif Sign:IsA("BasePart") then
+                Sign.CFrame = CFrame.new(signSpawn) * CFrame.Angles(math.rad(90), 0, 0)
+            end
+        end
+
+        -- ==================================================
+        -- 3. IMAGEN FLOTANTE ROTATIVA DEL ÍTEM
+        -- ==================================================
+        local ImagePart = Instance.new("Part")
+        ImagePart.Name = "KittyItemImage"
+        ImagePart.Size = Vector3.new(2.8, 2.8, 0.15)
+        ImagePart.Anchored = true
+        ImagePart.CanCollide = false
+        ImagePart.Transparency = 1
+        ImagePart.CFrame = CFrame.new(spawnPos + Vector3.new(0, 4.2, 0))
+        ImagePart.Parent = PreviewFolder
+
+        local Surface = Instance.new("SurfaceGui")
+        Surface.Face = Enum.NormalId.Front
+        Surface.AlwaysOnTop = true
+        Surface.Parent = ImagePart
+
+        local Img = Instance.new("ImageLabel")
+        Img.Size = UDim2.new(1, 0, 1, 0)
+        Img.BackgroundTransparency = 1
+        Img.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
+        Img.Parent = Surface
+
+        -- Rotación continua + flotación suave
+        local rotConnection
+        local floatTime = 0
+        rotConnection = RunService.RenderStepped:Connect(function(dt)
+            if not ImagePart or not ImagePart.Parent then
+                rotConnection:Disconnect()
+                return
+            end
+            floatTime += dt
+            local basePos = (Tile and (Tile:IsA("Model") and Tile.PrimaryPart or Tile).Position or spawnPos) + Vector3.new(0, 3.8 + math.sin(floatTime * 1.8) * 0.35, 0)
+            ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
+        end)
+
+        -- ==================================================
+        -- DETECCIÓN DE PROXIMIDAD + ALERTA NATIVA
+        -- ==================================================
+        local alreadyPrompted = false
+        local proximityConn
+
+        proximityConn = RunService.Heartbeat:Connect(function()
+            if alreadyPrompted or not ImagePart or not ImagePart.Parent then
+                if proximityConn then proximityConn:Disconnect() end
+                return
+            end
+
+            local dist = (hrp.Position - ImagePart.Position).Magnitude
+            if dist <= 5.5 then
+                alreadyPrompted = true
+                if proximityConn then proximityConn:Disconnect() end
+
+                -- ==================================================
+                -- ALERTA NATIVA REINVENTADA (Ítem + Nombre + Logo)
+                -- ==================================================
+                local bindable = Instance.new("BindableFunction")
+                bindable.OnInvoke = function(response)
+                    if response == "Conseguir" then
+                        -- ==================================================
+                        -- ATRACCIÓN MAGNÉTICA SERPENTEANTE HACIA LA CABEZA
+                        -- ==================================================
+                        task.spawn(function()
+                            ImagePart.Anchored = false
+                            ImagePart.CanCollide = false
+                            ImagePart.Massless = true
+
+                            local head = char:FindFirstChild("Head") or hrp
+                            local startTime = tick()
+                            local duration = 1.85
+
+                            local attractConn
+                            attractConn = RunService.RenderStepped:Connect(function()
+                                if not ImagePart or not ImagePart.Parent then
+                                    attractConn:Disconnect()
+                                    return
+                                end
+
+                                local t = math.clamp((tick() - startTime) / duration, 0, 1)
+                                local ease = 1 - (1 - t) ^ 3 -- easeOutCubic
+
+                                -- Movimiento serpenteante
+                                local snake = math.sin(t * 18) * (1 - t) * 1.8
+                                local targetPos = head.Position + Vector3.new(snake, 0.4, 0)
+                                local current = ImagePart.Position
+                                local newPos = current:Lerp(targetPos, 0.18 + ease * 0.35)
+
+                                ImagePart.CFrame = CFrame.new(newPos) * CFrame.Angles(0, tick() * 6, math.sin(tick() * 9) * 0.4)
+
+                                if t >= 1 then
+                                    attractConn:Disconnect()
+                                    -- "Comido"
+                                    ImagePart:Destroy()
+                                    if rotConnection then rotConnection:Disconnect() end
+
+                                    -- ==================================================
+                                    -- GLITCH DE DESAPARICIÓN DE BALDOSAS
+                                    -- ==================================================
+                                    local function glitchDestroy(obj)
+                                        if not obj then return end
+                                        task.spawn(function()
+                                            for i = 1, 12 do
+                                                if not obj.Parent then break end
+                                                for _, p in ipairs(obj:GetDescendants()) do
+                                                    if p:IsA("BasePart") then
+                                                        p.Transparency = math.clamp(p.Transparency + 0.12, 0, 1)
+                                                        p.CFrame = p.CFrame * CFrame.new(0, -0.18, 0) * CFrame.Angles(math.rad(math.random(-8, 8)), math.rad(math.random(-8, 8)), 0)
+                                                    end
+                                                end
+                                                if obj:IsA("BasePart") then
+                                                    obj.Transparency = math.clamp(obj.Transparency + 0.12, 0, 1)
+                                                    obj.CFrame = obj.CFrame * CFrame.new(0, -0.18, 0)
+                                                end
+                                                task.wait(0.04)
+                                            end
+                                            if obj and obj.Parent then obj:Destroy() end
+                                        end)
+                                    end
+
+                                    glitchDestroy(Tile)
+                                    glitchDestroy(Sign)
+
+                                    -- Finalmente cargamos al Visualizador
+                                    UpdateVisualizer(item.id, item.price or "Gratis")
+                                    NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
+                                end
+                            end)
+                        end)
+                    else
+                        -- Cancelar → solo limpiamos
+                        if PreviewFolder and PreviewFolder.Parent then
+                            PreviewFolder:Destroy()
+                        end
+                        if rotConnection then rotConnection:Disconnect() end
+                    end
+                end
+
+                -- Alerta nativa reinventada
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", {
+                        Title = item.name,
+                        Text = "¿Quieres conseguir este ítem?\nToca Conseguir o Rechazar",
+                        Icon = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150",
+                        Duration = 12,
+                        Button1 = "Conseguir",
+                        Button2 = "Rechazar",
+                        Callback = bindable
+                    })
                 end)
+            end
+        end)
+
+        -- Auto-limpieza de seguridad (por si el jugador se aleja mucho)
+        task.delay(45, function()
+            if PreviewFolder and PreviewFolder.Parent and not alreadyPrompted then
+                PreviewFolder:Destroy()
+                if rotConnection then rotConnection:Disconnect() end
+                if proximityConn then proximityConn:Disconnect() end
+            end
+        end)
+    end)
+end)
+-- ==========================================================
+-- FIN MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
+-- ==========================================================
             end
         else
             PagiLabel.Text = "Sin resultados"
