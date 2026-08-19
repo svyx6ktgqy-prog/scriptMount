@@ -182,6 +182,7 @@ function BannerSystem.RenderBanner(bannerData)
     CardRobux.Visible = (bannerData.Price ~= nil and type(bannerData.Price) == "number" and bannerData.Price > 0)
     CardRobux.Parent = Card
 
+    -- Objeto 3D 
     local ClickBtn = Instance.new("TextButton")
     ClickBtn.Size = UDim2.new(1, 0, 1, 0)
     ClickBtn.BackgroundTransparency = 1
