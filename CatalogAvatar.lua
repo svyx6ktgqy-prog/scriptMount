@@ -2585,100 +2585,327 @@ Panel:CreateInput({
    end,
 })
 
--- 1. Limpieza Profunda (VERSIÓN EXTREMA PLUS+ - Corrección de pcalls individuales)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - COMPLETA)
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui") -- Necesario para la alerta interactiva
+
+local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
+
+ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
+
+-- 1. Limpieza Profunda (VERSIÓN EXTREMA PLUS+ CON ALERTA DE CONFIRMACIÓN)
 ExtraTab:CreateButton({
     Name = "🧹 Limpieza Extrema y Ping Óptimo",
     Callback = function()
-        local ramAntes = math.floor(gcinfo() / 1024)
         
-        Rayfield:Notify({
-            Title = "⚠️ PRECAUCIÓN: Limpieza Extrema",
-            Content = "Aplicando modo liso/minimalista. No toques nada, el juego se pausará 1 segundo...",
-            Duration = 4,
-            Image = 4483362458,
-        })
-        
-        task.spawn(function()
-            task.wait(1) 
-            
-            local success, err = pcall(function()
+        -- Función que procesa el clic del usuario (OK o Cancelar)
+        local bindable = Instance.new("BindableFunction")
+        bindable.OnInvoke = function(respuesta)
+            if respuesta == "OK" then
+                -- === SI ACEPTA: INICIA LA LIMPIEZA ===
+                local ramAntes = math.floor(gcinfo() / 1024)
                 
-                -- APAGÓN VISUAL PROTEGIDO
-                pcall(function()
-                    Lighting.GlobalShadows = false
-                    Lighting.Brightness = 0
-                    Lighting.EnvironmentDiffuseScale = 0
-                    Lighting.EnvironmentSpecularScale = 0
-                    Lighting.ShadowSoftness = 0
-                    Lighting.FogEnd = 9e9 
-                end)
+                Rayfield:Notify({
+                    Title = "⚙️ Optimizando...",
+                    Content = "Aplicando modo liso/minimalista. Espera un momento.",
+                    Duration = 3,
+                    Image = 4483362458,
+                })
                 
-                -- Apagar Post-Procesados (ignorando errores si un objeto no tiene .Enabled)
-                for _, effect in ipairs(Lighting:GetChildren()) do
-                    pcall(function()
-                        if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
-                            effect.Enabled = false
-                        elseif effect:IsA("Atmosphere") or effect:IsA("Sky") then
-                            effect:Destroy() -- Estos no se pueden apagar, se deben destruir
+                task.spawn(function()
+                    task.wait(0.5) 
+                    
+                    local success, err = pcall(function()
+                        
+                        -- APAGÓN VISUAL PROTEGIDO
+                        pcall(function()
+                            Lighting.GlobalShadows = false
+                            Lighting.Brightness = 0
+                            Lighting.EnvironmentDiffuseScale = 0
+                            Lighting.EnvironmentSpecularScale = 0
+                            Lighting.ShadowSoftness = 0
+                            Lighting.FogEnd = 9e9 
+                        end)
+                        
+                        -- Apagar Post-Procesados (ignorando errores si no se dejan apagar)
+                        for _, effect in ipairs(Lighting:GetChildren()) do
+                            pcall(function()
+                                if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") or effect:IsA("ColorCorrectionEffect") then
+                                    effect.Enabled = false
+                                elseif effect:IsA("Atmosphere") or effect:IsA("Sky") then
+                                    effect:Destroy() 
+                                end
+                            end)
+                        end
+                        
+                        -- Neutralizar Terreno Protegido
+                        pcall(function()
+                            if Workspace:FindFirstChildOfClass("Terrain") then
+                                Workspace.Terrain.WaterWaveSize = 0
+                                Workspace.Terrain.WaterWaveSpeed = 0
+                                Workspace.Terrain.WaterReflectance = 0
+                                Workspace.Terrain.WaterTransparency = 1
+                                Workspace.Terrain.Decoration = false
+                            end
+                        end)
+                        
+                        -- FORZAR MODO LISO (Con pcall por cada pieza para evitar bloqueos)
+                        for _, v in ipairs(Workspace:GetDescendants()) do
+                            pcall(function()
+                                if v:IsA("BasePart") then
+                                    v.Material = Enum.Material.SmoothPlastic
+                                    v.Reflectance = 0
+                                    v.CastShadow = false
+                                elseif v:IsA("Texture") or v:IsA("Decal") then
+                                    v.Transparency = 1 
+                                elseif v:IsA("SurfaceAppearance") then
+                                    v:Destroy() 
+                                end
+                            end)
+                        end
+
+                        if collectgarbage then
+                            collectgarbage("collect")
+                            task.wait(0.1)
+                            collectgarbage("collect") 
                         end
                     end)
-                end
-                
-                -- Neutralizar Terreno Protegido
-                pcall(function()
-                    if Workspace:FindFirstChildOfClass("Terrain") then
-                        Workspace.Terrain.WaterWaveSize = 0
-                        Workspace.Terrain.WaterWaveSpeed = 0
-                        Workspace.Terrain.WaterReflectance = 0
-                        Workspace.Terrain.WaterTransparency = 1
-                        Workspace.Terrain.Decoration = false
+
+                    local ramDespues = math.floor(gcinfo() / 1024)
+                    local ramLiberada = ramAntes - ramDespues
+                    if ramLiberada < 0 then ramLiberada = 0 end 
+
+                    if success then
+                        Rayfield:Notify({
+                            Title = "✅ Modo Competitivo Activado",
+                            Content = "Entorno liso al 100%. RAM liberada: " .. ramLiberada .. " MB.",
+                            Duration = 5,
+                            Image = 4483362458,
+                        })
+                    else
+                        Rayfield:Notify({
+                            Title = "❌ Error en Limpieza",
+                            Content = "Detalle: " .. tostring(err),
+                            Duration = 5,
+                            Image = 4483362458,
+                        })
                     end
                 end)
-                
-                -- FORZAR MODO LISO (Con pcall por cada pieza para evitar bloqueos)
-                for _, v in ipairs(Workspace:GetDescendants()) do
-                    pcall(function()
-                        if v:IsA("BasePart") then
-                            v.Material = Enum.Material.SmoothPlastic
-                            v.Reflectance = 0
-                            v.CastShadow = false
-                        elseif v:IsA("Texture") or v:IsA("Decal") then
-                            v.Transparency = 1 
-                        elseif v:IsA("SurfaceAppearance") then
-                            v:Destroy() 
-                        end
-                    end)
-                end
-
-                if collectgarbage then
-                    collectgarbage("collect")
-                    task.wait(0.1)
-                    collectgarbage("collect") 
-                end
-            end)
-
-            local ramDespues = math.floor(gcinfo() / 1024)
-            local ramLiberada = ramAntes - ramDespues
-            if ramLiberada < 0 then ramLiberada = 0 end 
-
-            if success then
-                Rayfield:Notify({
-                    Title = "✅ Modo Competitivo Activado",
-                    Content = "Entorno liso al 100%. RAM liberada: " .. ramLiberada .. " MB.",
-                    Duration = 5,
-                    Image = 4483362458,
-                })
             else
-                -- Si por algún milagro vuelve a fallar, ahora nos dirá exactamente por qué
+                -- === SI CANCELA ===
                 Rayfield:Notify({
-                    Title = "❌ Error",
-                    Content = "Detalle: " .. tostring(err),
-                    Duration = 5,
+                    Title = "❌ Acción Cancelada",
+                    Content = "No se aplicaron los cambios de optimización.",
+                    Duration = 3,
                     Image = 4483362458,
                 })
+            end
+        end
+
+        -- Lanza la alerta flotante nativa de Roblox con botones
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "⚠️ ¿Modo Extremo?",
+                Text = "El mapa perderá texturas para dar FPS máximos. ¿Continuar?",
+                Duration = 10,
+                Button1 = "OK",
+                Button2 = "Cancelar",
+                Callback = bindable
+            })
+        end)
+    end
+})
+
+ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
+
+-- 2. Mostrar/Ocultar Visualizador
+ExtraTab:CreateToggle({
+    Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
+    CurrentValue = false,
+    Flag = "ToggleItemVisualizer",
+    Callback = function(Value)
+        pcall(function()
+            if Container then
+                Container.Visible = Value
+            else
+                local targetVisualizerName = "VisualizadorItemGUI" 
+                local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+                local visualizerUI = CoreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
+                
+                if visualizerUI then
+                    if visualizerUI:IsA("ScreenGui") then
+                        visualizerUI.Enabled = Value
+                    else
+                        visualizerUI.Visible = Value
+                    end
+                end
             end
         end)
     end
 })
+
+ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
+
+-- 3. Menú de Outfits con Sistema ANTI-LAG Externo (Corrección de Sincronización)
+ExtraTab:CreateButton({
+    Name = "📁 Mostrar/Ocultar Menú de Outfits",
+    Callback = function()
+        task.spawn(function()
+            local success, err = pcall(function()
+                local targetMenu = nil
+                
+                -- 1. Identificar el menú real sin importar dónde esté
+                if CharMenu then
+                    targetMenu = CharMenu
+                else
+                    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+                    local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
+                    
+                    if visualizerUI then
+                        -- Buscar a profundidad el texto "outfits" en minúsculas para no fallar
+                        for _, frame in ipairs(visualizerUI:GetChildren()) do
+                            if frame:IsA("Frame") then
+                                local title = frame:FindFirstChildWhichIsA("TextLabel", true)
+                                if title and string.find(string.lower(title.Text), "outfits") then
+                                    targetMenu = frame
+                                    break
+                                end
+                            end
+                        end
+                    end
+                end
+
+                -- 2. Aplicar lógica directa (si se encontró el menú)
+                if targetMenu then
+                    -- Leemos el estado ACTUAL de la UI y lo invertimos
+                    local nuevoEstado = not targetMenu.Visible 
+                    targetMenu.Visible = nuevoEstado
+                    
+                    if nuevoEstado then
+                        Rayfield:Notify({
+                            Title = "⏳ Cargando Personajes...",
+                            Content = "Iniciando protección Anti-Lag para miniaturas.",
+                            Duration = 2,
+                            Image = 4483362458,
+                        })
+                        
+                        if collectgarbage then collectgarbage("collect") end
+                        task.wait(0.2) 
+                        
+                        if RefreshSavedCharactersGrid then
+                            task.defer(function()
+                                pcall(RefreshSavedCharactersGrid)
+                            end)
+                        end
+                    end
+                else
+                    Rayfield:Notify({
+                        Title = "❌ UI No Encontrada",
+                        Content = "No se logró detectar el menú en la pantalla.",
+                        Duration = 3,
+                        Image = 4483362458,
+                    })
+                end
+            end)
+        end)
+    end
+})
+
+ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
+
+-- 4. Orientación de Pantalla 
+local function SetOrientation(orientation)
+    pcall(function()
+        Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation
+    end)
+end
+
+ExtraTab:CreateButton({
+    Name = "➡️ Forzar Horizontal (Derecha)",
+    Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeRight) end
+})
+
+ExtraTab:CreateButton({
+    Name = "⬅️ Forzar Horizontal (Izquierda)",
+    Callback = function() SetOrientation(Enum.ScreenOrientation.LandscapeLeft) end
+})
+
+ExtraTab:CreateButton({
+    Name = "⬆️ Forzar Vertical (Portrait)",
+    Callback = function() SetOrientation(Enum.ScreenOrientation.Portrait) end
+})
+
+ExtraTab:CreateButton({
+    Name = "🔄 Sensor Horizontal Automático",
+    Callback = function() SetOrientation(Enum.ScreenOrientation.SensorLandscape) end
+})
+
+ExtraTab:CreateButton({
+    Name = "🌐 Sensor Libre (Rotación Total)",
+    Callback = function() SetOrientation(Enum.ScreenOrientation.Sensor) end
+})
+
+ExtraTab:CreateSection("🔍 Visualizador Inteligente")
+
+-- 5. Buscador PRO: Valida en Roblox, actualiza datos y envía al visualizador
+ExtraTab:CreateInput({
+    Name = "👁️ Previsualizar Item por ID",
+    PlaceholderText = "Pega el ID aquí para verificar...",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Text)
+        local itemID = tonumber(Text)
+        
+        if itemID and itemID > 0 then
+            local success, itemInfo = pcall(function()
+                return MarketplaceService:GetProductInfo(itemID)
+            end)
+
+            if success and itemInfo then
+                pcall(function()
+                    if CurrentData then
+                        CurrentData.Id = tostring(itemID)
+                        CurrentData.Price = tostring(itemInfo.PriceInRobux or 0)
+                        if itemInfo.Name then 
+                            CurrentData.Name = itemInfo.Name 
+                        end
+                    end
+
+                    if UpdateVisualizer then
+                        local price = itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Gratis"
+                        UpdateVisualizer(itemID, price)
+                    end
+                end)
+
+                Rayfield:Notify({
+                    Title = "Item Validado",
+                    Content = "Mostrando: " .. (itemInfo.Name or "Item Desconocido"),
+                    Duration = 4,
+                    Image = 4483362458,
+                })
+            else
+                Rayfield:Notify({
+                    Title = "Item Inválido",
+                    Content = "El ID ingresado no existe en el catálogo de Roblox.",
+                    Duration = 4,
+                    Image = 4483362458,
+                })
+            end
+        else
+            Rayfield:Notify({
+                Title = "Error de Entrada",
+                Content = "Por favor, ingresa únicamente números válidos.",
+                Duration = 3,
+                Image = 4483362458,
+            })
+        end
+    end
+})
+
+--##FIN DEL METODO RAYFIELD
 
 Rayfield:LoadConfiguration()
