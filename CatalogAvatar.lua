@@ -2706,7 +2706,6 @@ ExtraTab:CreateButton({
     end
 })
 
--- NUEVO BOTÓN: Restaurar a la Normalidad (AHORA CON ALERTA DE CONFIRMACIÓN)
 ExtraTab:CreateButton({
     Name = "🌍 Restaurar Entorno (Normalidad)",
     Callback = function()
@@ -2752,7 +2751,6 @@ ExtraTab:CreateButton({
                     
                     for _, v in ipairs(Workspace:GetDescendants()) do
                         pcall(function()
-                            -- Devolver texturas SmoothPlastic a Plastic estándar
                             if v:IsA("BasePart") and v.Material == Enum.Material.SmoothPlastic then
                                 v.Material = Enum.Material.Plastic
                                 v.CastShadow = true
@@ -2771,7 +2769,6 @@ ExtraTab:CreateButton({
                 end)
                 
             else
-                -- Si el usuario presiona "Cancelar"
                 Rayfield:Notify({
                     Title = "❌ Acción Cancelada",
                     Content = "No se restauraron los gráficos.",
@@ -2781,7 +2778,6 @@ ExtraTab:CreateButton({
             end
         end
 
-        -- Llamada a la alerta nativa de Roblox
         pcall(function()
             StarterGui:SetCore("SendNotification", {
                 Title = "⚠️ ¿Restaurar Gráficos?",
@@ -2798,7 +2794,6 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
 
--- 2. Mostrar/Ocultar Visualizador
 ExtraTab:CreateToggle({
     Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
     CurrentValue = false,
@@ -2826,7 +2821,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con Sistema ANTI-LAG Externo (MÉTODO RADAR/EVENTOS)
+-- 3. Menú de Outfits con INTERCEPTOR AGRESIVO EXTERNO (0 LAG)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2859,55 +2854,58 @@ ExtraTab:CreateButton({
                     
                     if nuevoEstado then
                         Rayfield:Notify({
-                            Title = "⏳ Cargando Personajes...",
-                            Content = "Radar Anti-Lag activado. Eliminando 3D...",
+                            Title = "⏳ Interceptando 3D...",
+                            Content = "Bloqueando carga de avatares para evitar lag.",
                             Duration = 2,
                             Image = 4483362458,
                         })
                         
                         -- ==========================================================
-                        -- FIX ANTI-LAG PRO: ESCANEO ACTIVO (EVENT LISTENER)
+                        -- INTERCEPTOR AGRESIVO (EXTERNO)
                         -- ==========================================================
-                        -- Protegemos para no crear múltiples radares si el jugador abre y cierra el menú varias veces
                         if not targetMenu:GetAttribute("RadarActivo") then
                             targetMenu:SetAttribute("RadarActivo", true)
                             
-                            local function Neutralizar3D(item)
+                            local function NeutralizarDescarga(item)
+                                -- 1. Si intenta meter un modelo 3D (Avatar), lo fulminamos antes de que descargue la ropa
+                                if item:IsA("Model") or item:IsA("Humanoid") or item:IsA("WorldModel") then
+                                    pcall(function()
+                                        item:Destroy()
+                                    end)
+                                end
+                                
+                                -- 2. Si crea el cuadro 3D, lo apagamos para que no consuma GPU y ponemos la foto
                                 if item:IsA("ViewportFrame") then
-                                    -- Usamos task.defer para que Roblox termine de crear la carta antes de intervenir
+                                    item.Visible = false -- Apaga el motor de renderizado de este frame
+                                    
                                     task.defer(function()
                                         local Card = item.Parent
-                                        if Card then
-                                            item:Destroy() -- Eliminamos la causa del Lag
+                                        if Card and not Card:FindFirstChild("AntiLagPlaceholder") then
+                                            local Placeholder = Instance.new("ImageLabel")
+                                            Placeholder.Name = "AntiLagPlaceholder"
+                                            Placeholder.Size = UDim2.new(1, -10, 0, 75)
+                                            Placeholder.Position = UDim2.new(0, 5, 0, 5)
+                                            Placeholder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                                            Placeholder.Image = "rbxassetid://132859920937628" 
+                                            Placeholder.ScaleType = Enum.ScaleType.Fit
+                                            Placeholder.BackgroundTransparency = 0
+                                            Placeholder.ZIndex = 33
+                                            Placeholder.Parent = Card
                                             
-                                            -- Creamos la miniatura estática si no existe aún
-                                            if not Card:FindFirstChild("AntiLagPlaceholder") then
-                                                local Placeholder = Instance.new("ImageLabel")
-                                                Placeholder.Name = "AntiLagPlaceholder"
-                                                Placeholder.Size = UDim2.new(1, -10, 0, 75)
-                                                Placeholder.Position = UDim2.new(0, 5, 0, 5)
-                                                Placeholder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                                                Placeholder.Image = "rbxassetid://132859920937628" 
-                                                Placeholder.ScaleType = Enum.ScaleType.Fit
-                                                Placeholder.BackgroundTransparency = 0
-                                                Placeholder.ZIndex = 33
-                                                Placeholder.Parent = Card
-                                                
-                                                local PCorner = Instance.new("UICorner")
-                                                PCorner.CornerRadius = UDim.new(0, 6)
-                                                PCorner.Parent = Placeholder
-                                            end
+                                            local PCorner = Instance.new("UICorner")
+                                            PCorner.CornerRadius = UDim.new(0, 6)
+                                            PCorner.Parent = Placeholder
                                         end
                                     end)
                                 end
                             end
 
-                            -- ACTIVAMOS EL RADAR: Cada vez que el juego cree un nuevo objeto aquí, pasará por nuestra función
-                            targetMenu.DescendantAdded:Connect(Neutralizar3D)
+                            -- Conectamos el interceptor
+                            targetMenu.DescendantAdded:Connect(NeutralizarDescarga)
                             
-                            -- Hacemos una limpieza inicial por si acaso ya había cartas cargadas
+                            -- Limpieza de seguridad por si ya había algo
                             for _, item in ipairs(targetMenu:GetDescendants()) do
-                                Neutralizar3D(item)
+                                NeutralizarDescarga(item)
                             end
                         end
                         -- ==========================================================
@@ -2935,7 +2933,6 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
 
--- 4. Orientación de Pantalla 
 local function SetOrientation(orientation)
     pcall(function()
         Players.LocalPlayer.PlayerGui.ScreenOrientation = orientation
@@ -2969,7 +2966,6 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🔍 Visualizador Inteligente")
 
--- 5. Buscador PRO
 ExtraTab:CreateInput({
     Name = "👁️ Previsualizar Item por ID",
     PlaceholderText = "Pega el ID aquí para verificar...",
