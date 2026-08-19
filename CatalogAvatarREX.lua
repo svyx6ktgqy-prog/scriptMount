@@ -2603,13 +2603,12 @@ local function UniversalAlert(config)
         pcall(function()
             local rawText = config.Text or config.Content or ""
             
-            -- THE TRICK: We use the Verified Image ID as the main Notification Icon.
-            -- We put the Player's name in the Title.
-            -- This makes the custom image stand out perfectly without breaking the text layout.
+            -- EL COMPROMISO NATIVO:
+            -- Ponemos el nombre del jugador y un emoji de verificado a la derecha.
             local alertData = {
-                Title = "✔️ " .. Players.LocalPlayer.DisplayName,
+                Title = Players.LocalPlayer.DisplayName .. " ✅",
                 Text = rawText,
-                Icon = "rbxassetid://93631347041836", -- Custom Verified Texture ID
+                Icon = "rbxassetid://9322622699", -- Vuelve tu icono de perfil a la izquierda
                 Duration = config.Duration or 5
             }
 
@@ -2628,9 +2627,8 @@ end
 -- 🧠 ULTRA-FAST CACHE & MEMORY SYSTEMS
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Created ONCE (Saves micro-calculations)
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
 
--- Hash Dictionary O(1) for instant identification (100x faster than :IsA())
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
@@ -2638,7 +2636,7 @@ local TrashClasses = {
 }
 
 -- ==========================================================
--- 🌑 "ECLIPSE" SYSTEM (DEFINITION KEPT FOR SAFETY)
+-- 🌑 "ECLIPSE" SYSTEM
 -- ==========================================================
 local function ToggleEclipse(state)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -2649,7 +2647,7 @@ local function ToggleEclipse(state)
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999 -- Covers the game, but Rayfield (CoreGui) stays on top
+            eclipseUI.DisplayOrder = 9999 
             
             local blackoutFrame = Instance.new("Frame")
             blackoutFrame.Name = "BlackBackground"
@@ -2734,7 +2732,7 @@ ExtraTab:CreateButton({
     Callback = function()
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(response)
-            if response == "OK" then
+            if response == "Accept" then
                 UniversalAlert({Text = "Applying smooth/minimalist mode.", Duration = 3})
                 task.spawn(function()
                     task.wait(0.5) 
@@ -2746,7 +2744,8 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        UniversalAlert({Text = "The map will lose textures. Continue?", Duration = 10, Button1 = "OK", Button2 = "Cancel", Callback = bindable})
+        -- Botones actualizados a Dev English
+        UniversalAlert({Text = "The map will lose textures. Continue?", Duration = 10, Button1 = "Accept", Button2 = "Cancel", Callback = bindable})
     end
 })
 
@@ -2755,7 +2754,7 @@ ExtraTab:CreateButton({
     Callback = function()
         local bindable = Instance.new("BindableFunction")
         bindable.OnInvoke = function(response)
-            if response == "OK" then
+            if response == "Accept" then
                 task.spawn(function()
                     pcall(function() Lighting.GlobalShadows = true; Lighting.Brightness = 2; Lighting.EnvironmentDiffuseScale = 1; Lighting.EnvironmentSpecularScale = 1; Lighting.ShadowSoftness = 0.2; Lighting.FogEnd = 100000 end)
                     pcall(function() if Workspace:FindFirstChildOfClass("Terrain") then Workspace.Terrain.WaterWaveSize = 0.15; Workspace.Terrain.WaterWaveSpeed = 10; Workspace.Terrain.WaterReflectance = 1; Workspace.Terrain.WaterTransparency = 0.3; Workspace.Terrain.Decoration = true end end)
@@ -2764,7 +2763,8 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        UniversalAlert({Text = "Do you want to restore original graphics?", Duration = 10, Button1 = "OK", Button2 = "Cancel", Callback = bindable})
+        -- Botones actualizados a Dev English
+        UniversalAlert({Text = "Do you want to restore original graphics?", Duration = 10, Button1 = "Accept", Button2 = "Cancel", Callback = bindable})
     end
 })
 
