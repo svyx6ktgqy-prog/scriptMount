@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - CORREGIDA V4)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO Y OPTIMIZADA PARA DELTA - RENDERIZADO 3D ULTRA)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2595,40 +2595,30 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 
 -- ==========================================================
--- 🛡️ MOTOR DE INTERCEPCIÓN "CERO ABSOLUTO" (0 OVERHEAD)
+-- 🛡️ MOTOR DE OPTIMIZACIÓN 3D (RENDERIZADO ULTRA RÁPIDO)
 -- ==========================================================
-if not getgenv().ZeroLagHookActive then
-    getgenv().ZeroLagHookActive = true
-    getgenv().BlockHeavyRenders = false
+if not getgenv().FastRenderHookActive then
+    getgenv().FastRenderHookActive = true
     
-    -- 1. INTERCEPTOR DE RED (Optimizado)
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-        if getgenv().BlockHeavyRenders and not checkcaller() then
-            local method = getnamecallmethod()
-            
-            if method == "GetHumanoidDescriptionFromOutfitId" or method == "GetHumanoidDescriptionFromUserId" then
-                return Instance.new("HumanoidDescription") 
-            elseif method == "GetCharacterAppearanceAsync" or method == "CreateHumanoidModelFromOutfitId" then
-                return Instance.new("Model") 
-            elseif method == "ApplyDescription" or method == "AddAccessory" or method == "LoadCharacterAppearance" or method == "ClearCharacterAppearance" then
-                return 
-            end
-        end
-        return oldNamecall(self, ...)
-    end)
-    
-    -- 2. INTERCEPTOR GRÁFICO (Sin Lua Bridge Overhead)
     local oldNewindex
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        if getgenv().BlockHeavyRenders and not checkcaller() then
-            -- Verificación ultra rápida sin usar :IsA() para evitar lag en el puente Lua-C
-            if index == "Parent" and typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                local cName = self.ClassName
-                if cName == "Model" or cName == "Part" or cName == "MeshPart" or cName == "Accessory" or cName == "Humanoid" or cName == "Shirt" or cName == "Pants" then
-                    return -- Bloqueo instantáneo de mallas 3D
-                end
-            end
+        -- Si un objeto 3D está entrando al menú (ViewportFrame), lo optimizamos al vuelo
+        if not checkcaller() and index == "Parent" and typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+            task.spawn(function()
+                pcall(function()
+                    if self:IsA("Model") or self:IsA("BasePart") then
+                        -- Desactivamos cálculos pesados sin borrar el modelo visual
+                        for _, part in ipairs(self:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CastShadow = false -- Adiós lag de sombras
+                            elseif part:IsA("Humanoid") then
+                                part.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                                part:ChangeState(Enum.HumanoidStateType.Dead) -- Evita que el CPU calcule físicas de un modelo estático
+                            end
+                        end
+                    end
+                end)
+            end)
         end
         return oldNewindex(self, index, value)
     end)
@@ -2698,10 +2688,11 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con CERO LAG + LOGO FIJO
+-- 3. Menú de Outfits (CON APERTURA ASÍNCRONA PARA 0 LAG)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
+        -- task.spawn crea un hilo paralelo, evitando que el click en el botón congele tu juego
         task.spawn(function()
             local success, err = pcall(function()
                 local targetMenu = nil
@@ -2721,56 +2712,15 @@ ExtraTab:CreateButton({
                 end
 
                 if targetMenu then
-                    local nuevoEstado = not targetMenu.Visible 
-                    targetMenu.Visible = nuevoEstado
+                    targetMenu.Visible = not targetMenu.Visible 
                     
-                    if nuevoEstado then
-                        Rayfield:Notify({Title = "🚀 Modo Cero Absoluto", Content = "Carga instantánea activada.", Duration = 2, Image = 4483362458})
+                    if targetMenu.Visible then
+                        Rayfield:Notify({Title = "🚀 Menú Acelerado", Content = "Cargando renderizados 3D optimizados...", Duration = 2, Image = 4483362458})
                         
-                        -- Enciende el escudo metamétodo
-                        getgenv().BlockHeavyRenders = true
-                        
-                        -- Inyector de Logo Optimizado (Garantiza que el logo se vea)
-                        local function InyectarLogo(item)
-                            if item.ClassName == "ViewportFrame" then
-                                -- Mantenemos el cuadro vacío limpio
-                                item.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                                item.BackgroundTransparency = 0
-                                
-                                -- Clavamos el logo 2D por encima del ViewportFrame
-                                if not item:FindFirstChild("AntiLagLogo") then
-                                    local img = Instance.new("ImageLabel")
-                                    img.Name = "AntiLagLogo"
-                                    img.Size = UDim2.new(1, -16, 1, -16)
-                                    img.AnchorPoint = Vector2.new(0.5, 0.5)
-                                    img.Position = UDim2.new(0.5, 0, 0.5, 0)
-                                    img.BackgroundTransparency = 1
-                                    img.Image = "rbxassetid://132859920937628" 
-                                    img.ScaleType = Enum.ScaleType.Fit
-                                    img.ZIndex = 50 -- Asegura que esté por encima de todo
-                                    img.Parent = item
-                                end
-                            end
-                        end
-
-                        if not targetMenu:GetAttribute("LogoInyectorActivo") then
-                            targetMenu:SetAttribute("LogoInyectorActivo", true)
-                            targetMenu.DescendantAdded:Connect(InyectarLogo)
-                        end
-                        
-                        -- Aplica el logo a los que ya existen en el menú
-                        for _, item in ipairs(targetMenu:GetDescendants()) do InyectarLogo(item) end
-
-                        -- Llama la carga del menú
                         if RefreshSavedCharactersGrid then
+                            -- task.defer ejecuta la carga pesada en el fondo (ESTA ES LA VERDADERA MAGIA)
                             task.defer(function() pcall(RefreshSavedCharactersGrid) end)
                         end
-                        
-                        -- Apaga el escudo después de 5 segundos para mantener la estabilidad del juego
-                        task.delay(5, function() getgenv().BlockHeavyRenders = false end)
-                        
-                    else
-                        getgenv().BlockHeavyRenders = false
                     end
                 else
                     Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
