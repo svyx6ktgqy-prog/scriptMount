@@ -2629,20 +2629,29 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
 
--- 2. Mostrar/Ocultar Visualizador (Evita errores si el UI no existe)
+-- 2. Mostrar/Ocultar Visualizador conectado a tu UI real
 ExtraTab:CreateToggle({
     Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
-    CurrentValue = true,
+    CurrentValue = false, -- Empieza apagado por defecto
     Flag = "ToggleItemVisualizer",
     Callback = function(Value)
         pcall(function()
-            local targetVisualizerName = "VisualizadorItemGUI" -- Cambia esto por el nombre de tu GUI
-            
-            local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-            local visualizerUI = CoreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
-            
-            if visualizerUI then
-                visualizerUI.Enabled = Value
+            -- Priorizamos interactuar directamente con tu variable 'Container' si están en el mismo script
+            if Container then
+                Container.Visible = Value
+            else
+                -- Método de respaldo por si están en scripts separados
+                local targetVisualizerName = "VisualizadorItemGUI" 
+                local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+                local visualizerUI = CoreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
+                
+                if visualizerUI then
+                    if visualizerUI:IsA("ScreenGui") then
+                        visualizerUI.Enabled = Value
+                    else
+                        visualizerUI.Visible = Value
+                    end
+                end
             end
         end)
     end
@@ -2699,18 +2708,12 @@ ExtraTab:CreateInput({
             end)
 
             if success and itemInfo then
-                -- ENVIAR AL VISUALIZADOR
+                -- ENVIAR AL VISUALIZADOR REAL
                 pcall(function()
-                    -- Aquí debes colocar el nombre de la función que actualiza tu visualizador.
-                    -- Ejemplos comunes: PreviewItem(itemID), UpdateVisualizer(itemID)
-                    if PreviewItem then
-                        PreviewItem(itemID)
-                    elseif LoadToVisualizer then
-                        LoadToVisualizer(itemID)
-                    else
-                        -- Si controlas la imagen directamente por UI, descomenta y edita esto:
-                        -- local imagenUI = CoreGui.VisualizadorItemGUI.ImageLabel
-                        -- imagenUI.Image = "rbxthumb://type=Asset&id="..itemID.."&w=420&h=420"
+                    -- Llamamos a la función global UpdateVisualizer que pre-declaramos antes
+                    if UpdateVisualizer then
+                        local price = itemInfo.PriceInRobux or "Gratis"
+                        UpdateVisualizer(itemID, price)
                     end
                 end)
 
