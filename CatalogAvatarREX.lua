@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V17)
--- Físicas congeladas pre-spawn + Ocultar/Aparecer UI Definitivo + Sin Patas
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V18)
+-- Físicas congeladas + Ocultar UI Universal + Suelo Raycast Preciso
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2440,7 +2440,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local Debris = game:GetService("Debris")
         local StarterGui = game:GetService("StarterGui")
         local Lighting = game:GetService("Lighting")
-        local CoreGui = game:GetService("CoreGui") -- Añadido para el nuevo método
+        local CoreGui = game:GetService("CoreGui")
         local LocalPlayer = Players.LocalPlayer
 
         -- ==================================================
@@ -2455,7 +2455,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                     Container.Visible = state
                 end
                 
-                -- Nombres comunes de tu script inyectado (puedes agregar más a la lista)
+                -- Nombres comunes de tu script inyectado
                 local hubNames = {"VisualizadorItemGUI", "Kitty", "KittyHub"} 
                 for _, name in ipairs(hubNames) do
                     local ui = (CoreGui and CoreGui:FindFirstChild(name)) or (PlayerGui and PlayerGui:FindFirstChild(name))
@@ -2550,11 +2550,28 @@ ClickBtn.MouseButton1Click:Connect(function()
                 if success and objs and #objs > 0 then
                     local model = objs[1]:Clone()
                     model.Name = name
-                    -- FIX CLAVE: Congelar físicas ANTES de meterlo al Workspace para evitar explosiones
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
-                    AnimateDrop(model, CFrame.new(spawnPos) * offsetCFrame)
+                    -- ==================================================
+                    -- NUEVO: RAYCAST PARA LA ESCENOGRAFÍA (PRECISIÓN MILIMÉTRICA)
+                    -- ==================================================
+                    local baseTargetCFrame = CFrame.new(spawnPos) * offsetCFrame
+                    local rayOrigin = baseTargetCFrame.Position + Vector3.new(0, 50, 0) -- Buscamos desde arriba
+                    local raycastParams = RaycastParams.new()
+                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    raycastParams.FilterDescendantsInstances = {char, PreviewFolder} -- Ignoramos al jugador y a la preview
+                    
+                    local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+                    
+                    local finalCFrame = baseTargetCFrame
+                    if result then
+                        -- Si encontramos el suelo, ajustamos la "Y" manteniendo la rotación y el X/Z original
+                        -- Mantenemos el offset.Y para que los objetos que deben ir un poco arriba (como el cartel) no se hundan
+                        finalCFrame = CFrame.new(baseTargetCFrame.X, result.Position.Y + offsetCFrame.Y, baseTargetCFrame.Z) * baseTargetCFrame.Rotation
+                    end
+
+                    AnimateDrop(model, finalCFrame)
                     table.insert(SceneObjects, model)
                 end
             end)
@@ -2854,7 +2871,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
     end)
 end)
-                
+        
 -- ==========================================================
 -- FIN MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
 -- ==========================================================
