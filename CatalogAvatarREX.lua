@@ -182,21 +182,210 @@ function BannerSystem.RenderBanner(bannerData)
     CardRobux.Visible = (bannerData.Price ~= nil and type(bannerData.Price) == "number" and bannerData.Price > 0)
     CardRobux.Parent = Card
 
-    local ClickBtn = Instance.new("TextButton")
+        local ClickBtn = Instance.new("TextButton")
     ClickBtn.Size = UDim2.new(1, 0, 1, 0)
     ClickBtn.BackgroundTransparency = 1
     ClickBtn.Text = ""
     ClickBtn.Parent = Card
     
+    local isSpawning3D = false
+
     ClickBtn.MouseButton1Click:Connect(function()
-        CurrentData.Id = tostring(bannerData.Id)
-        CurrentData.Name = bannerData.Name
-        CurrentData.Price = bannerData.Price and (tostring(bannerData.Price) .. " R$") or "Gratis"
-        CurrentData.ItemType = bannerData.ItemType or "Asset"
-        
-        if bannerData.OnSelectCallback then
-            bannerData.OnSelectCallback(bannerData.Id, bannerData.Price or "Gratis")
+        if isSpawning3D then return end
+        isSpawning3D = true
+
+        local Char = LocalPlayer.Character
+        local HRP = Char and Char:FindFirstChild("HumanoidRootPart")
+        if not HRP then isSpawning3D = false return end
+
+        -- 1. Ocultar el panel UI Kitty para ver el espectáculo
+        local KittyGui = CoreGui:FindFirstChild("KittyCatalogGui")
+        if KittyGui then
+            local mainUI = KittyGui:FindFirstChild("Frame") -- KittyMain
+            if mainUI then mainUI.Visible = false end
+            local floatBtn = KittyGui:FindFirstChild("KittyFloatingBtn")
+            if floatBtn then floatBtn.Visible = true end
         end
+
+        -- 2. Sistema de Lluvia Cuántica (Spawn y Físicas Nativas)
+        local SpawnFolder = Instance.new("Folder")
+        SpawnFolder.Name = "QuantumLoot_" .. tostring(bannerData.Id)
+        SpawnFolder.Parent = workspace
+
+        -- Aparecerán 40 studs arriba del jugador, unos pasos adelante
+        local spawnPos = HRP.Position + (HRP.CFrame.LookVector * 6) + Vector3.new(0, 40, 0)
+
+        local tileObj, signObj
+        pcall(function()
+            local tRes = game:GetObjects("rbxassetid://4699539638")
+            if tRes and tRes[1] then tileObj = tRes[1] end
+            local sRes = game:GetObjects("rbxassetid://121348416036836")
+            if sRes and sRes[1] then signObj = sRes[1] end
+        end)
+
+        -- Fallbacks de seguridad por si Roblox falla al cargar el asset
+        if not tileObj then
+            tileObj = Instance.new("Part"); tileObj.Size = Vector3.new(6, 1, 6); tileObj.Color = Color3.fromRGB(80, 80, 80)
+        end
+        if not signObj then
+            signObj = Instance.new("Part"); signObj.Size = Vector3.new(2, 3, 0.5); signObj.Color = Color3.fromRGB(150, 75, 0)
+        end
+
+        local mainTile = tileObj:IsA("Model") and (tileObj.PrimaryPart or tileObj:FindFirstChildWhichIsA("BasePart")) or tileObj
+        local mainSign = signObj:IsA("Model") and (signObj.PrimaryPart or signObj:FindFirstChildWhichIsA("BasePart")) or signObj
+
+        -- Físicas naturales de caída
+        if mainTile then
+            mainTile.Position = spawnPos
+            mainTile.Anchored = false
+            mainTile.CanCollide = true
+            mainTile.CustomPhysicalProperties = PhysicalProperties.new(1, 0.4, 0.5, 1, 1) -- Ligero rebote
+            tileObj.Parent = SpawnFolder
+        end
+
+        if mainSign and mainTile then
+            mainSign.Position = spawnPos + Vector3.new(0, 5, 0)
+            mainSign.Anchored = false
+            mainSign.CanCollide = true
+            mainSign.CustomPhysicalProperties = PhysicalProperties.new(1, 0.4, 0.5, 1, 1)
+            signObj.Parent = SpawnFolder
+            
+            -- Congelar las físicas después de que caigan (1.8 seg) y parar el cartel apoyado a la baldosa
+            task.spawn(function()
+                task.wait(1.8)
+                mainTile.Anchored = true
+                mainSign.Anchored = true
+                -- Paramos el cartel afuera de la baldosa de forma natural
+                mainSign.CFrame = mainTile.CFrame * CFrame.new(0, mainSign.Size.Y/2 + 0.5, mainTile.Size.Z/2 + 0.3) * CFrame.Angles(0, 0, 0)
+            end)
+        end
+
+        -- 3. Crear el Elemento de Imagen 3D Rotativo Flotando
+        local ItemVis = Instance.new("Part")
+        ItemVis.Size = Vector3.new(2, 2, 2)
+        ItemVis.Transparency = 1
+        ItemVis.Anchored = true
+        ItemVis.CanCollide = false
+        ItemVis.Position = spawnPos
+        ItemVis.Parent = SpawnFolder
+
+        local BBG = Instance.new("BillboardGui")
+        BBG.Size = UDim2.new(4, 0, 4, 0)
+        BBG.AlwaysOnTop = true
+        BBG.Parent = ItemVis
+
+        local ImgLabel = Instance.new("ImageLabel")
+        ImgLabel.Size = UDim2.new(1, 0, 1, 0)
+        ImgLabel.BackgroundTransparency = 1
+        ImgLabel.Image = "rbxthumb://type=Asset&id=" .. tostring(bannerData.Id) .. "&w=150&h=150"
+        ImgLabel.Parent = BBG
+
+        -- Bucle para rotar y flotar dinámicamente arriba de la baldosa
+        local spinConn
+        spinConn = RunService.RenderStepped:Connect(function()
+            if not ItemVis.Parent then spinConn:Disconnect() return end
+            if mainTile and mainTile.Parent and mainTile.Anchored then
+                ItemVis.CFrame = mainTile.CFrame * CFrame.new(0, 4 + math.sin(tick() * 3) * 0.5, 0) * CFrame.Angles(0, tick() * 2, 0)
+            else
+                ItemVis.Position = mainTile.Position + Vector3.new(0, 4, 0) -- Mientras cae
+            end
+        end)
+
+        -- 4. Escuchar Proximidad para Lanzar la Alerta
+        local proxConn
+        proxConn = RunService.RenderStepped:Connect(function()
+            if not HRP or not ItemVis.Parent then proxConn:Disconnect() return end
+            
+            if (HRP.Position - ItemVis.Position).Magnitude < 6 then
+                proxConn:Disconnect()
+                
+                -- Alerta Nativa CoreGui estructurada según tu UniversalAlert
+                local alertData = {
+                    Title = (bannerData.Name or "Ítem") .. " 💬",
+                    Text = "¿Quieres conseguir o rechazar este objeto?",
+                    Icon = "rbxthumb://type=Asset&id=" .. tostring(bannerData.Id) .. "&w=150&h=150",
+                    Duration = 10,
+                    Button1 = "Conseguir",
+                    Button2 = "Rechazar",
+                    Callback = function(btn)
+                        if btn == "Conseguir" then
+                            -- 5. Efecto Imán / Serpiente "Comiendo" hacia la cabeza
+                            local Head = Char:FindFirstChild("Head") or HRP
+                            local startPos = ItemVis.Position
+                            local dur = 1.2
+                            local elapsed = 0
+                            
+                            local eatConn
+                            eatConn = RunService.RenderStepped:Connect(function(dt)
+                                if not Head or not Head.Parent then eatConn:Disconnect() return end
+                                elapsed = elapsed + dt
+                                local alpha = math.clamp(elapsed / dur, 0, 1)
+                                
+                                local headPos = Head.Position
+                                local straightLine = startPos:Lerp(headPos, alpha)
+                                
+                                -- Cálculo de onda senoidal para el efecto visual serpiente + gravedad al inicio
+                                local waveX = math.sin(elapsed * 15) * 4 * (1 - alpha)
+                                local waveY = math.cos(elapsed * 12) * 3 * (1 - alpha)
+                                local gravityCurve = math.sin(alpha * math.pi) * 3
+                                
+                                ItemVis.Position = straightLine + Vector3.new(waveX, waveY + gravityCurve, 0)
+                                BBG.Size = UDim2.new(4 * (1-alpha), 0, 4 * (1-alpha), 0)
+                                
+                                -- Al comérselo (Llegar a la cabeza)
+                                if alpha >= 1 or (ItemVis.Position - headPos).Magnitude < 1.5 then
+                                    eatConn:Disconnect()
+                                    ItemVis:Destroy()
+                                    
+                                    -- 6. Animación de Glitch y hundimiento de Tierra
+                                    if mainTile then
+                                        mainTile.CanCollide = false
+                                        task.spawn(function()
+                                            for i=1, 8 do
+                                                mainTile.Color = Color3.fromRGB(math.random(50,255), math.random(50,255), math.random(50,255))
+                                                mainTile.Transparency = math.random(2, 9)/10
+                                                if mainSign then
+                                                    mainSign.Color = mainTile.Color
+                                                    mainSign.Transparency = mainTile.Transparency
+                                                    mainSign.CanCollide = false
+                                                end
+                                                task.wait(0.1)
+                                            end
+                                        end)
+                                        TweenService:Create(mainTile, TweenInfo.new(1.2, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Position = mainTile.Position - Vector3.new(0, 15, 0), Transparency = 1}):Play()
+                                    end
+                                    if mainSign then
+                                        TweenService:Create(mainSign, TweenInfo.new(1.2, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Position = mainSign.Position - Vector3.new(0, 15, 0), Transparency = 1}):Play()
+                                    end
+                                    
+                                    task.wait(1.5)
+                                    SpawnFolder:Destroy()
+                                    
+                                    -- 7. Cargar el Item en tu "Visualizador" (Copia Nativa de tu Código original)
+                                    CurrentData.Id = tostring(bannerData.Id)
+                                    CurrentData.Name = bannerData.Name
+                                    CurrentData.Price = bannerData.Price and (tostring(bannerData.Price) .. " R$") or "Gratis"
+                                    CurrentData.ItemType = bannerData.ItemType or "Asset"
+                                    
+                                    if bannerData.OnSelectCallback then
+                                        bannerData.OnSelectCallback(bannerData.Id, bannerData.Price or "Gratis")
+                                    end
+                                    
+                                    isSpawning3D = false
+                                end
+                            end)
+                        else
+                            -- Si elige "Rechazar"
+                            SpawnFolder:Destroy()
+                            isSpawning3D = false
+                        end
+                    end
+                }
+                
+                -- Invocar sistema de alertas Default de Roblox
+                pcall(function() StarterGui:SetCore("SendNotification", alertData) end)
+            end
+        end)
     end)
 
     return Card
