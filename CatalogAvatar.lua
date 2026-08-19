@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN OMEGA: ECLIPSE + COLA ASÍNCRONA + ANTI-LAG PARA DELTA)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN OMEGA: ECLIPSE + EVENTOS NATIVOS PARA DELTA)
 
 -- ==========================================================
 -- 🚀 MICRO-OPTIMIZACIONES LUA (PUNTEROS DIRECTOS PARA VELOCIDAD)
@@ -2731,27 +2731,24 @@ local function ToggleEclipse(estado)
 end
 
 -- ==========================================================
--- 🛡️ MOTOR ECLIPSE / SINGULARIDAD (INTERCEPTOR COMPATIBLE CON DELTA)
--- Nota: Se ha quitado newcclosure para evitar cuelgues en Delta.
+-- 🛡️ MOTOR ECLIPSE SEGURO (NATIVO - SIN HOOKMETAMETHOD)
 -- ==========================================================
-if not getgenv().EclipseRenderHook then
-    getgenv().EclipseRenderHook = true
-    
-    local oldNewindex
-    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        if index == "Parent" and not checkcaller() then
-            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                task_spawn(function()
-                    if typeof(self) == "Instance" and self.ClassName == "Model" then
-                        table_insert(ViewportQueue, self)
-                        ProcessQueue()
-                    end
-                end)
+local function CatchViewportModel(instance)
+    task_defer(function()
+        if typeof(instance) == "Instance" and instance.ClassName == "Model" then
+            local parent = instance.Parent
+            if parent and parent.ClassName == "ViewportFrame" then
+                table_insert(ViewportQueue, instance)
+                ProcessQueue()
             end
         end
-        return oldNewindex(self, index, value)
     end)
 end
+
+-- Monitoreamos la creación de modelos en la UI usando la API limpia de Roblox
+pcall(function() CoreGui.DescendantAdded:Connect(CatchViewportModel) end)
+pcall(function() LocalPlayer:WaitForChild("PlayerGui", 5).DescendantAdded:Connect(CatchViewportModel) end)
+
 
 -- ==========================================================
 -- ⚙️ UI RAYFIELD
@@ -2852,7 +2849,6 @@ ExtraTab:CreateButton({
                             task_spawn(function()
                                 pcall(RefreshSavedCharactersGrid)
                                 
-                                -- ESPERA DINÁMICA (No más esperas fijas, espera a que termine la cola de optimización)
                                 local waitCycles = 0
                                 while IsProcessingQueue and waitCycles < 15 do
                                     task_wait(0.2)
