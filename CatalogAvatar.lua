@@ -900,6 +900,231 @@ EditPartsBtn.MouseButton1Click:Connect(function()
     PartsPanel.Visible = true
 end)
 
+-- ==========================================================
+-- BOTÓN Y MENÚ DE HERRAMIENTAS AVANZADAS (EXTRAS) INYECTADOS AQUI
+-- ==========================================================
+local ExtraToolsBtn = Instance.new("TextButton")
+ExtraToolsBtn.Size = UDim2.new(0, 85, 0, 30)
+ExtraToolsBtn.Position = UDim2.new(1, -215, 0, 5) -- Al lado de Edit Parts
+ExtraToolsBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+ExtraToolsBtn.Text = "⚡ Extras"
+ExtraToolsBtn.Font = Enum.Font.GothamBold
+ExtraToolsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExtraToolsBtn.TextSize = 11
+ExtraToolsBtn.ZIndex = 11
+ExtraToolsBtn.Parent = EqPanel
+local ExtraToolsCorner = Instance.new("UICorner"); ExtraToolsCorner.CornerRadius = UDim.new(0, 6); ExtraToolsCorner.Parent = ExtraToolsBtn
+
+local ExtraPanel = Instance.new("Frame")
+ExtraPanel.Size = UDim2.new(0, 320, 0, 360)
+ExtraPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
+ExtraPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+ExtraPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ExtraPanel.ClipsDescendants = true
+ExtraPanel.Visible = false
+ExtraPanel.ZIndex = 40
+ExtraPanel.Parent = VisualizerGui
+
+local ExtraPanelCorner = Instance.new("UICorner"); ExtraPanelCorner.CornerRadius = UDim.new(0, 12); ExtraPanelCorner.Parent = ExtraPanel
+local ExtraPanelStroke = Instance.new("UIStroke"); ExtraPanelStroke.Color = Color3.fromRGB(0, 150, 255); ExtraPanelStroke.Thickness = 2; ExtraPanelStroke.Parent = ExtraPanel
+
+local ExtraTitle = Instance.new("TextLabel")
+ExtraTitle.Size = UDim2.new(1, 0, 0, 40)
+ExtraTitle.BackgroundTransparency = 1
+ExtraTitle.Text = "⚡ Herramientas Avanzadas"
+ExtraTitle.Font = Enum.Font.GothamBold
+ExtraTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExtraTitle.TextSize = 14
+ExtraTitle.ZIndex = 41
+ExtraTitle.Parent = ExtraPanel
+
+local ExtraCloseBtn = Instance.new("TextButton")
+ExtraCloseBtn.Size = UDim2.new(0, 30, 0, 30)
+ExtraCloseBtn.Position = UDim2.new(1, -35, 0, 5)
+ExtraCloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+ExtraCloseBtn.Text = "X"
+ExtraCloseBtn.Font = Enum.Font.GothamBold
+ExtraCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExtraCloseBtn.ZIndex = 41
+ExtraCloseBtn.Parent = ExtraPanel
+local ExtraCloseCorner = Instance.new("UICorner"); ExtraCloseCorner.CornerRadius = UDim.new(0, 6); ExtraCloseCorner.Parent = ExtraCloseBtn
+
+ExtraCloseBtn.MouseButton1Click:Connect(function() 
+    ExtraPanel.Visible = false
+    EqPanel.Visible = true 
+end)
+
+ExtraToolsBtn.MouseButton1Click:Connect(function()
+    EqPanel.Visible = false
+    ExtraPanel.Visible = true
+end)
+
+-- 1. Limpiador Avanzado de RAM / Cache
+local RamCleanBtn = Instance.new("TextButton")
+RamCleanBtn.Size = UDim2.new(0.9, 0, 0, 40)
+RamCleanBtn.Position = UDim2.new(0.05, 0, 0, 50)
+RamCleanBtn.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+RamCleanBtn.Text = "🧹 Limpiar RAM y Optimizar Delta (iOS)"
+RamCleanBtn.Font = Enum.Font.GothamBold
+RamCleanBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RamCleanBtn.TextSize = 12
+RamCleanBtn.ZIndex = 41
+RamCleanBtn.Parent = ExtraPanel
+local RamCleanCorner = Instance.new("UICorner"); RamCleanCorner.CornerRadius = UDim.new(0, 8); RamCleanCorner.Parent = RamCleanBtn
+
+RamCleanBtn.MouseButton1Click:Connect(function()
+    pcall(function()
+        if collectgarbage then collectgarbage("collect") end
+        for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
+            if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v.Enabled = false
+            end
+        end
+        local lighting = game:GetService("Lighting")
+        lighting.GlobalShadows = false
+        lighting.FogEnd = 9e9
+        if NotifyUser then NotifyUser("Optimización Lista", "Se liberó RAM, texturas y partículas sin callbacks de error.") end
+    end)
+end)
+
+-- 2. Mostrar / Ocultar Visualizador
+local visHidden = false
+local ToggleVisBtn = Instance.new("TextButton")
+ToggleVisBtn.Size = UDim2.new(0.9, 0, 0, 40)
+ToggleVisBtn.Position = UDim2.new(0.05, 0, 0, 100)
+ToggleVisBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 255)
+ToggleVisBtn.Text = "👁️ Ocultar Visualizador de Ítems"
+ToggleVisBtn.Font = Enum.Font.GothamBold
+ToggleVisBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleVisBtn.TextSize = 12
+ToggleVisBtn.ZIndex = 41
+ToggleVisBtn.Parent = ExtraPanel
+local ToggleVisCorner = Instance.new("UICorner"); ToggleVisCorner.CornerRadius = UDim.new(0, 8); ToggleVisCorner.Parent = ToggleVisBtn
+
+ToggleVisBtn.MouseButton1Click:Connect(function()
+    visHidden = not visHidden
+    if Container then Container.Visible = not visHidden end
+    ToggleVisBtn.Text = visHidden and "👁️ Mostrar Visualizador de Ítems" or "👁️ Ocultar Visualizador de Ítems"
+    if NotifyUser then NotifyUser("Visualizador", visHidden and "El panel visualizador está oculto" or "El panel visualizador está visible") end
+end)
+
+-- 3. Orientación de Pantalla
+local OrientLabel = Instance.new("TextLabel")
+OrientLabel.Size = UDim2.new(0.9, 0, 0, 20)
+OrientLabel.Position = UDim2.new(0.05, 0, 0, 155)
+OrientLabel.BackgroundTransparency = 1
+OrientLabel.Text = "Orientación de Pantalla:"
+OrientLabel.Font = Enum.Font.GothamSemibold
+OrientLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+OrientLabel.TextSize = 12
+OrientLabel.TextXAlignment = Enum.TextXAlignment.Left
+OrientLabel.ZIndex = 41
+OrientLabel.Parent = ExtraPanel
+
+local OrientVertBtn = Instance.new("TextButton")
+OrientVertBtn.Size = UDim2.new(0.42, 0, 0, 35)
+OrientVertBtn.Position = UDim2.new(0.05, 0, 0, 180)
+OrientVertBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+OrientVertBtn.Text = "📱 Vertical"
+OrientVertBtn.Font = Enum.Font.GothamBold
+OrientVertBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OrientVertBtn.TextSize = 12
+OrientVertBtn.ZIndex = 41
+OrientVertBtn.Parent = ExtraPanel
+local OrientVertCorner = Instance.new("UICorner"); OrientVertCorner.CornerRadius = UDim.new(0, 6); OrientVertCorner.Parent = OrientVertBtn
+
+local OrientHorizBtn = Instance.new("TextButton")
+OrientHorizBtn.Size = UDim2.new(0.42, 0, 0, 35)
+OrientHorizBtn.Position = UDim2.new(0.53, 0, 0, 180)
+OrientHorizBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+OrientHorizBtn.Text = "📟 Horizontal"
+OrientHorizBtn.Font = Enum.Font.GothamBold
+OrientHorizBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OrientHorizBtn.TextSize = 12
+OrientHorizBtn.ZIndex = 41
+OrientHorizBtn.Parent = ExtraPanel
+local OrientHorizCorner = Instance.new("UICorner"); OrientHorizCorner.CornerRadius = UDim.new(0, 6); OrientHorizCorner.Parent = OrientHorizBtn
+
+local function SetScreenOrient(orientEnum, name)
+    pcall(function()
+        local pGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if pGui then
+            pGui.ScreenOrientation = orientEnum
+        end
+        if NotifyUser then NotifyUser("Orientación", "Pantalla ajustada a modo " .. name) end
+    end)
+end
+OrientVertBtn.MouseButton1Click:Connect(function() SetScreenOrient(Enum.ScreenOrientation.Portrait, "Vertical") end)
+OrientHorizBtn.MouseButton1Click:Connect(function() SetScreenOrient(Enum.ScreenOrientation.LandscapeRight, "Horizontal") end)
+
+-- 4. Búsqueda por ID Personalizada
+local SearchIdLabel = Instance.new("TextLabel")
+SearchIdLabel.Size = UDim2.new(0.9, 0, 0, 20)
+SearchIdLabel.Position = UDim2.new(0.05, 0, 0, 230)
+SearchIdLabel.BackgroundTransparency = 1
+SearchIdLabel.Text = "Buscar Accesorio / Item por ID:"
+SearchIdLabel.Font = Enum.Font.GothamSemibold
+SearchIdLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+SearchIdLabel.TextSize = 12
+SearchIdLabel.TextXAlignment = Enum.TextXAlignment.Left
+SearchIdLabel.ZIndex = 41
+SearchIdLabel.Parent = ExtraPanel
+
+local SearchIdInput = Instance.new("TextBox")
+SearchIdInput.Size = UDim2.new(0.65, 0, 0, 35)
+SearchIdInput.Position = UDim2.new(0.05, 0, 0, 255)
+SearchIdInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+SearchIdInput.PlaceholderText = "Escribe ID aquí..."
+SearchIdInput.Text = ""
+SearchIdInput.Font = Enum.Font.GothamMedium
+SearchIdInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchIdInput.TextSize = 12
+SearchIdInput.ZIndex = 41
+SearchIdInput.Parent = ExtraPanel
+local SearchIdCorner = Instance.new("UICorner"); SearchIdCorner.CornerRadius = UDim.new(0, 6); SearchIdCorner.Parent = SearchIdInput
+
+local SearchIdActionBtn = Instance.new("TextButton")
+SearchIdActionBtn.Size = UDim2.new(0.22, 0, 0, 35)
+SearchIdActionBtn.Position = UDim2.new(0.73, 0, 0, 255)
+SearchIdActionBtn.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
+SearchIdActionBtn.Text = "🔍"
+SearchIdActionBtn.Font = Enum.Font.GothamBold
+SearchIdActionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SearchIdActionBtn.TextSize = 16
+SearchIdActionBtn.ZIndex = 41
+SearchIdActionBtn.Parent = ExtraPanel
+local SearchIdActionCorner = Instance.new("UICorner"); SearchIdActionCorner.CornerRadius = UDim.new(0, 6); SearchIdActionCorner.Parent = SearchIdActionBtn
+
+SearchIdActionBtn.MouseButton1Click:Connect(function()
+    local inputId = tonumber(SearchIdInput.Text)
+    if inputId and inputId > 0 then
+        pcall(function()
+            local info = MarketplaceService:GetProductInfo(inputId)
+            CurrentData.Id = tostring(inputId)
+            CurrentData.Name = info.Name
+            CurrentData.Price = info.PriceInRobux and (tostring(info.PriceInRobux) .. " R$") or "Gratis"
+            CurrentData.ItemType = "Asset"
+            if UpdateVisualizer then 
+                UpdateVisualizer(inputId, CurrentData.Price)
+            end
+            if not visHidden then
+                Container.Visible = true 
+            end
+            if NotifyUser then NotifyUser("Buscador ID", "Item cargado en el visualizador con éxito.") end
+        end)
+    else
+        if NotifyUser then NotifyUser("Error ID", "Por favor ingresa una ID numérica válida.") end
+    end
+end)
+-- ==========================================================
+-- FIN INTEGRACIONES EXTRA (Continúa código original EqScroll)
+-- ==========================================================
+
 local EqScroll = Instance.new("ScrollingFrame")
 EqScroll.Size = UDim2.new(1, -20, 1, -50)
 EqScroll.Position = UDim2.new(0, 10, 0, 40)
