@@ -2423,9 +2423,10 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V5)
--- Flotante Más Grande + Caída de Pie + Cartel al Lado 
--- + Explosión de Madera Limpia + Notificación Nativa "Infinita"
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V6)
+-- Distancia Corregida + Anclaje Absoluto (Anti-Caídas) 
+-- + Flotante + Explosión + Notificación Nativa "Infinita"
+-- + Ocultar Interfaz + Desenfoque de Cámara
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2440,6 +2441,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local RunService = game:GetService("RunService")
         local Debris = game:GetService("Debris")
         local StarterGui = game:GetService("StarterGui")
+        local Lighting = game:GetService("Lighting")
         local LocalPlayer = Players.LocalPlayer
 
         if Workspace:FindFirstChild("Kitty3DPreview") then
@@ -2453,15 +2455,15 @@ ClickBtn.MouseButton1Click:Connect(function()
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
         
-        -- Posición base en el suelo
-        local spawnPos = hrp.Position + hrp.CFrame.LookVector * 7
+        -- FIX: Aparece mucho más lejos (14 studs) y se ajusta la altura al nivel de los pies (aprox Y - 3)
+        local rawPos = hrp.Position + (hrp.CFrame.LookVector * 14)
+        local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
         -- ==================================================
-        -- FUNCIÓN: CAÍDA PERFECTA Y PARADA (No cae de lado)
+        -- FUNCIÓN: CAÍDA PERFECTA Y PARADA
         -- ==================================================
         local function AnimateDrop(model, targetCFrame)
             local cfValue = Instance.new("CFrameValue")
-            -- Sumamos 25 studs hacia arriba manteniendo la rotación exacta del target
             cfValue.Value = targetCFrame + Vector3.new(0, 25, 0)
             model:PivotTo(cfValue.Value)
             
@@ -2479,6 +2481,20 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end
 
+        -- FIX: Función maestra para congelar TODAS las físicas, incluyendo la pieza raíz
+        local function LockPhysics(obj)
+            if obj:IsA("BasePart") then
+                obj.Anchored = true
+                obj.CanCollide = false
+            end
+            for _, p in ipairs(obj:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    p.Anchored = true
+                    p.CanCollide = false
+                end
+            end
+        end
+
         -- ==================================================
         -- 1. BALDOSA (Objeto Principal)
         -- ==================================================
@@ -2488,12 +2504,10 @@ ClickBtn.MouseButton1Click:Connect(function()
             Tile = tileObjs[1]:Clone()
             Tile.Name = "KittyTile"
             Tile.Parent = PreviewFolder
-            for _, p in ipairs(Tile:GetDescendants()) do
-                if p:IsA("BasePart") then
-                    p.Anchored = true
-                    p.CanCollide = false
-                end
-            end
+            
+            LockPhysics(Tile) -- Congelamos absolutamente todo
+            
+            -- FIX: Forzamos que caiga totalmente plano (CFrame sin ángulos raros)
             AnimateDrop(Tile, CFrame.new(spawnPos))
         else
             Tile = Instance.new("Part")
@@ -2515,33 +2529,28 @@ ClickBtn.MouseButton1Click:Connect(function()
             Sign = signObjs[1]:Clone()
             Sign.Name = "KittySign"
             Sign.Parent = PreviewFolder
-            for _, p in ipairs(Sign:GetDescendants()) do
-                if p:IsA("BasePart") then
-                    p.Anchored = true
-                    p.CanCollide = false
-                end
-            end
             
-            -- Posición: Desplazado a la derecha (+4 en X), 1.5 studs elevado (para que clave de pie), y rotado levemente hacia adentro.
+            LockPhysics(Sign) -- Congelamos absolutamente todo
+            
+            -- FIX: Rotación forzada para estar de pie y un poco ladeado hacia adentro
             local signTarget = CFrame.new(spawnPos + Vector3.new(4, 1.5, 0)) * CFrame.Angles(0, math.rad(-25), 0)
             AnimateDrop(Sign, signTarget)
         end
 
         -- ==================================================
-        -- EFECTO: EXPLOSIÓN DE PIEZAS DE MADERA (Sin ramas)
+        -- EFECTO: EXPLOSIÓN DE PIEZAS DE MADERA
         -- ==================================================
         task.delay(0.65, function() 
             for i = 1, 14 do
                 local wood = Instance.new("Part")
                 wood.Size = Vector3.new(math.random(3,6)/10, math.random(3,6)/10, math.random(3,6)/10)
-                wood.Position = spawnPos + Vector3.new(0, 1.5, 0) -- Aparecen desde el centro del impacto
+                wood.Position = spawnPos + Vector3.new(0, 1.5, 0)
                 wood.Material = Enum.Material.Wood
                 wood.Color = Color3.fromRGB(110, 75, 45) 
                 wood.Anchored = false
                 wood.CanCollide = true
                 wood.Parent = PreviewFolder
                 
-                -- Explosión física en todas direcciones
                 wood.Velocity = Vector3.new(math.random(-25, 25), math.random(20, 45), math.random(-25, 25))
                 wood.RotVelocity = Vector3.new(math.random(-20, 20), math.random(-20, 20), math.random(-20, 20))
                 
@@ -2550,7 +2559,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. IMAGEN FLOTANTE (Más Grande y Más Alta)
+        -- 3. IMAGEN FLOTANTE
         -- ==================================================
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
@@ -2583,13 +2592,13 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime += dt
-            -- Se asegura de estar a 5 studs de altura, claramente por encima del Tile 3D
-            local basePos = spawnPos + Vector3.new(0, 5.0 + math.sin(floatTime * 1.8) * 0.4, 0)
+            -- Ajustado a +6 studs desde el nivel del suelo para que resalte
+            local basePos = spawnPos + Vector3.new(0, 6.0 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
 
         -- ==================================================
-        -- DETECCIÓN + NOTIFICACIÓN NATIVA "INFINITA"
+        -- DETECCIÓN (Solo si te acercas)
         -- ==================================================
         local alreadyPrompted = false
         local proximityConn
@@ -2604,6 +2613,15 @@ ClickBtn.MouseButton1Click:Connect(function()
             if dist <= 8.5 then
                 alreadyPrompted = true
                 if proximityConn then proximityConn:Disconnect() end
+
+                -- 🔥 ALTERNATIVA 2: Ocultamos la UI Principal y agregamos Desenfoque
+                local mainUI = ClickBtn:FindFirstAncestorOfClass("ScreenGui")
+                if mainUI then mainUI.Enabled = false end
+
+                local blurEffect = Instance.new("BlurEffect")
+                blurEffect.Name = "KittyPreviewBlur"
+                blurEffect.Size = 15
+                blurEffect.Parent = Lighting
 
                 local bindable = Instance.new("BindableFunction")
                 bindable.OnInvoke = function(response)
@@ -2659,6 +2677,10 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     SinkAndDestroy(Tile)
                                     SinkAndDestroy(Sign)
 
+                                    -- 🔥 Restauramos la UI y quitamos el desenfoque
+                                    if mainUI then mainUI.Enabled = true end
+                                    if blurEffect then blurEffect:Destroy() end
+
                                     UpdateVisualizer(item.id, item.price or "Gratis")
                                     NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
                                 end
@@ -2667,6 +2689,10 @@ ClickBtn.MouseButton1Click:Connect(function()
                     else
                         if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end
                         if rotConnection then rotConnection:Disconnect() end
+                        
+                        -- 🔥 Restauramos la UI y quitamos el desenfoque si cancela
+                        if mainUI then mainUI.Enabled = true end
+                        if blurEffect then blurEffect:Destroy() end
                     end
                 end
 
@@ -2675,7 +2701,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                         Title = item.name,
                         Text = "¿Quieres conseguir este ítem?",
                         Icon = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150",
-                        Duration = 9999999, -- Tiempo masivo para que no desaparezca sola
+                        Duration = 9999999, 
                         Button1 = "Conseguir",
                         Button2 = "Rechazar",
                         Callback = bindable
