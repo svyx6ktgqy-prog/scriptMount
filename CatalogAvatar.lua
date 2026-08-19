@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---# EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE SEGURA PARA DELTA: SIN HOOKS INVASIVOS)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + HASH DICTIONARY O(1) + TITILEO + 0 LAG)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2597,12 +2597,39 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 -- ==========================================================
--- 🧠 SISTEMAS DE MEMORIA Y CACHÉ
+-- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
 -- ==========================================================
 local ItemCache = {}
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
+
+-- Diccionario Hash O(1) DEFINITIVO (Todo lo que no sea geometría pura o uniones vitales muere aquí)
+local TrashClasses = {
+    -- Scripts & Lógica
+    FaceControls = true, Animator = true, Animation = true, Script = true, 
+    LocalScript = true, ModuleScript = true,
+    
+    -- Audio y Efectos Visuales Especiales
+    Sound = true, ParticleEmitter = true, Trail = true, Fire = true, 
+    Smoke = true, Sparkles = true, Beam = true, Highlight = true, ForceField = true,
+    
+    -- Texturas 2D (Se evalúan antes de destruir)
+    Decal = true, Texture = true,
+    
+    -- Deformación, Huesos y Ropa 3D
+    WrapLayer = true, WrapTarget = true, IKControl = true, Bone = true, Attachment = true,
+    
+    -- Luces Dinámicas (Consumen muchísimo renderizado)
+    PointLight = true, SpotLight = true, SurfaceLight = true,
+    
+    -- Interacción inútil en Viewports
+    ProximityPrompt = true, ClickDetector = true, BillboardGui = true, SurfaceGui = true,
+    
+    -- Físicas innecesarias (No se toca Weld ni Motor6D para no desarmar el avatar)
+    SpringConstraint = true, RopeConstraint = true, RodConstraint = true
+}
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO CON CROSSFADE Y TITILEO - 100% SEGURO)
+-- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO CON CROSSFADE Y TITILEO)
 -- ==========================================================
 local eclipseActive = false
 
@@ -2616,7 +2643,7 @@ local function ToggleEclipse(estado)
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield queda encima
+            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield (CoreGui) queda encima
             
             local fondo = Instance.new("Frame")
             fondo.Name = "FondoNegro"
@@ -2627,7 +2654,7 @@ local function ToggleEclipse(estado)
             eclipseUI.Parent = playerGui
         end
         
-        -- Bajamos la calidad gráfica del motor al mínimo absoluto temporalmente
+        -- Bajamos la calidad gráfica del motor al mínimo absoluto
         pcall(function() settings().Rendering.QualityLevel = 1 end)
         
         local fondo = eclipseUI:FindFirstChild("FondoNegro")
@@ -2654,14 +2681,14 @@ local function ToggleEclipse(estado)
             -- Restauramos calidad gráfica
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
             
-            -- 3. CROSSFADE DE SALIDA (Anula automáticamente el titileo)
             local fondo = eclipseUI.FondoNegro
+            -- 3. CROSSFADE DE SALIDA (Sobreescribe y anula el titileo automáticamente)
             local tweenSalida = TweenService:Create(fondo, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
             tweenSalida:Play()
             
-            tweenSalida.Completed:Connect(function()
+            tweenSalida.Completed:Connect(function() 
                 if not eclipseActive and eclipseUI then
-                    eclipseUI:Destroy()
+                    eclipseUI:Destroy() 
                 end
             end)
         end
@@ -2669,11 +2696,75 @@ local function ToggleEclipse(estado)
 end
 
 -- ==========================================================
--- ⚙️ INTERFAZ DE USUARIO RAYFIELD
+-- 🛡️ MOTOR ECLIPSE (INTERCEPTOR CON DICCIONARIO HASH)
 -- ==========================================================
+if not getgenv().EclipseRenderHook then
+    getgenv().EclipseRenderHook = true
+    
+    local oldNewindex
+    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
+        if index == "Parent" and not checkcaller() then
+            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+                
+                -- ILUMINACIÓN PLANA: Desactivar sombras del contenedor ViewportFrame
+                pcall(function()
+                    value.LightColor = Color3.new(1, 1, 1)
+                    value.Ambient = Color3.new(1, 1, 1)
+                    value.LightDirection = Vector3.new(0, 0, 0)
+                end)
 
--- Verificación rápida de Rayfield
-if not Window then return end
+                task.spawn(function()
+                    pcall(function()
+                        if self.ClassName == "Model" then
+                            for _, v in ipairs(self:GetDescendants()) do
+                                local cName = v.ClassName -- Lectura directa en memoria rápida
+                                
+                                -- 1. Optimización Geométrica Total
+                                if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
+                                    v.CastShadow = false
+                                    v.CanCollide = false
+                                    v.CanTouch = false
+                                    v.CanQuery = false
+                                    v.Anchored = true
+                                    v.Massless = true
+                                    v.Reflectance = 0 -- Evita cálculos de reflejos PBR
+                                    v.CustomPhysicalProperties = ZeroPhysics
+                                    
+                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
+                                    if cName == "MeshPart" then
+                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
+                                    end
+                                    
+                                -- 2. Lobotomía del Humanoide
+                                elseif cName == "Humanoid" then
+                                    v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                                    v.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+                                    v.RequiresNeck = false
+                                    v.BreakJointsOnDeath = false
+                                    pcall(function() v.EvaluateStateMachine = false end)
+                                    pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+                                        pcall(function() v:SetStateEnabled(state, false) end)
+                                    end
+                                    
+                                -- 3. Destrucción instantánea por Diccionario Hash O(1)
+                                elseif TrashClasses[cName] then
+                                    if (cName == "Decal" or cName == "Texture") then
+                                        if v.Transparency == 1 then v:Destroy() end
+                                    else
+                                        v:Destroy()
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                end)
+            end
+        end
+        return oldNewindex(self, index, value)
+    end)
+end
+-- ==========================================================
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
@@ -2688,9 +2779,11 @@ ExtraTab:CreateButton({
                 Rayfield:Notify({Title = "⚙️ Optimizando...", Content = "Aplicando modo liso/minimalista.", Duration = 3, Image = 4483362458})
                 task.spawn(function()
                     task.wait(0.5) 
+                    -- Limpieza de Iluminación y Sombras
                     pcall(function() Lighting.GlobalShadows = false; Lighting.Brightness = 0; Lighting.EnvironmentDiffuseScale = 0; Lighting.EnvironmentSpecularScale = 0; Lighting.ShadowSoftness = 0; Lighting.FogEnd = 9e9 end)
                     for _, effect in ipairs(Lighting:GetChildren()) do pcall(function() if effect:IsA("PostEffect") or effect:IsA("Atmosphere") or effect:IsA("Sky") then effect:Destroy() end end) end
                     
+                    -- Limpieza de Terreno y Nubes Volumétricas
                     pcall(function() 
                         if Workspace:FindFirstChildOfClass("Terrain") then 
                             Workspace.Terrain.WaterWaveSize = 0; Workspace.Terrain.WaterWaveSpeed = 0; Workspace.Terrain.WaterReflectance = 0; Workspace.Terrain.WaterTransparency = 1; Workspace.Terrain.Decoration = false 
@@ -2698,6 +2791,7 @@ ExtraTab:CreateButton({
                         end 
                     end)
                     
+                    -- Plasticidad Global
                     for _, v in ipairs(Workspace:GetDescendants()) do 
                         pcall(function() 
                             if v:IsA("BasePart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0; v.CastShadow = false 
@@ -2706,7 +2800,7 @@ ExtraTab:CreateButton({
                         end) 
                     end
                     
-                    pcall(function() collectgarbage("collect") end)
+                    pcall(function() collectgarbage("collect") end) -- Purga de RAM
                     Rayfield:Notify({Title = "✅ Listo", Content = "Entorno liso al 100% y memoria liberada.", Duration = 3, Image = 4483362458})
                 end)
             end
@@ -2779,22 +2873,19 @@ ExtraTab:CreateButton({
                     
                     if targetMenu.Visible then
                         ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Procesando avatares...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Desviando 100% de la GPU a la carga de avatares...", Duration = 2, Image = 4483362458})
                         
-                        task.spawn(function()
-                            pcall(function() collectgarbage("collect") end)
-                            
-                            if RefreshSavedCharactersGrid then
+                        if RefreshSavedCharactersGrid then
+                            task.spawn(function()
                                 pcall(RefreshSavedCharactersGrid)
-                            end
-                            
-                            task.wait(1.5) 
-                            
-                            pcall(function() collectgarbage("collect") end)
-                            
+                                task.wait(1.5)
+                                ToggleEclipse(false)
+                                Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
+                            end)
+                        else
+                            task.wait(1)
                             ToggleEclipse(false)
-                            Rayfield:Notify({Title = "✅ Carga Completada", Content = "Restaurando mundo.", Duration = 2, Image = 4483362458})
-                        end)
+                        end
                     else
                         ToggleEclipse(false)
                     end
