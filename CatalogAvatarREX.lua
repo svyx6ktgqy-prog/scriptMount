@@ -2585,7 +2585,7 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD (VERSIÓN ECLIPSE: APAGÓN GRÁFICO + HASH DICTIONARY O(1) + 0 LAG)
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN DEFINITIVA: ECLIPSE V2 + GARBAGE SWEEP 2.0 + ANTI-DEFORMIDADES)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -2594,14 +2594,14 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 -- ==========================================================
 -- 🧠 SISTEMAS DE MEMORIA Y CACHÉ ULTRA-RÁPIDOS
 -- ==========================================================
 local ItemCache = {}
-local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0) -- Se crea UNA sola vez (Ahorra miles de micro-cálculos)
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
 
--- Diccionario Hash O(1) para identificación instantánea (100x más rápido que :IsA())
 local TrashClasses = {
     FaceControls = true, Animator = true, Animation = true, Script = true, 
     LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
@@ -2609,7 +2609,7 @@ local TrashClasses = {
 }
 
 -- ==========================================================
--- 🌑 SISTEMA "ECLIPSE" (APAGÓN GRÁFICO DE CARGA)
+-- 🌑 SISTEMA "ECLIPSE" V2 (CROSS-FADE + TITILEO)
 -- ==========================================================
 local function ToggleEclipse(estado)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -2620,7 +2620,7 @@ local function ToggleEclipse(estado)
             eclipseUI = Instance.new("ScreenGui")
             eclipseUI.Name = "OptiEclipseBlackout"
             eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999 -- Tapa el juego, pero Rayfield (CoreGui) queda encima
+            eclipseUI.DisplayOrder = 99999
             
             local fondo = Instance.new("Frame")
             fondo.Name = "FondoNegro"
@@ -2628,29 +2628,68 @@ local function ToggleEclipse(estado)
             fondo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             fondo.BackgroundTransparency = 1
             fondo.Parent = eclipseUI
+            
+            local textoCarga = Instance.new("TextLabel")
+            textoCarga.Name = "TextoCarga"
+            textoCarga.Size = UDim2.new(1, 0, 1, 0)
+            textoCarga.BackgroundTransparency = 1
+            textoCarga.Font = Enum.Font.GothamBold
+            textoCarga.Text = "SISTEMA ECLIPSE\nPROCESANDO ASSETS..."
+            textoCarga.TextColor3 = Color3.fromRGB(255, 255, 255)
+            textoCarga.TextSize = 24
+            textoCarga.TextTransparency = 1
+            textoCarga.Parent = fondo
+            
             eclipseUI.Parent = playerGui
         end
         
-        -- Bajamos la calidad gráfica del motor al mínimo absoluto
+        local fondo = eclipseUI.FondoNegro
+        local texto = fondo.TextoCarga
+        
+        -- Limpieza de RAM antes del apagón
+        pcall(function() collectgarbage("collect") end)
         pcall(function() settings().Rendering.QualityLevel = 1 end)
         
-        -- Oscurecemos instantáneamente
-        eclipseUI.FondoNegro.BackgroundTransparency = 0
+        -- Cross-fade de ENTRADA
+        local tweenInFondo = TweenService:Create(fondo, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0})
+        local tweenInTexto = TweenService:Create(texto, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {TextTransparency = 0})
+        
+        tweenInFondo:Play()
+        tweenInTexto:Play()
+        tweenInFondo.Completed:Wait() -- Esperamos a que la pantalla esté negra para soltar el lag
+        
+        -- Efecto de TITILEO (Pulsación de respiración infinita)
+        local pulseInfo = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+        local tweenPulse = TweenService:Create(texto, pulseInfo, {TextTransparency = 0.6})
+        tweenPulse:Play()
+        
     else
         if eclipseUI and eclipseUI:FindFirstChild("FondoNegro") then
-            -- Restauramos calidad gráfica
+            local fondo = eclipseUI.FondoNegro
+            local texto = fondo:FindFirstChild("TextoCarga")
+            
+            -- Restauramos el motor
+            pcall(function() collectgarbage("collect") end)
             pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
             
-            -- Desvanecimiento suave para que luzca profesional
-            local tween = TweenService:Create(eclipseUI.FondoNegro, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-            tween:Play()
-            tween.Completed:Connect(function() eclipseUI:Destroy() end)
+            -- Cross-fade de SALIDA
+            local tweenOutFondo = TweenService:Create(fondo, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {BackgroundTransparency = 1})
+            tweenOutFondo:Play()
+            
+            if texto then
+                local tweenOutTexto = TweenService:Create(texto, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {TextTransparency = 1})
+                tweenOutTexto:Play()
+            end
+            
+            tweenOutFondo.Completed:Connect(function() 
+                eclipseUI:Destroy() 
+            end)
         end
     end
 end
 
 -- ==========================================================
--- 🛡️ MOTOR ECLIPSE (INTERCEPTOR CON DICCIONARIO HASH)
+-- 🛡️ MOTOR ECLIPSE (INTERCEPTOR DE DEFORMIDADES)
 -- ==========================================================
 if not getgenv().EclipseRenderHook then
     getgenv().EclipseRenderHook = true
@@ -2660,13 +2699,17 @@ if not getgenv().EclipseRenderHook then
         if index == "Parent" and not checkcaller() then
             if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
                 
-                task.spawn(function()
+                task.defer(function()
                     pcall(function()
                         if self.ClassName == "Model" then
-                            for _, v in ipairs(self:GetDescendants()) do
-                                local cName = v.ClassName -- Lectura directa en memoria
+                            local descendants = self:GetDescendants()
+                            local count = 0
+                            
+                            for i = 1, #descendants do
+                                local v = descendants[i]
+                                local cName = v.ClassName
                                 
-                                -- 1. Optimización Geométrica
+                                -- 1. Optimizador de Geometría
                                 if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
                                     v.CastShadow = false
                                     v.CanCollide = false
@@ -2674,13 +2717,21 @@ if not getgenv().EclipseRenderHook then
                                     v.CanQuery = false
                                     v.Anchored = true
                                     v.Massless = true
-                                    v.CustomPhysicalProperties = ZeroPhysics -- Usamos la variable global
+                                    v.CustomPhysicalProperties = ZeroPhysics
                                     pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
                                     if cName == "MeshPart" then
                                         pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
                                     end
                                     
-                                -- 2. Apagado Cerebral del Humanoide
+                                -- 2. Ropa en Capas (Layered Clothing)
+                                elseif cName == "WrapLayer" or cName == "WrapTarget" then
+                                    pcall(function() v.Enabled = true end) 
+                                    
+                                -- 3. Huesos y Articulaciones (Evita T-Pose o rotura)
+                                elseif cName == "Motor6D" or cName == "Bone" then
+                                    pcall(function() v.Enabled = true end)
+                                    
+                                -- 4. Humanoide (Cerebro)
                                 elseif cName == "Humanoid" then
                                     v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
                                     v.RequiresNeck = false
@@ -2689,14 +2740,19 @@ if not getgenv().EclipseRenderHook then
                                         pcall(function() v:SetStateEnabled(state, false) end)
                                     end
                                     
-                                -- 3. Destrucción instantánea por Diccionario Hash (O(1))
+                                -- 5. Basurero Hash O(1)
                                 elseif TrashClasses[cName] then
-                                    -- Si es Decal/Texture, solo destruimos si es invisible para no dañar las caras
                                     if (cName == "Decal" or cName == "Texture") then
                                         if v.Transparency == 1 then v:Destroy() end
                                     else
                                         v:Destroy()
                                     end
+                                end
+                                
+                                count = count + 1
+                                -- Micro-yield cada 100 partes para evitar Crash
+                                if count % 100 == 0 then
+                                    RunService.RenderStepped:Wait()
                                 end
                             end
                         end
@@ -2707,8 +2763,45 @@ if not getgenv().EclipseRenderHook then
         return oldNewindex(self, index, value)
     end)
 end
--- ==========================================================
 
+-- ==========================================================
+-- 🧹 SISTEMA DE LIMPIEZA DE CACHÉ (GARBAGE SWEEP 2.0)
+-- ==========================================================
+local function ClearOldAvatars(menu)
+    if not menu then return end
+    
+    local deletedCount = 0
+    for _, obj in ipairs(menu:GetDescendants()) do
+        if obj:IsA("ViewportFrame") then
+            for _, child in ipairs(obj:GetChildren()) do
+                if child:IsA("Model") or child:IsA("WorldModel") then
+                    -- Desarmar deformaciones y uniones
+                    for _, sub in ipairs(child:GetDescendants()) do
+                        if sub:IsA("Motor6D") or sub:IsA("Bone") or sub:IsA("WrapLayer") or sub:IsA("WrapTarget") or sub:IsA("Weld") or sub:IsA("Attachment") then
+                            game:GetService("Debris"):AddItem(sub, 0)
+                        end
+                    end
+                    -- Eliminar cascarón
+                    game:GetService("Debris"):AddItem(child, 0)
+                    deletedCount = deletedCount + 1
+                end
+            end
+            
+            if obj.CurrentCamera then
+                game:GetService("Debris"):AddItem(obj.CurrentCamera, 0)
+                obj.CurrentCamera = nil
+            end
+        end
+    end
+    
+    if deletedCount > 0 then
+        pcall(function() collectgarbage("collect") end)
+    end
+end
+
+-- ==========================================================
+-- 🎛️ CREACIÓN DE UI EN RAYFIELD
+-- ==========================================================
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
 ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
@@ -2797,28 +2890,36 @@ ExtraTab:CreateButton({
                     targetMenu.Visible = not targetMenu.Visible 
                     
                     if targetMenu.Visible then
-                        -- 1. ACTIVAMOS EL APAGÓN (El fondo se vuelve negro, los gráficos bajan al mínimo)
+                        -- 1. ACTIVAMOS EL APAGÓN
                         ToggleEclipse(true)
-                        Rayfield:Notify({Title = "🌑 Modo Eclipse Activo", Content = "Desviando 100% de la GPU a la carga de avatares...", Duration = 2, Image = 4483362458})
+                        Rayfield:Notify({Title = "🌑 Eclipse Activo", Content = "Limpiando caché antigua...", Duration = 1.5, Image = 4483362458})
                         
-                        if RefreshSavedCharactersGrid then
-                            task.spawn(function()
-                                -- 2. Carga pesada con los recursos al máximo
+                        task.spawn(function()
+                            -- 2. LIMPIEZA DE CACHÉ AGRESIVA QUIRÚRGICA
+                            ClearOldAvatars(targetMenu)
+                            task.wait(0.1)
+                            
+                            if RefreshSavedCharactersGrid then
+                                -- 3. CARGA DE NUEVOS AVATARES
                                 pcall(RefreshSavedCharactersGrid)
                                 
-                                -- 3. Esperamos dinámicamente a que termine el pico de lag (1.5s suele ser el punto dulce)
-                                task.wait(1.5)
+                                -- 4. ESPERA DINÁMICA
+                                task.wait(0.8) 
                                 
-                                -- 4. LEVANTAMOS EL APAGÓN (El mundo vuelve a aparecer con una animación suave)
+                                -- 5. LEVANTAMOS EL APAGÓN
                                 ToggleEclipse(false)
-                                Rayfield:Notify({Title = "✅ Carga Completada", Content = "Avatares listos. Restaurando mundo.", Duration = 2, Image = 4483362458})
-                            end)
-                        else
-                            task.wait(1)
-                            ToggleEclipse(false)
-                        end
+                            else
+                                task.wait(0.5)
+                                ToggleEclipse(false)
+                            end
+                        end)
                     else
-                        ToggleEclipse(false) -- Por si acaso se cierra de golpe
+                        -- LIMPIEZA INMEDIATA AL CERRAR
+                        task.spawn(function()
+                            ClearOldAvatars(targetMenu)
+                            ToggleEclipse(false)
+                            Rayfield:Notify({Title = "🧹 Caché Limpia", Content = "Memoria de avatares liberada.", Duration = 2, Image = 4483362458})
+                        end)
                     end
                 else
                     Rayfield:Notify({Title = "❌ UI No Encontrada", Content = "No se detectó el menú.", Duration = 3, Image = 4483362458})
