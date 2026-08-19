@@ -2826,7 +2826,7 @@ ExtraTab:CreateToggle({
 
 ExtraTab:CreateSection("👔 Gestor de Outfits y Trajes")
 
--- 3. Menú de Outfits con Sistema ANTI-LAG Externo (CORREGIDO Y AUTOMATIZADO)
+-- 3. Menú de Outfits con Sistema ANTI-LAG Externo (MÉTODO RADAR/EVENTOS)
 ExtraTab:CreateButton({
     Name = "📁 Mostrar/Ocultar Menú de Outfits",
     Callback = function()
@@ -2860,38 +2860,34 @@ ExtraTab:CreateButton({
                     if nuevoEstado then
                         Rayfield:Notify({
                             Title = "⏳ Cargando Personajes...",
-                            Content = "Iniciando protección Anti-Lag para miniaturas.",
+                            Content = "Radar Anti-Lag activado. Eliminando 3D...",
                             Duration = 2,
                             Image = 4483362458,
                         })
                         
-                        task.wait(0.2) 
-                        
-                        if RefreshSavedCharactersGrid then
-                            task.defer(function()
-                                -- Llamamos a la función original
-                                pcall(RefreshSavedCharactersGrid)
-                                
-                                -- ==========================================================
-                                -- FIX ANTI-LAG: INTERCEPCIÓN Y REEMPLAZO (SIN TOCAR CÓDIGO EXTRA)
-                                -- ==========================================================
-                                task.wait(0.1) -- Damos un breve respiro para que las cards se rendericen
-                                
-                                pcall(function()
-                                    -- Escaneamos todo dentro del menú buscando los 3D (ViewportFrame)
-                                    for _, item in ipairs(targetMenu:GetDescendants()) do
-                                        if item:IsA("ViewportFrame") then
-                                            local Card = item.Parent
-                                            item:Destroy() -- Eliminamos el culpable del Lag
+                        -- ==========================================================
+                        -- FIX ANTI-LAG PRO: ESCANEO ACTIVO (EVENT LISTENER)
+                        -- ==========================================================
+                        -- Protegemos para no crear múltiples radares si el jugador abre y cierra el menú varias veces
+                        if not targetMenu:GetAttribute("RadarActivo") then
+                            targetMenu:SetAttribute("RadarActivo", true)
+                            
+                            local function Neutralizar3D(item)
+                                if item:IsA("ViewportFrame") then
+                                    -- Usamos task.defer para que Roblox termine de crear la carta antes de intervenir
+                                    task.defer(function()
+                                        local Card = item.Parent
+                                        if Card then
+                                            item:Destroy() -- Eliminamos la causa del Lag
                                             
-                                            -- Prevenimos duplicados si se actualiza varias veces
+                                            -- Creamos la miniatura estática si no existe aún
                                             if not Card:FindFirstChild("AntiLagPlaceholder") then
                                                 local Placeholder = Instance.new("ImageLabel")
                                                 Placeholder.Name = "AntiLagPlaceholder"
                                                 Placeholder.Size = UDim2.new(1, -10, 0, 75)
                                                 Placeholder.Position = UDim2.new(0, 5, 0, 5)
                                                 Placeholder.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-                                                Placeholder.Image = "rbxassetid://132859920937628" -- Ícono de Ropa/Catálogo
+                                                Placeholder.Image = "rbxassetid://132859920937628" 
                                                 Placeholder.ScaleType = Enum.ScaleType.Fit
                                                 Placeholder.BackgroundTransparency = 0
                                                 Placeholder.ZIndex = 33
@@ -2902,9 +2898,25 @@ ExtraTab:CreateButton({
                                                 PCorner.Parent = Placeholder
                                             end
                                         end
-                                    end
-                                end)
-                                -- ==========================================================
+                                    end)
+                                end
+                            end
+
+                            -- ACTIVAMOS EL RADAR: Cada vez que el juego cree un nuevo objeto aquí, pasará por nuestra función
+                            targetMenu.DescendantAdded:Connect(Neutralizar3D)
+                            
+                            -- Hacemos una limpieza inicial por si acaso ya había cartas cargadas
+                            for _, item in ipairs(targetMenu:GetDescendants()) do
+                                Neutralizar3D(item)
+                            end
+                        end
+                        -- ==========================================================
+
+                        task.wait(0.1) 
+                        
+                        if RefreshSavedCharactersGrid then
+                            task.defer(function()
+                                pcall(RefreshSavedCharactersGrid)
                             end)
                         end
                     end
