@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V20)
--- Rotación 3D Perfecta (Sin Z-Fighting) + Altura Ajustada
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V21)
+-- Animación Órbita + Absorción | Fix Decorativos en suelo
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2543,7 +2543,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                     local raycastParams = RaycastParams.new()
                     raycastParams.FilterType = Enum.RaycastFilterType.Exclude
                     
-                    local trueGroundY = baseTargetCFrame.Y
+                    -- FIX: Salvavidas por si el raycast no toca nada, asume la altura del jugador.
+                    local trueGroundY = spawnPos.Y 
                     
                     for i = 1, 10 do
                         raycastParams.FilterDescendantsInstances = ignoreList
@@ -2554,7 +2555,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                             if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
                                 table.insert(ignoreList, inst)
                             else
-                                trueGroundY = result.Position.Y
+                                -- FIX: +0.4 extra de elevación para que no se entierren los maletines/dinero.
+                                trueGroundY = result.Position.Y + 0.4 
                                 break
                             end
                         else
@@ -2594,7 +2596,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. EFECTO: LLUVIA DE BILLETES
+        -- 3. EFECTO: LLUVIA DE BILLETES (INTACTO)
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2700,7 +2702,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. IMAGEN FLOTANTE (Fix Espejo Invertido + Altura)
+        -- 4. IMAGEN FLOTANTE
         -- ==================================================
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
@@ -2708,8 +2710,6 @@ ClickBtn.MouseButton1Click:Connect(function()
         ImagePart.Anchored = true; ImagePart.CanCollide = false
         ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
 
-        -- FIX CLAVE: AlwaysOnTop = false evita que se superpongan visualmente y se rompa el 3D al girar.
-        -- LightInfluence = 0 mantiene la imagen iluminada al máximo aunque AlwaysOnTop esté desactivado.
         local SurfaceFront = Instance.new("SurfaceGui")
         SurfaceFront.Face = Enum.NormalId.Front
         SurfaceFront.AlwaysOnTop = false 
@@ -2739,13 +2739,12 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
             floatTime = floatTime + dt
-            -- FIX CLAVE: Elevado a 5.2 para que destaque apenitas más por encima de la mesa.
             local basePos = spawnPos + Vector3.new(0, 5.2 + math.sin(floatTime * 1.8) * 0.4, 0)
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
         end)
 
         -- ==================================================
-        -- 5. DETECCIÓN (Sistema de Estados)
+        -- 5. DETECCIÓN Y ANIMACIÓN DE ABSORCIÓN ÉPICA
         -- ==================================================
         local promptState = "Waiting" 
         local proximityConn
@@ -2784,19 +2783,37 @@ ClickBtn.MouseButton1Click:Connect(function()
                             
                             local head = char:FindFirstChild("Head") or hrp
                             local startTime = tick()
-                            local duration = 1.2 
+                            local duration = 1.8 -- Aumentado para dar tiempo a la órbita
+                            local startPos = ImagePart.Position
 
                             local attractConn
                             attractConn = RunService.RenderStepped:Connect(function()
                                 if not ImagePart or not ImagePart.Parent then attractConn:Disconnect(); return end
 
                                 local t = math.clamp((tick() - startTime) / duration, 0, 1)
-                                local ease = t * t * (3 - 2 * t)
-                                local snake = math.sin(t * 15) * (1 - t) * 2.5
-                                local targetPos = head.Position + Vector3.new(snake, 0, 0)
+                                local ease = t * t * (3 - 2 * t) 
                                 
-                                local newPos = ImagePart.Position:Lerp(targetPos, ease)
-                                ImagePart.CFrame = CFrame.new(newPos) * CFrame.Angles(0, tick() * 10, math.sin(tick() * 12) * 0.5)
+                                -- FASE 1: Órbita circular que se va cerrando
+                                -- Da 2.5 vueltas (math.pi * 5) a medida que se acerca
+                                local angle = ease * math.pi * 5 
+                                local radius = 7 * (1 - ease) 
+                                
+                                local orbitPos = head.Position + Vector3.new(math.cos(angle) * radius, (1 - ease) * 1.5, math.sin(angle) * radius)
+                                
+                                -- FASE 2: Animación clásica de comer/snake al final
+                                local snake = 0
+                                if t > 0.6 then
+                                    local snakeT = (t - 0.6) / 0.4
+                                    snake = math.sin(snakeT * 25) * (1 - snakeT) * 1.8
+                                end
+                                
+                                local finalTarget = orbitPos + (head.CFrame.RightVector * snake)
+                                
+                                -- Transición fluida desde su base hasta la órbita
+                                local newPos = startPos:Lerp(finalTarget, ease)
+                                
+                                -- Giro dinámico loco mientras es atraído
+                                ImagePart.CFrame = CFrame.new(newPos) * CFrame.Angles(0, tick() * 15, math.sin(tick() * 10) * 0.5)
 
                                 if t >= 1 then
                                     attractConn:Disconnect()
