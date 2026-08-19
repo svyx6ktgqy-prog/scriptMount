@@ -2585,70 +2585,89 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA APARTADO PARA RAYFIELD.
+--#EXTRA APARTADO PARA RAYFIELD (VERSIÓN PRO).
 
---Metodos
+-- Metodos
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458) -- Icono genérico de Rayfield (opcional)
 
-ExtraTab:CreateSection("Optimización y Rendimiento")
+ExtraTab:CreateSection("⚡ Optimización y Rendimiento Extremo")
 
--- 1. Boton limpiador avanzado de RAM y Caché (Optimizado para Delta, sin errores de CallBack)
+-- 1. Boton limpiador avanzado de RAM y Caché (Con Notificación PRO de Rayfield)
 ExtraTab:CreateButton({
-    Name = "🧹 Limpiador Avanzado de RAM / Caché",
+    Name = "🧹 Limpieza Profunda de RAM / Caché",
     Callback = function()
         pcall(function()
-            -- Limpieza de cola de descargas nativa de Roblox
+            -- 1. Limpieza de cola de descargas nativa de Roblox (Libera carga de red)
             game:GetService("ContentProvider"):ClearWorkspaceQueue()
             
-            -- Recolección de basura asíncrona (Soportado por Delta iOS/Android)
+            -- 2. Recolección de basura forzada (Soportado por la mayoría de ejecutores móviles)
             if collectgarbage then
                 collectgarbage("collect")
+                -- Segunda pasada para asegurar limpieza profunda
+                task.wait(0.1)
+                collectgarbage("collect") 
             end
             
-            -- Limpieza de texturas y memoria huérfana en el Workspace
+            -- 3. Limpieza de memoria visual huérfana
             for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
                 if v:IsA("Texture") or v:IsA("Decal") then
-                    v.LocalTransparencyModifier = 0 -- Forzar actualización gráfica
+                    v.LocalTransparencyModifier = 0 
                 end
             end
             
-            if NotifyUser then
-                NotifyUser("Optimización", "Memoria RAM y caché liberadas con éxito.")
-            end
+            -- Notificación estilo PRO de Rayfield
+            Rayfield:Notify({
+                Title = "Optimización Completada",
+                Content = "Se ha liberado la memoria RAM y caché del juego exitosamente. Rendimiento al máximo.",
+                Duration = 5,
+                Image = 4483362458,
+                Actions = { -- Botón decorativo en la notificación
+                    Ignore = {
+                        Name = "Excelente",
+                        Callback = function() end
+                    }
+                }
+            })
         end)
     end
 })
 
-ExtraTab:CreateSection("Gestión de Interfaz")
+ExtraTab:CreateSection("🖼️ Control del Visualizador de Items")
 
--- 2. Boton ocultar-mostrar visualizador de items
+-- 2. Boton ocultar-mostrar visualizador de items (Aislado del Catálogo)
 ExtraTab:CreateToggle({
-    Name = "👁️ Mostrar/Ocultar Visualizador de Items",
+    Name = "👁️ Mostrar/Ocultar Visualizador de Imagen",
     CurrentValue = true,
-    Flag = "ToggleVisualizer",
+    Flag = "ToggleItemVisualizer",
     Callback = function(Value)
         pcall(function()
-            -- Alterna la visibilidad del VisualizerGui principal ya existente
-            if VisualizerGui then
-                VisualizerGui.Enabled = Value
-            elseif game:GetService("CoreGui"):FindFirstChild("QuirurgicoVisualizer") then
-                game:GetService("CoreGui").QuirurgicoVisualizer.Enabled = Value
-            end
+            -- Buscamos específicamente el UI del Visualizador (No el Catálogo)
+            local coreGui = game:GetService("CoreGui")
+            local playerGui = game:GetService("Players").LocalPlayer.PlayerGui
             
-            -- Alterna el catálogo Kitty si está activo
-            if KittyGui then
-                KittyGui.Enabled = Value
+            -- Reemplaza "NombreDeTuVisualizadorUI" por el nombre exacto de tu ScreenGui del visualizador
+            local targetVisualizerName = "VisualizadorItemGUI" 
+            
+            local visualizerUI = coreGui:FindFirstChild(targetVisualizerName) or playerGui:FindFirstChild(targetVisualizerName)
+            
+            if visualizerUI then
+                visualizerUI.Enabled = Value
+            else
+                -- Búsqueda de respaldo en caso de que esté dentro de otro Frame
+                if VisualizerImageFrame then 
+                    VisualizerImageFrame.Visible = Value
+                end
             end
         end)
     end
 })
 
-ExtraTab:CreateSection("Orientación de Pantalla (Dispositivos Móviles)")
+ExtraTab:CreateSection("📱 Control Total de Pantalla (Móviles)")
 
--- 3. Botones para Orientación de PANTALLA
+-- 3. Botones para Orientación de PANTALLA Avanzada
 ExtraTab:CreateButton({
-    Name = "📱 Forzar Modo Horizontal (Landscape)",
+    Name = "➡️ Forzar Horizontal (Derecha)",
     Callback = function()
         pcall(function()
             game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeRight
@@ -2657,7 +2676,16 @@ ExtraTab:CreateButton({
 })
 
 ExtraTab:CreateButton({
-    Name = "📱 Forzar Modo Vertical (Portrait)",
+    Name = "⬅️ Forzar Horizontal (Izquierda)",
+    Callback = function()
+        pcall(function()
+            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.LandscapeLeft
+        end)
+    end
+})
+
+ExtraTab:CreateButton({
+    Name = "⬆️ Forzar Vertical (Portrait)",
     Callback = function()
         pcall(function()
             game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.Portrait
@@ -2666,41 +2694,58 @@ ExtraTab:CreateButton({
 })
 
 ExtraTab:CreateButton({
-    Name = "🔄 Restaurar Orientación Automática (Sensor)",
+    Name = "🔄 Sensor Horizontal Automático",
     Callback = function()
         pcall(function()
+            -- Gira automáticamente, pero solo en formato horizontal
+            game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.SensorLandscape
+        end)
+    end
+})
+
+ExtraTab:CreateButton({
+    Name = "🌐 Sensor Libre (Rotación Total)",
+    Callback = function()
+        pcall(function()
+            -- Sigue el giroscopio del teléfono a cualquier orientación
             game:GetService("Players").LocalPlayer.PlayerGui.ScreenOrientation = Enum.ScreenOrientation.Sensor
         end)
     end
 })
 
-ExtraTab:CreateSection("Utilidades de Catálogo")
+ExtraTab:CreateSection("🛍️ Utilidades de Catálogo Rápido")
 
--- 4. Buscar por ID también
+-- 4. Buscar por ID con notificación integrada
 ExtraTab:CreateInput({
-    Name = "🔍 Buscar y Equipar por ID",
-    PlaceholderText = "Ingresa el ID del item aquí...",
+    Name = "🔍 Equipar Item por ID",
+    PlaceholderText = "Pega el ID aquí...",
     RemoveTextAfterFocusLost = false,
     Callback = function(Text)
         local itemID = tonumber(Text)
         if itemID and itemID > 0 then
             pcall(function()
-                -- Llama al método UniversalEquip existente en tu código base
                 if UniversalEquip then
                     UniversalEquip(itemID, false)
-                    if NotifyUser then
-                        NotifyUser("Obtención por ID", "Equipando ID: " .. tostring(itemID))
-                    end
+                    
+                    Rayfield:Notify({
+                        Title = "Item Equipado",
+                        Content = "Se ha cargado el ID: " .. tostring(itemID) .. " con éxito.",
+                        Duration = 3,
+                        Image = 4483362458,
+                    })
                 end
             end)
         else
-            if NotifyUser then
-                NotifyUser("Error de Entrada", "Por favor, ingresa un ID numérico válido.")
-            end
+            Rayfield:Notify({
+                Title = "Error de Sistema",
+                Content = "Por favor, ingresa un ID numérico válido.",
+                Duration = 4,
+                Image = 4483362458,
+            })
         end
     end
 })
 
---##FIN DEL METODO RYFIELD
+--##FIN DEL METODO RAYFIELD
 
 Rayfield:LoadConfiguration()
