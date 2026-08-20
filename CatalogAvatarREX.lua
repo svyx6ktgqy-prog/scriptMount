@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V27)
--- Esfera Traslúcida + Fix Blur de Texto + Absorción Orbital y Crossfade
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V28)
+-- Fix Lag Inicial (Carga Escalonada) + Esfera Nativa + Orbital
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2556,11 +2556,18 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- CARGA MODULAR
+        -- CARGA MODULAR ESCALONADA (ANTI-LAG)
         -- ==================================================
         local SceneObjects = {}
+        local currentLoadDelay = 0 -- Contador de retraso
+        
         local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, onLoaded)
+            currentLoadDelay = currentLoadDelay + 0.12 -- Añade 120ms por objeto para no ahogar la red
+            local thisDelay = currentLoadDelay
+            
             task.spawn(function()
+                if thisDelay > 0 then task.wait(thisDelay) end
+                
                 local success, objs = pcall(function() return game:GetObjects("rbxassetid://" .. id) end)
                 if success and objs and #objs > 0 then
                     local model = objs[1]:Clone()
@@ -2596,7 +2603,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
+        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA SECUENCIAL
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
@@ -2608,7 +2615,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
         LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
         
-        -- FIX BLUR TEXTO RELOJ: Asignado a PlayerGui y manejado independientemente
+        -- Reloj
         LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(25), 0), nil, nil, function(clockModel)
             if clockModel:IsA("Model") then clockModel:ScaleTo(20)
             elseif clockModel:IsA("BasePart") then clockModel.Size = clockModel.Size * 20 end
@@ -2632,11 +2639,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             bbGui.Adornee = parentPart or clockModel
             
             local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
-            if PlayerGui then
-                bbGui.Parent = PlayerGui
-            else
-                bbGui.Parent = PreviewFolder
-            end
+            if PlayerGui then bbGui.Parent = PlayerGui else bbGui.Parent = PreviewFolder end
             
             task.spawn(function()
                 while clockModel and clockModel.Parent do
@@ -2649,34 +2652,18 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- CARGA DE ESFERA TRASLÚCIDA
+        -- 3. ESFERA TRASLÚCIDA NATIVA (CERO LAG & PERFECTA)
         -- ==================================================
-        local SphereModel = nil
-        local SphereParts = {}
-        LoadAsset("1782830048", "KittyGlassSphere", CFrame.new(0, 5.2, 0), nil, true, function(sphere)
-            SphereModel = sphere
-            local function applyGlassStyle(obj)
-                if obj:IsA("BasePart") then
-                    obj.Material = Enum.Material.Glass
-                    obj.Transparency = 0.55
-                    obj.Color = Color3.fromRGB(15, 15, 15) -- Tinte dark/carbonic
-                    obj.Anchored = true
-                    obj.CanCollide = false
-                    table.insert(SphereParts, obj)
-                end
-            end
-            applyGlassStyle(sphere)
-            for _, d in ipairs(sphere:GetDescendants()) do applyGlassStyle(d) end
-            
-            -- Escalar la esfera para que envuelva el ítem de 3x3
-            if sphere:IsA("Model") then
-                local extents = sphere:GetExtentsSize()
-                local maxDim = math.max(extents.X, extents.Y, extents.Z)
-                if maxDim > 0 then sphere:ScaleTo(4.8 / maxDim) end 
-            elseif sphere:IsA("BasePart") then
-                sphere.Size = Vector3.new(4.8, 4.8, 4.8)
-            end
-        end)
+        local SphereModel = Instance.new("Part")
+        SphereModel.Name = "KittyGlassSphere"
+        SphereModel.Shape = Enum.PartType.Ball
+        SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
+        SphereModel.Material = Enum.Material.Glass
+        SphereModel.Color = Color3.fromRGB(15, 15, 15) -- Tinte dark/carbonic
+        SphereModel.Transparency = 0.55
+        SphereModel.Anchored = true
+        SphereModel.CanCollide = false
+        SphereModel.Parent = PreviewFolder
 
         task.delay(0.65, function() 
             for i = 1, 10 do
@@ -2693,7 +2680,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. EFECTO: LLUVIA DE BILLETES
+        -- 4. EFECTO: LLUVIA DE BILLETES
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2784,7 +2771,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. CONSTRUCCIÓN DEL LIBRO Y LA IMAGEN FLOTANTE
+        -- 5. CONSTRUCCIÓN DEL LIBRO Y LA IMAGEN FLOTANTE
         -- ==================================================
         local function CreateFloatingBook()
             local book = Instance.new("Model")
@@ -2875,10 +2862,10 @@ ClickBtn.MouseButton1Click:Connect(function()
             local itemCF = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
             ImagePart.CFrame = itemCF
 
-            -- Esfera: Rotación constante abarcando el ítem
+            -- Esfera: Misma posición central, rotación envolvente
             if SphereModel and SphereModel.Parent then
                 local sphereCF = CFrame.new(basePos) * CFrame.Angles(floatTime * 0.5, -floatTime * 1.2, floatTime * 0.8)
-                if SphereModel:IsA("Model") then SphereModel:PivotTo(sphereCF) else SphereModel.CFrame = sphereCF end
+                SphereModel.CFrame = sphereCF
             end
 
             -- Libro
@@ -2891,7 +2878,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 5. DETECCIÓN Y ANIMACIÓN DE ABSORCIÓN ÉPICA
+        -- 6. DETECCIÓN Y ANIMACIÓN DE ABSORCIÓN ÉPICA
         -- ==================================================
         local promptState = "Waiting" 
         local proximityConn
@@ -2909,7 +2896,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                 
                 ToggleUIVisibility(false)
 
-                -- FIX BLUR: Ocultamos limpiamente el reloj antes del efecto Blur
+                -- Ocultamos limpiamente el reloj antes del efecto Blur
                 local clockGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("KittyClockGui")
                 if clockGui then clockGui.Enabled = false end
 
@@ -2934,7 +2921,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                             
                             local head = char:FindFirstChild("Head") or hrp
                             local startTime = tick()
-                            local duration = 2.2 -- Tiempo aumentado para apreciar la espiral y el crossfade
+                            local duration = 2.2 
                             local startPos = ImagePart.Position
 
                             local attractConn
@@ -2947,8 +2934,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 -- Animación Orbital en Espiral
                                 local startDist = (startPos - head.Position).Magnitude
                                 local currentRadius = startDist * (1 - ease)
-                                local angle = ease * math.pi * 12 -- 6 vueltas completas
-                                local heightOffset = math.sin(ease * math.pi) * 3.5 -- Curva parabólica vertical
+                                local angle = ease * math.pi * 12 
+                                local heightOffset = math.sin(ease * math.pi) * 3.5 
                                 
                                 local orbitPos = head.Position + Vector3.new(
                                     math.cos(angle) * currentRadius, 
@@ -2961,20 +2948,15 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 
                                 ImagePart.CFrame = finalCFrame
 
-                                -- Fundido Crossfade del Item
+                                -- Fundido Crossfade
                                 ImagePart.Transparency = ease
                                 if ImgFront then ImgFront.ImageTransparency = ease end
                                 if ImgBack then ImgBack.ImageTransparency = ease end
 
-                                -- Animación y Crossfade de la Esfera
+                                -- Crossfade de la Esfera Nativa
                                 if SphereModel and SphereModel.Parent then
-                                    local sphereCF = finalCFrame * CFrame.Angles(math.rad(45), tick() * spinSpeed * -0.5, 0)
-                                    if SphereModel:IsA("Model") then SphereModel:PivotTo(sphereCF) else SphereModel.CFrame = sphereCF end
-                                    
-                                    local sphereTargetTrans = 0.55 + (0.45 * ease)
-                                    for _, p in ipairs(SphereParts) do
-                                        if p.Parent then p.Transparency = sphereTargetTrans end
-                                    end
+                                    SphereModel.CFrame = finalCFrame * CFrame.Angles(math.rad(45), tick() * spinSpeed * -0.5, 0)
+                                    SphereModel.Transparency = 0.55 + (0.45 * ease)
                                 end
 
                                 if t >= 1 then
@@ -3013,7 +2995,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                         end)
                     else
                         if blurEffect then blurEffect:Destroy() end
-                        if clockGui then clockGui.Enabled = true end -- Restauramos el texto
+                        if clockGui then clockGui.Enabled = true end 
                         promptState = "Cooldown"
                     end
                 end
