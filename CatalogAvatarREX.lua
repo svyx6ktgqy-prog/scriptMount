@@ -25,6 +25,8 @@ local PlayingAnimationTracks = {}
 local ItemAdjustments = {}
 local EqPanel, RefreshEquippedItems 
 
+local SkipPreviewActive = false
+
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 
