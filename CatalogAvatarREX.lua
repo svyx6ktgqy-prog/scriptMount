@@ -2612,10 +2612,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
         LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(124), 0))
-
-        -- El número 0.8 es la altura manual de elevación (ajústalo a 1.0 o 1.2 si requiere más altura)
-        LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0), 0.8)
-
+        LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
         LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
         
         -- Reloj
@@ -2634,8 +2631,8 @@ ClickBtn.MouseButton1Click:Connect(function()
             txt.BackgroundTransparency = 1
             txt.TextScaled = true
             txt.Font = Enum.Font.GothamBlack 
-            txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-            txt.TextStrokeTransparency = 0 
+            txt.TextColor3 = Color3.fromRGB(136, 8, 8)
+            txt.TextStrokeTransparency = 2 
             txt.Parent = bbGui
             
             local parentPart = clockModel:IsA("Model") and (clockModel.PrimaryPart or clockModel:FindFirstChildWhichIsA("BasePart")) or clockModel
@@ -2684,7 +2681,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local WhiteReflect = Instance.new("Part")
         WhiteReflect.Name = "WhiteGlassReflection"
         WhiteReflect.Shape = Enum.PartType.Ball
-        WhiteReflect.Size = Vector3.new(4.32, 4.32, 4.32) -- Ligeramente más grande que la esfera
+        WhiteReflect.Size = Vector3.new(3.62, 3.62, 3.62) -- Ligeramente más grande que la esfera
         WhiteReflect.Material = Enum.Material.SmoothPlastic 
         WhiteReflect.Color = Color3.fromRGB(255, 255, 255)
         WhiteReflect.Transparency = 0.88 -- Muy transparente para solo reflejar luz
