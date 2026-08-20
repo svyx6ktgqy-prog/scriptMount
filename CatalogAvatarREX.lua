@@ -2654,19 +2654,31 @@ ClickBtn.MouseButton1Click:Connect(function()
                 -- ==================================================
         -- 3. ESFERA TRASLÚCIDA NATIVA (CERO LAG & PERFECTA)
         -- ==================================================
+        -- ==================================================
+        -- 3. ESFERA VIVA REFLECTANTE (CON BRILLO Y MOVIMIENTO)
+        -- ==================================================
         local SphereModel = Instance.new("Part")
         SphereModel.Name = "KittyGlassSphere"
         SphereModel.Shape = Enum.PartType.Ball
         SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
         
-        -- FIX: Cambiamos Glass por SmoothPlastic para que no oculte el SurfaceGui.
-        SphereModel.Material = Enum.Material.SmoothPlastic 
-        
-        SphereModel.Color = Color3.fromRGB(15, 15, 15) -- Tinte dark/carbonic
-        SphereModel.Transparency = 0.55
+        -- Usamos Ice o ForceField para forzar reflejos especulares vivos sin apagar el SurfaceGui interno como el Glass puro
+        SphereModel.Material = Enum.Material.ForceField 
+        SphereModel.Color = Color3.fromRGB(40, 255, 160) -- Tinte ciberpunk/carbonic que atrapa la luz
+        SphereModel.Transparency = 0.45
+        SphereModel.Reflectance = 1 -- Máximo brillo especular
         SphereModel.Anchored = true
         SphereModel.CanCollide = false
         SphereModel.Parent = PreviewFolder
+
+        -- Añadimos un Highlight sutil para delinear sus "polígonos" y darle un aspecto de malla de alta tecnología
+        local SphereHighlight = Instance.new("Highlight")
+        SphereHighlight.Name = "TechMeshHighlight"
+        SphereHighlight.Adornee = SphereModel
+        SphereHighlight.FillTransparency = 1 -- Solo el contorno y las mallas brillan
+        SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
+        SphereHighlight.OutlineTransparency = 0.1
+        SphereHighlight.Parent = SphereModel
 
         task.delay(0.65, function() 
             for i = 1, 10 do
