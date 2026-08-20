@@ -2602,20 +2602,21 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end
 
-                                                -- ==================================================
+                                                        -- ==================================================
         -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         
         -- NUEVA MESA (Cartel): 
-        -- Deslizamos X a 5.0 (hacia la derecha) y Z a -2.0 (hacia adelante/abajo)
-        -- siguiendo exactamente la ruta de la flecha amarilla.
-        LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
+        -- Movimiento sutil siguiendo la flecha (ajustamos X a 4.6 y Z a -1.5)
+        LoadAsset("121348416036836", "KittySignTable", CFrame.new(4.6, 0.35, -1.5) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
         
         -- MALETÍN / LAPTOP: 
-        -- Mantiene su posición y altura perfecta, esperando que el cartel se posicione debajo.
-        LoadAsset("9387964217", "Briefcase", CFrame.new(2.0, 0.52, -4.5) * CFrame.Angles(0, math.rad(25), 0))
+        -- INVERTIDO. Pasamos el X de 2.0 a 7.8 para mandarlo al otro lado del cartel (zona del logo).
+        -- Mantenemos Y en 0.52 para que repose perfecto sin flotar.
+        -- Ajustamos su rotación para que mire hacia adentro desde su nueva esquina.
+        LoadAsset("9387964217", "Briefcase", CFrame.new(7.8, 0.52, -0.8) * CFrame.Angles(0, math.rad(-35), 0))
         
         -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
