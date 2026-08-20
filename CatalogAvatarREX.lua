@@ -2640,7 +2640,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
-        LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0, -2.0) * CFrame.Angles(0, math.rad(-25), 0), nil, false)
+        LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0, -2.0) * CFrame.Angles(0, math.rad(-25), 0), nil, true)
         LoadAsset("8504132994", "Briefcase", CFrame.new(8.4, 0, 0) * CFrame.Angles(0, math.rad(-250), 0), nil, false, true)
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
