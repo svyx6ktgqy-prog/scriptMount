@@ -2602,21 +2602,21 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end
 
-                                -- ==================================================
+                                        -- ==================================================
         -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         
         -- NUEVA MESA (Cartel): 
-        -- Aumentamos X (4.8) para alejarlo de la mesa central.
-        -- Ajustamos Z (0.5) para traerlo un poco más hacia adelante.
-        LoadAsset("121348416036836", "KittySignTable", CFrame.new(4.8, 0.35, 0.5) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
+        -- Z = -3.5 lo empuja hacia "adelante" (lejos de la cámara y de la mesa central).
+        -- X = 3.5 mantiene el espacio lateral adecuado.
+        LoadAsset("121348416036836", "KittySignTable", CFrame.new(3.5, 0.35, -3.5) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
         
         -- MALETÍN / LAPTOP: 
-        -- X (6.8) y Z (-0.8) lo empujan hacia la punta contraria (donde está el logo).
-        -- Y (0.65) lo eleva lo suficiente para que su carcasa negra no se hunda en el cartel.
-        LoadAsset("9387964217", "Briefcase", CFrame.new(6.8, 0.65, -0.8) * CFrame.Angles(0, math.rad(15), 0))
+        -- Z = -4.5 y X = 2.0 lo tiran bien al fondo y hacia la izquierda (sobre el logo).
+        -- Y = 0.52 lo baja lo suficiente para quitar el espacio flotante.
+        LoadAsset("9387964217", "Briefcase", CFrame.new(2.0, 0.52, -4.5) * CFrame.Angles(0, math.rad(25), 0))
         
         -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
