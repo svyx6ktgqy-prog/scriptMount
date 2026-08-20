@@ -2651,17 +2651,11 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end)
 
-                -- ==================================================
-        -- 3. ESFERA TRASLÚCIDA NATIVA (CERO LAG & PERFECTA)
-        -- ==================================================
-        -- ==================================================
-        -- 3. ESFERA VIVA REFLECTANTE (CON BRILLO Y MOVIMIENTO)
-        -- ==================================================
-                -- ==================================================
+                        -- ==================================================
         -- 3. ESFERA VIVA REFLECTANTE (CON BRILLO Y MOVIMIENTO)
         -- ==================================================
         
-        -- [CAPA 1] LA ESFERA EXTERNA (Tu código original)
+        -- [CAPA 1] LA ESFERA EXTERNA
         local SphereModel = Instance.new("Part")
         SphereModel.Name = "KittyGlassSphere"
         SphereModel.Shape = Enum.PartType.Ball
@@ -2683,55 +2677,98 @@ ClickBtn.MouseButton1Click:Connect(function()
         SphereHighlight.Parent = SphereModel
 
         -- ==================================================
-        -- [NUEVO] 3.1 CAPA INTERNA DE REFRACCIÓN (Cristal)
+        -- 3.1 CAPA INTERNA DE REFRACCIÓN (Cristal)
         -- ==================================================
         local InnerGlass = Instance.new("Part")
         InnerGlass.Name = "InnerGlassReflector"
         InnerGlass.Shape = Enum.PartType.Ball
-        InnerGlass.Size = Vector3.new(4.5, 4.5, 4.5) -- Ligeramente más pequeña
-        InnerGlass.Material = Enum.Material.Glass -- El cristal distorsiona los objetos en su interior
+        InnerGlass.Size = Vector3.new(4.5, 4.5, 4.5) 
+        InnerGlass.Material = Enum.Material.Glass 
         InnerGlass.Color = Color3.fromRGB(20, 255, 140)
         InnerGlass.Transparency = 0.65 
-        InnerGlass.Reflectance = 0.9 -- Alto nivel de reflejo
+        InnerGlass.Reflectance = 0.9 
         InnerGlass.Anchored = true
         InnerGlass.CanCollide = false
         InnerGlass.CFrame = SphereModel.CFrame
         InnerGlass.Parent = SphereModel
         
-        -- Soldadura para que se mueva con la esfera principal
         local WeldGlass = Instance.new("WeldConstraint")
         WeldGlass.Part0 = SphereModel
         WeldGlass.Part1 = InnerGlass
         WeldGlass.Parent = InnerGlass
 
         -- ==================================================
-        -- [NUEVO] 3.2 NÚCLEO POLIGONAL (Múltiples facetas)
+        -- 3.2 NÚCLEO POLIGONAL (Múltiples facetas)
         -- ==================================================
-        -- Generamos 3 cubos rotados al azar que, al intersectarse dentro del cristal, 
-        -- parecerán un holograma poligonal muy complejo.
         for i = 1, 3 do
             local PolyPart = Instance.new("Part")
             PolyPart.Name = "InternalPoly" .. i
             PolyPart.Shape = Enum.PartType.Block
             PolyPart.Size = Vector3.new(3.2, 3.2, 3.2) 
-            PolyPart.Material = Enum.Material.Neon -- Da un brillo ligero a los bordes del polígono
+            PolyPart.Material = Enum.Material.Neon 
             PolyPart.Color = Color3.fromRGB(85, 255, 127)
-            PolyPart.Transparency = 0.88 -- Muy transparente para que no sature la vista
+            PolyPart.Transparency = 0.88 
             PolyPart.Anchored = true
             PolyPart.CanCollide = false
             
-            -- Rotación aleatoria para formar una especie de "diamante" o geoda
             local rotX = math.rad(math.random(0, 360))
             local rotY = math.rad(math.random(0, 360))
             local rotZ = math.rad(math.random(0, 360))
             PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
             PolyPart.Parent = SphereModel
 
-            -- Soldadura
             local WeldPoly = Instance.new("WeldConstraint")
             WeldPoly.Part0 = SphereModel
             WeldPoly.Part1 = PolyPart
             WeldPoly.Parent = PolyPart
+        end
+
+        -- ==================================================
+        -- [NUEVO] 3.3 LÍNEAS 3D (MERIDIANOS Y PARALELOS)
+        -- ==================================================
+        -- Radio base (La esfera mide 4.8, así que el radio es 2.4)
+        local baseRadius = 2.42 -- Un poco más grande para que resalte en la superficie
+        local lineColor = Color3.fromRGB(85, 255, 255) -- Cyan neón
+        
+        -- 1. Crear líneas verticales (Meridianos)
+        for i = 1, 4 do
+            local meridian = Instance.new("CylinderHandleAdornment")
+            meridian.Name = "MeridianLine" .. i
+            meridian.Adornee = SphereModel
+            meridian.Radius = baseRadius
+            meridian.InnerRadius = baseRadius - 0.04 -- Grosor de la línea
+            meridian.Height = 0.04 -- Grosor lateral
+            meridian.Color3 = lineColor
+            meridian.Transparency = 0.3
+            meridian.AlwaysOnTop = false
+            meridian.ZIndex = 1
+            
+            -- Rotamos en el eje Y para cruzar las líneas
+            local angle = math.rad((180 / 4) * i)
+            meridian.CFrame = CFrame.Angles(0, angle, math.rad(90))
+            meridian.Parent = SphereModel
+        end
+
+        -- 2. Crear líneas horizontales (Paralelos)
+        local latitudes = {-1.2, 0, 1.2} -- Tres líneas: abajo, ecuador, arriba
+        for i, yOffset in ipairs(latitudes) do
+            local parallel = Instance.new("CylinderHandleAdornment")
+            parallel.Name = "ParallelLine" .. i
+            parallel.Adornee = SphereModel
+            
+            -- Pitágoras para calcular el radio exacto del anillo a esta altura
+            local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
+            
+            parallel.Radius = ringRadius
+            parallel.InnerRadius = ringRadius - 0.04
+            parallel.Height = 0.04
+            parallel.Color3 = lineColor
+            parallel.Transparency = 0.3
+            parallel.AlwaysOnTop = false
+            parallel.ZIndex = 1
+            
+            parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
+            parallel.Parent = SphereModel
         end
 
         task.delay(0.65, function() 
