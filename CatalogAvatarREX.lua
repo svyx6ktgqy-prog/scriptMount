@@ -2652,122 +2652,156 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
                                         -- ==================================================
-        -- 3. ESFERA VIVA REFLECTANTE (CON BRILLO Y MOVIMIENTO)
-        -- ==================================================
-        
-        -- [CAPA 1] LA ESFERA EXTERNA (Tus bordes verdes originales están aquí)
-        local SphereModel = Instance.new("Part")
-        SphereModel.Name = "KittyGlassSphere"
-        SphereModel.Shape = Enum.PartType.Ball
-        SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
-        SphereModel.Material = Enum.Material.ForceField 
-        SphereModel.Color = Color3.fromRGB(40, 255, 160) 
-        SphereModel.Transparency = 0.45
-        SphereModel.Reflectance = 1 
-        SphereModel.Anchored = true
-        SphereModel.CanCollide = false
-        SphereModel.Parent = PreviewFolder
+-- 3. ESFERA VIVA REFLECTANTE Y CONGELADA (EXPERT DEPTH)
+-- ==================================================
 
-        -- AQUÍ ESTÁN TUS BORDES VERDES:
-        local SphereHighlight = Instance.new("Highlight")
-        SphereHighlight.Name = "TechMeshHighlight"
-        SphereHighlight.Adornee = SphereModel
-        SphereHighlight.FillTransparency = 1 
-        SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127) -- Verde de los bordes
-        SphereHighlight.OutlineTransparency = 0.1
-        SphereHighlight.Parent = SphereModel
+-- [CAPA 1] ESFERA EXTERNA (Bordes y contenedor)
+local SphereModel = Instance.new("Part")
+SphereModel.Name = "KittyGlassSphere"
+SphereModel.Shape = Enum.PartType.Ball
+SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
+SphereModel.Material = Enum.Material.ForceField 
+SphereModel.Color = Color3.fromRGB(40, 255, 160) 
+SphereModel.Transparency = 0.45
+SphereModel.Reflectance = 0.8 
+SphereModel.Anchored = true
+SphereModel.CanCollide = false
+SphereModel.Parent = PreviewFolder
 
-        -- ==================================================
-        -- 3.1 CAPA INTERNA DE REFRACCIÓN (Cristal)
-        -- ==================================================
-        local InnerGlass = Instance.new("Part")
-        InnerGlass.Name = "InnerGlassReflector"
-        InnerGlass.Shape = Enum.PartType.Ball
-        InnerGlass.Size = Vector3.new(4.5, 4.5, 4.5) 
-        InnerGlass.Material = Enum.Material.Glass 
-        InnerGlass.Color = Color3.fromRGB(20, 255, 140)
-        InnerGlass.Transparency = 0.65 
-        InnerGlass.Reflectance = 0.9 
-        InnerGlass.Anchored = true
-        InnerGlass.CanCollide = false
-        InnerGlass.CFrame = SphereModel.CFrame
-        InnerGlass.Parent = SphereModel
-        
-        local WeldGlass = Instance.new("WeldConstraint")
-        WeldGlass.Part0 = SphereModel
-        WeldGlass.Part1 = InnerGlass
-        WeldGlass.Parent = InnerGlass
+-- Bordes verdes brillantes
+local SphereHighlight = Instance.new("Highlight")
+SphereHighlight.Name = "TechMeshHighlight"
+SphereHighlight.Adornee = SphereModel
+SphereHighlight.FillTransparency = 1 
+SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
+SphereHighlight.OutlineTransparency = 0.15
+SphereHighlight.Parent = SphereModel
 
-        -- ==================================================
-        -- 3.2 NÚCLEO POLIGONAL (Múltiples facetas)
-        -- ==================================================
-        for i = 1, 3 do
-            local PolyPart = Instance.new("Part")
-            PolyPart.Name = "InternalPoly" .. i
-            PolyPart.Shape = Enum.PartType.Block
-            PolyPart.Size = Vector3.new(3.2, 3.2, 3.2) 
-            PolyPart.Material = Enum.Material.Neon 
-            PolyPart.Color = Color3.fromRGB(85, 255, 127)
-            PolyPart.Transparency = 0.88 
-            PolyPart.Anchored = true
-            PolyPart.CanCollide = false
-            
-            local rotX = math.rad(math.random(0, 360))
-            local rotY = math.rad(math.random(0, 360))
-            local rotZ = math.rad(math.random(0, 360))
-            PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
-            PolyPart.Parent = SphereModel
+-- ==================================================
+-- 3.1 CAPA DE CRISTAL INTERNO (Oclusión de Profundidad)
+-- ==================================================
+-- El cristal procesa la profundidad real y permite que el ítem del centro
+-- oculte las líneas que quedan detrás de él.
+local InnerGlass = Instance.new("Part")
+InnerGlass.Name = "InnerGlassReflector"
+InnerGlass.Shape = Enum.PartType.Ball
+InnerGlass.Size = Vector3.new(4.5, 4.5, 4.5) 
+InnerGlass.Material = Enum.Material.Glass 
+InnerGlass.Color = Color3.fromRGB(20, 255, 140)
+InnerGlass.Transparency = 0.60 
+InnerGlass.Reflectance = 0.85 
+InnerGlass.Anchored = true
+InnerGlass.CanCollide = false
+InnerGlass.CFrame = SphereModel.CFrame
+InnerGlass.Parent = SphereModel
 
-            local WeldPoly = Instance.new("WeldConstraint")
-            WeldPoly.Part0 = SphereModel
-            WeldPoly.Part1 = PolyPart
-            WeldPoly.Parent = PolyPart
-        end
+local WeldGlass = Instance.new("WeldConstraint")
+WeldGlass.Part0 = SphereModel
+WeldGlass.Part1 = InnerGlass
+WeldGlass.Parent = InnerGlass
 
-        -- ==================================================
-        -- 3.3 LÍNEAS 3D (VERDES TRANSLÚCIDAS Y RESPETANDO PROFUNDIDAD)
-        -- ==================================================
-        local baseRadius = 2.42 
-        local lineColor = Color3.fromRGB(85, 255, 127) 
-        
-        -- 1. Líneas verticales (Meridianos)
-        for i = 1, 4 do
-            local meridian = Instance.new("CylinderHandleAdornment")
-            meridian.Name = "MeridianLine" .. i
-            meridian.Adornee = SphereModel
-            meridian.Radius = baseRadius
-            meridian.InnerRadius = baseRadius - 0.04 
-            meridian.Height = 0.04 
-            meridian.Color3 = lineColor
-            meridian.Transparency = 0.55
-            meridian.AlwaysOnTop = false -- No tapa los elementos del interior (tu imagen)
-            meridian.ZIndex = 0
-            
-            local angle = math.rad((180 / 4) * i)
-            meridian.CFrame = CFrame.Angles(0, angle, math.rad(90))
-            meridian.Parent = SphereModel
-        end
+-- ==================================================
+-- 3.2 EFECTO DE CONGELAMIENTO Y FROST GLOW (Aura verde helada)
+-- ==================================================
+-- Luz central difusa para efecto helado
+local FrostLight = Instance.new("PointLight")
+FrostLight.Name = "FrostGlow"
+FrostLight.Color = Color3.fromRGB(85, 255, 127)
+FrostLight.Brightness = 1.8
+FrostLight.Range = 6.5
+FrostLight.Shadows = false
+FrostLight.Parent = InnerGlass
 
-        -- 2. Líneas horizontales (Paralelos)
-        local latitudes = {-1.2, 0, 1.2} 
-        for i, yOffset in ipairs(latitudes) do
-            local parallel = Instance.new("CylinderHandleAdornment")
-            parallel.Name = "ParallelLine" .. i
-            parallel.Adornee = SphereModel
-            
-            local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
-            
-            parallel.Radius = ringRadius
-            parallel.InnerRadius = ringRadius - 0.04
-            parallel.Height = 0.04
-            parallel.Color3 = lineColor
-            parallel.Transparency = 0.55
-            parallel.AlwaysOnTop = false -- No tapa los elementos del interior (tu imagen)
-            parallel.ZIndex = 0
-            
-            parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
-            parallel.Parent = SphereModel
-        end
+-- Emisor de bruma congelada (Efecto "bola congelada suave")
+local FrostParticles = Instance.new("ParticleEmitter")
+FrostParticles.Name = "IceFrostAura"
+FrostParticles.Texture = "rbxassetid://243660364" -- Textura difusa/suave
+FrostParticles.Color = ColorSequence.new(Color3.fromRGB(120, 255, 180))
+FrostParticles.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0.75),
+    NumberSequenceKeypoint.new(1, 1)
+})
+FrostParticles.Size = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1.2),
+    NumberSequenceKeypoint.new(1, 2.5)
+})
+FrostParticles.Lifetime = NumberRange.new(1.5, 2.5)
+FrostParticles.Rate = 8
+FrostParticles.Speed = NumberRange.new(0.1, 0.4)
+FrostParticles.LightEmission = 0.35
+FrostParticles.Parent = InnerGlass
+
+-- ==================================================
+-- 3.3 NÚCLEO POLIGONAL (Facetas de hielo interno)
+-- ==================================================
+for i = 1, 3 do
+    local PolyPart = Instance.new("Part")
+    PolyPart.Name = "InternalPoly" .. i
+    PolyPart.Shape = Enum.PartType.Block
+    PolyPart.Size = Vector3.new(3.0, 3.0, 3.0) 
+    PolyPart.Material = Enum.Material.Ice -- Material Ice para reforzar el congelamiento
+    PolyPart.Color = Color3.fromRGB(85, 255, 127)
+    PolyPart.Transparency = 0.82 
+    PolyPart.Anchored = true
+    PolyPart.CanCollide = false
+    
+    local rotX = math.rad(math.random(0, 360))
+    local rotY = math.rad(math.random(0, 360))
+    local rotZ = math.rad(math.random(0, 360))
+    PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
+    PolyPart.Parent = SphereModel
+
+    local WeldPoly = Instance.new("WeldConstraint")
+    WeldPoly.Part0 = SphereModel
+    WeldPoly.Part1 = PolyPart
+    WeldPoly.Parent = PolyPart
+end
+
+-- ==================================================
+-- 3.4 LÍNEAS 3D (RESPETANDO PROFUNDIDAD Y CONGELAMIENTO)
+-- ==================================================
+local baseRadius = 2.42 
+local lineColor = Color3.fromRGB(85, 255, 127) 
+
+-- 1. Líneas verticales (Meridianos)
+for i = 1, 4 do
+    local meridian = Instance.new("CylinderHandleAdornment")
+    meridian.Name = "MeridianLine" .. i
+    meridian.Adornee = SphereModel
+    meridian.Radius = baseRadius
+    meridian.InnerRadius = baseRadius - 0.045 
+    meridian.Height = 0.04 
+    meridian.Color3 = lineColor
+    meridian.Transparency = 0.45 -- Un poco más visible para acentuar el marco congelado
+    meridian.AlwaysOnTop = false -- Habilita el cálculo de profundidad 3D
+    meridian.ZIndex = 1
+    
+    local angle = math.rad((180 / 4) * i)
+    meridian.CFrame = CFrame.Angles(0, angle, math.rad(90))
+    meridian.Parent = SphereModel
+end
+
+-- 2. Líneas horizontales (Paralelos)
+local latitudes = {-1.2, 0, 1.2} 
+for i, yOffset in ipairs(latitudes) do
+    local parallel = Instance.new("CylinderHandleAdornment")
+    parallel.Name = "ParallelLine" .. i
+    parallel.Adornee = SphereModel
+    
+    local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
+    
+    parallel.Radius = ringRadius
+    parallel.InnerRadius = ringRadius - 0.045
+    parallel.Height = 0.04
+    parallel.Color3 = lineColor
+    parallel.Transparency = 0.45
+    parallel.AlwaysOnTop = false -- Habilita el cálculo de profundidad 3D
+    parallel.ZIndex = 1
+    
+    parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
+    parallel.Parent = SphereModel
+end
 
         task.delay(0.65, function() 
             for i = 1, 10 do
