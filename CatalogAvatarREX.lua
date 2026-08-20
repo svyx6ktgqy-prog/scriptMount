@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V23)
--- Detención Inteligente (Bounding Box) + Override para Mesas Planas
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V24)
+-- Detención Inteligente + Nuevos Items + Libro Custom + Reloj Real
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2556,11 +2556,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- DETENCIÓN INTELIGENTE Y CARGA MODULAR
+        -- DETENCIÓN INTELIGENTE Y CARGA MODULAR CON CALLBACK
         -- ==================================================
         local SceneObjects = {}
-        -- Añadimos parámetros manualLift y skipDrop para props conflictivos
-        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop)
+        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, onLoaded)
             task.spawn(function()
                 local success, objs = pcall(function() return game:GetObjects("rbxassetid://" .. id) end)
                 if success and objs and #objs > 0 then
@@ -2573,16 +2572,13 @@ ClickBtn.MouseButton1Click:Connect(function()
                     local finalCFrame
                     
                     if manualLift then
-                        -- Override manual: Útil para carteles o meshes 2D sin volumen
                         finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + manualLift, baseCFrame.Z) * baseCFrame.Rotation
                     else
-                        -- Cálculo Bounding Box dinámico
                         local boundsCFrame, size = model:GetBoundingBox()
                         local pivotY = model:GetPivot().Y
                         local bottomY = boundsCFrame.Y - (size.Y / 2)
                         local liftOffset = pivotY - bottomY 
                         
-                        -- PROTECCIÓN: Si el modelo es plano o falla el cálculo, damos una altura segura por defecto
                         if size.Y < 0.1 or liftOffset ~= liftOffset then
                             liftOffset = 0.05
                         end
@@ -2590,7 +2586,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                         finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
                     end
                     
-                    -- Aplicamos la animación de caída o la instanciación directa
                     if skipDrop then
                         if model:IsA("Model") then model:PivotTo(finalCFrame) else model.CFrame = finalCFrame end
                     else
@@ -2598,29 +2593,73 @@ ClickBtn.MouseButton1Click:Connect(function()
                     end
                     
                     table.insert(SceneObjects, model)
+                    
+                    -- Disparamos el callback si existe (útil para el reloj)
+                    if onLoaded then
+                        task.spawn(function() onLoaded(model) end)
+                    end
                 end
             end)
         end
 
-                                                        -- ==================================================
-                                -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
+        -- ==================================================
+        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA + NUEVOS ITEMS
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         
-        -- NUEVA MESA (Cartel): 
-        -- Intacta.
         LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
-        
-        -- MALETÍN / LAPTOP: 
-        -- Rotación ajustada a math.rad(25).
-        -- Deslizamiento final: X = 8.2 y Z = -0.2 para llevarlo al límite de la esquina.
         LoadAsset("8504132994", "Briefcase", CFrame.new(8.4, 0.52, -0.0) * CFrame.Angles(0, math.rad(-250), 0))
-        
-        -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
+
+        -- --- NUEVOS ITEMS ---
+        -- Cofre (Más adelante que el cartel Z=-5.5)
+        LoadAsset("134327951838106", "Cofre", CFrame.new(5.5, 0, -5.5) * CFrame.Angles(0, math.rad(-35), 0))
+        
+        -- Caja con armas (Cerca del cofre sin chocar Z=-4.5)
+        LoadAsset("103693408325569", "WeaponBox", CFrame.new(8.0, 0, -4.5) * CFrame.Angles(0, math.rad(15), 0))
+        
+        -- Iphone (En el suelo en un lugar que no estorbe)
+        LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
+        
+        -- Dragon product (En el suelo pero alejado)
+        LoadAsset("33356860", "DragonProduct", CFrame.new(-8.0, 0, -5.5) * CFrame.Angles(0, math.rad(115), 0))
+        
+        -- Clock time (Alejado con texto BillboardGui flotando arriba)
+        LoadAsset("86136491298166", "ClockTime", CFrame.new(7.5, 0, 6.0) * CFrame.Angles(0, math.rad(-45), 0), nil, nil, function(clockModel)
+            local bbGui = Instance.new("BillboardGui")
+            bbGui.Name = "ClockGui"
+            bbGui.Size = UDim2.new(6, 0, 1.5, 0)
+            bbGui.StudsOffset = Vector3.new(0, 4, 0) -- Altura sobre el reloj
+            bbGui.AlwaysOnTop = true
+            
+            local txt = Instance.new("TextLabel")
+            txt.Size = UDim2.new(1, 0, 1, 0)
+            txt.BackgroundTransparency = 1
+            txt.TextScaled = true
+            txt.Font = Enum.Font.GothamBlack -- White bold text
+            txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+            txt.TextStrokeTransparency = 0 -- Borde negro para legibilidad
+            txt.Parent = bbGui
+            
+            local parentPart = clockModel:IsA("Model") and (clockModel.PrimaryPart or clockModel:FindFirstChildWhichIsA("BasePart")) or clockModel
+            if parentPart then
+                bbGui.Parent = parentPart
+            else
+                bbGui.Parent = PreviewFolder
+                bbGui.Adornee = clockModel
+            end
+            
+            -- Loop de actualización en tiempo real
+            task.spawn(function()
+                while clockModel and clockModel.Parent do
+                    local date = os.date("*t")
+                    txt.Text = string.format("%02d:%02d:%02d", date.hour, date.min, date.sec)
+                    task.wait(1)
+                end
+            end)
+        end)
 
         task.delay(0.65, function() 
             for i = 1, 10 do
@@ -2743,8 +2782,74 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. IMAGEN FLOTANTE
+        -- 4. CONSTRUCCIÓN DEL LIBRO CUSTOM Y LA IMAGEN FLOTANTE
         -- ==================================================
+        local function CreateFloatingBook()
+            local book = Instance.new("Model")
+            book.Name = "CustomBook"
+
+            -- Interior (Hojas Amarillas)
+            local pages = Instance.new("Part")
+            pages.Name = "Pages"
+            pages.Size = Vector3.new(1.8, 0.4, 2.5)
+            pages.Color = Color3.fromRGB(255, 204, 0) 
+            pages.Material = Enum.Material.SmoothPlastic
+            pages.Parent = book
+            book.PrimaryPart = pages
+
+            -- Tapa Superior Negra
+            local topCover = Instance.new("Part")
+            topCover.Name = "TopCover"
+            topCover.Size = Vector3.new(1.9, 0.05, 2.6)
+            topCover.Color = Color3.fromRGB(15, 15, 15)
+            topCover.CFrame = pages.CFrame * CFrame.new(0, 0.225, 0)
+            topCover.Parent = book
+
+            -- Tapa Inferior Negra
+            local bottomCover = topCover:Clone()
+            bottomCover.Name = "BottomCover"
+            bottomCover.CFrame = pages.CFrame * CFrame.new(0, -0.225, 0)
+            bottomCover.Parent = book
+
+            -- Lomo / Franja Negra (Spine)
+            local spine = Instance.new("Part")
+            spine.Name = "Spine"
+            spine.Size = Vector3.new(0.05, 0.5, 2.6)
+            spine.Color = Color3.fromRGB(15, 15, 15)
+            spine.CFrame = pages.CFrame * CFrame.new(-0.925, 0, 0)
+            spine.Parent = book
+
+            -- Texto en Tapa Superior
+            local surfaceGui = Instance.new("SurfaceGui")
+            surfaceGui.Face = Enum.NormalId.Top
+            surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+            surfaceGui.PixelsPerStud = 100
+            surfaceGui.Parent = topCover
+
+            local textLabel = Instance.new("TextLabel")
+            textLabel.Size = UDim2.new(1, 0, 1, 0)
+            textLabel.BackgroundTransparency = 1
+            textLabel.Text = "REAL SCRIPT ON BACK ☠️"
+            textLabel.TextColor3 = Color3.new(1, 1, 1) -- White
+            textLabel.Font = Enum.Font.GothamBlack -- Bold negrita
+            textLabel.TextScaled = true
+            textLabel.Rotation = -90 -- Apaisado
+            textLabel.Parent = surfaceGui
+
+            -- Fijar físicas
+            for _, p in ipairs(book:GetDescendants()) do
+                if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end
+            end
+
+            book.Parent = PreviewFolder
+            table.insert(SceneObjects, book) -- Lo agregamos a SceneObjects para que se hunda/elimine al final
+
+            return book
+        end
+
+        local CustomBook = CreateFloatingBook()
+
+        -- Imagen del item
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
         ImagePart.Size = Vector3.new(5, 5, 0.05) 
@@ -2781,7 +2886,18 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
             floatTime = floatTime + dt
             local basePos = spawnPos + Vector3.new(0, 5.2 + math.sin(floatTime * 1.8) * 0.4, 0)
+            
+            -- Flote y rotación estándar de la imagen del item
             ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
+
+            -- Flote y rotación excéntrica del Libro (diagonal y desde una punta)
+            if CustomBook and CustomBook.Parent then
+                local bookBasePos = basePos + Vector3.new(0, 4.0, 0) -- Situado más arriba de la imagen
+                local pivotOffset = CFrame.new(0.9, 0, 1.25) -- Offset para rotar desde la esquina (punta)
+                local spinCFrame = CFrame.Angles(floatTime * 1.4, floatTime * 2.1, floatTime * 1.6) -- Giro en X,Y,Z
+                
+                CustomBook:PivotTo(CFrame.new(bookBasePos) * spinCFrame * pivotOffset:Inverse())
+            end
         end)
 
         -- ==================================================
@@ -2909,10 +3025,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
     end)
 end)
+                ----
+                --fin del metodo--
+                ----
 
--- ==========================================================
--- FIN MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY
--- ==========================================================
             end
         else
             PagiLabel.Text = "Sin resultados"
