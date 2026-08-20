@@ -2657,28 +2657,82 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- ==================================================
         -- 3. ESFERA VIVA REFLECTANTE (CON BRILLO Y MOVIMIENTO)
         -- ==================================================
+                -- ==================================================
+        -- 3. ESFERA VIVA REFLECTANTE (CON BRILLO Y MOVIMIENTO)
+        -- ==================================================
+        
+        -- [CAPA 1] LA ESFERA EXTERNA (Tu código original)
         local SphereModel = Instance.new("Part")
         SphereModel.Name = "KittyGlassSphere"
         SphereModel.Shape = Enum.PartType.Ball
         SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
-        
-        -- Usamos Ice o ForceField para forzar reflejos especulares vivos sin apagar el SurfaceGui interno como el Glass puro
         SphereModel.Material = Enum.Material.ForceField 
-        SphereModel.Color = Color3.fromRGB(40, 255, 160) -- Tinte ciberpunk/carbonic que atrapa la luz
+        SphereModel.Color = Color3.fromRGB(40, 255, 160) 
         SphereModel.Transparency = 0.45
-        SphereModel.Reflectance = 1 -- Máximo brillo especular
+        SphereModel.Reflectance = 1 
         SphereModel.Anchored = true
         SphereModel.CanCollide = false
         SphereModel.Parent = PreviewFolder
 
-        -- Añadimos un Highlight sutil para delinear sus "polígonos" y darle un aspecto de malla de alta tecnología
         local SphereHighlight = Instance.new("Highlight")
         SphereHighlight.Name = "TechMeshHighlight"
         SphereHighlight.Adornee = SphereModel
-        SphereHighlight.FillTransparency = 1 -- Solo el contorno y las mallas brillan
+        SphereHighlight.FillTransparency = 1 
         SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
         SphereHighlight.OutlineTransparency = 0.1
         SphereHighlight.Parent = SphereModel
+
+        -- ==================================================
+        -- [NUEVO] 3.1 CAPA INTERNA DE REFRACCIÓN (Cristal)
+        -- ==================================================
+        local InnerGlass = Instance.new("Part")
+        InnerGlass.Name = "InnerGlassReflector"
+        InnerGlass.Shape = Enum.PartType.Ball
+        InnerGlass.Size = Vector3.new(4.5, 4.5, 4.5) -- Ligeramente más pequeña
+        InnerGlass.Material = Enum.Material.Glass -- El cristal distorsiona los objetos en su interior
+        InnerGlass.Color = Color3.fromRGB(20, 255, 140)
+        InnerGlass.Transparency = 0.65 
+        InnerGlass.Reflectance = 0.9 -- Alto nivel de reflejo
+        InnerGlass.Anchored = true
+        InnerGlass.CanCollide = false
+        InnerGlass.CFrame = SphereModel.CFrame
+        InnerGlass.Parent = SphereModel
+        
+        -- Soldadura para que se mueva con la esfera principal
+        local WeldGlass = Instance.new("WeldConstraint")
+        WeldGlass.Part0 = SphereModel
+        WeldGlass.Part1 = InnerGlass
+        WeldGlass.Parent = InnerGlass
+
+        -- ==================================================
+        -- [NUEVO] 3.2 NÚCLEO POLIGONAL (Múltiples facetas)
+        -- ==================================================
+        -- Generamos 3 cubos rotados al azar que, al intersectarse dentro del cristal, 
+        -- parecerán un holograma poligonal muy complejo.
+        for i = 1, 3 do
+            local PolyPart = Instance.new("Part")
+            PolyPart.Name = "InternalPoly" .. i
+            PolyPart.Shape = Enum.PartType.Block
+            PolyPart.Size = Vector3.new(3.2, 3.2, 3.2) 
+            PolyPart.Material = Enum.Material.Neon -- Da un brillo ligero a los bordes del polígono
+            PolyPart.Color = Color3.fromRGB(85, 255, 127)
+            PolyPart.Transparency = 0.88 -- Muy transparente para que no sature la vista
+            PolyPart.Anchored = true
+            PolyPart.CanCollide = false
+            
+            -- Rotación aleatoria para formar una especie de "diamante" o geoda
+            local rotX = math.rad(math.random(0, 360))
+            local rotY = math.rad(math.random(0, 360))
+            local rotZ = math.rad(math.random(0, 360))
+            PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
+            PolyPart.Parent = SphereModel
+
+            -- Soldadura
+            local WeldPoly = Instance.new("WeldConstraint")
+            WeldPoly.Part0 = SphereModel
+            WeldPoly.Part1 = PolyPart
+            WeldPoly.Parent = PolyPart
+        end
 
         task.delay(0.65, function() 
             for i = 1, 10 do
