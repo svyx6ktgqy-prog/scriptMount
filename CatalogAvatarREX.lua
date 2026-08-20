@@ -2561,7 +2561,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local SceneObjects = {}
         local currentLoadDelay = 0 
         
-        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, onLoaded)
+                local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, skipGroundCheck, onLoaded)
             currentLoadDelay = currentLoadDelay + 0.12 
             local thisDelay = currentLoadDelay
             
@@ -2575,33 +2575,35 @@ ClickBtn.MouseButton1Click:Connect(function()
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
-                    -- [NUEVO]: Raycast individual para cada elemento decorativo basado en su offset (X, Z)
                     local rawTargetPos = (CFrame.new(spawnPos) * offsetCFrame).Position
-                    local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
-                    local itemGroundY = rawTargetPos.Y -- Fallback si no encuentra nada
+                    local itemGroundY = spawnPos.Y -- Por defecto usa la altura de la mesa
                     
-                    local raycastParamsIndividual = RaycastParams.new()
-                    raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
-                    local individualIgnoreList = {char, PreviewFolder}
-                    
-                    for i = 1, 10 do
-                        raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
-                        local result = Workspace:Raycast(itemRayOrigin, Vector3.new(0, -100, 0), raycastParamsIndividual)
+                    -- Si skipGroundCheck no es true, hace el Raycast individual
+                    if not skipGroundCheck then
+                        local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
+                        local raycastParamsIndividual = RaycastParams.new()
+                        raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
+                        local individualIgnoreList = {char, PreviewFolder}
                         
-                        if result then
-                            local inst = result.Instance
-                            if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
-                                table.insert(individualIgnoreList, inst)
+                        for i = 1, 10 do
+                            raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
+                            local result = Workspace:Raycast(itemRayOrigin, Vector3.new(0, -100, 0), raycastParamsIndividual)
+                            
+                            if result then
+                                local inst = result.Instance
+                                if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                                    table.insert(individualIgnoreList, inst)
+                                else
+                                    itemGroundY = result.Position.Y
+                                    break
+                                end
                             else
-                                itemGroundY = result.Position.Y
                                 break
                             end
-                        else
-                            break
                         end
                     end
                     
-                    -- Posicionar basándose en SU suelo real, no en el suelo de la mesa
+                    -- Posicionar usando el suelo detectado (o la altura base si lo omitimos)
                     local baseCFrame = CFrame.new(rawTargetPos.X, itemGroundY, rawTargetPos.Z) * offsetCFrame.Rotation
                     local finalCFrame
                     
