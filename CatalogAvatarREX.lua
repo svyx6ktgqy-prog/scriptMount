@@ -2582,7 +2582,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                     
                     local raycastParamsIndividual = RaycastParams.new()
                     raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
-                    local individualIgnoreList = {char, PreviewFolder}
+                    local individualIgnoreList = {char, model}
                     
                     for i = 1, 10 do
                         raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
