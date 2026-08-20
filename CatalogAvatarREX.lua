@@ -2561,7 +2561,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local SceneObjects = {}
         local currentLoadDelay = 0 
         
-                local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, skipGroundCheck, onLoaded)
+        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, onLoaded)
             currentLoadDelay = currentLoadDelay + 0.12 
             local thisDelay = currentLoadDelay
             
@@ -2575,35 +2575,33 @@ ClickBtn.MouseButton1Click:Connect(function()
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
+                    -- [NUEVO]: Raycast individual para cada elemento decorativo basado en su offset (X, Z)
                     local rawTargetPos = (CFrame.new(spawnPos) * offsetCFrame).Position
-                    local itemGroundY = spawnPos.Y -- Por defecto usa la altura de la mesa
+                    local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
+                    local itemGroundY = rawTargetPos.Y -- Fallback si no encuentra nada
                     
-                    -- Si skipGroundCheck no es true, hace el Raycast individual
-                    if not skipGroundCheck then
-                        local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
-                        local raycastParamsIndividual = RaycastParams.new()
-                        raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
-                        local individualIgnoreList = {char, PreviewFolder}
+                    local raycastParamsIndividual = RaycastParams.new()
+                    raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
+                    local individualIgnoreList = {char, PreviewFolder}
+                    
+                    for i = 1, 10 do
+                        raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
+                        local result = Workspace:Raycast(itemRayOrigin, Vector3.new(0, -100, 0), raycastParamsIndividual)
                         
-                        for i = 1, 10 do
-                            raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
-                            local result = Workspace:Raycast(itemRayOrigin, Vector3.new(0, -100, 0), raycastParamsIndividual)
-                            
-                            if result then
-                                local inst = result.Instance
-                                if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
-                                    table.insert(individualIgnoreList, inst)
-                                else
-                                    itemGroundY = result.Position.Y
-                                    break
-                                end
+                        if result then
+                            local inst = result.Instance
+                            if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                                table.insert(individualIgnoreList, inst)
                             else
+                                itemGroundY = result.Position.Y
                                 break
                             end
+                        else
+                            break
                         end
                     end
                     
-                    -- Posicionar usando el suelo detectado (o la altura base si lo omitimos)
+                    -- Posicionar basándose en SU suelo real, no en el suelo de la mesa
                     local baseCFrame = CFrame.new(rawTargetPos.X, itemGroundY, rawTargetPos.Z) * offsetCFrame.Rotation
                     local finalCFrame
                     
@@ -2637,7 +2635,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
-        LoadAsset("8504132994", "Briefcase", CFrame.new(8.4, 0.52, -0.0) * CFrame.Angles(0, math.rad(-250), 0), 0, false, true)
+        LoadAsset("8504132994", "Briefcase", CFrame.new(8.4, 0.52, -0.0) * CFrame.Angles(0, math.rad(-250), 0))
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
         LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(124), 0))
@@ -3060,7 +3058,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             
             -- Horizontal <= 4.5 studs asegura que está tocando los bordes físicos de una mesa promedio.
             -- Vertical <= 6.5 asegura que el jugador no esté volando o en un piso superior.
-            if horizontalDist <= 2.5 and verticalDist <= 6.5 and promptState == "Waiting" then
+            if horizontalDist <= 4.5 and verticalDist <= 6.5 and promptState == "Waiting" then
                 promptState = "Prompting"
                 
                 ToggleUIVisibility(false)
