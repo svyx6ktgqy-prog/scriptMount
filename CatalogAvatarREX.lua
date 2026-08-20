@@ -2651,14 +2651,17 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end)
 
-        -- ==================================================
+                -- ==================================================
         -- 3. ESFERA TRASLÚCIDA NATIVA (CERO LAG & PERFECTA)
         -- ==================================================
         local SphereModel = Instance.new("Part")
         SphereModel.Name = "KittyGlassSphere"
         SphereModel.Shape = Enum.PartType.Ball
         SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
-        SphereModel.Material = Enum.Material.Glass
+        
+        -- FIX: Cambiamos Glass por SmoothPlastic para que no oculte el SurfaceGui.
+        SphereModel.Material = Enum.Material.SmoothPlastic 
+        
         SphereModel.Color = Color3.fromRGB(15, 15, 15) -- Tinte dark/carbonic
         SphereModel.Transparency = 0.55
         SphereModel.Anchored = true
