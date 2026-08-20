@@ -2616,7 +2616,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- MALETÍN / LAPTOP: 
         -- Rotación diagonal: math.rad(55) para que mire de lado, rompiendo la vista frontal.
         -- Empujoncito final: X = 7.9 y Z = -0.5 para llevarlo justo a la marca.
-        LoadAsset("9387964217", "Briefcase", CFrame.new(7.9, 0.52, -0.5) * CFrame.Angles(0, math.rad(55), 0))
+        LoadAsset("9387964217", "Briefcase", CFrame.new(7.9, 0.52, -0.5) * CFrame.Angles(0, math.rad(45), 0))
         
         -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
