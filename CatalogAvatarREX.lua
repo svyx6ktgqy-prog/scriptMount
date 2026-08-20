@@ -2616,7 +2616,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- MALETÍN / LAPTOP: 
         -- Rotación ajustada a math.rad(25).
         -- Deslizamiento final: X = 8.2 y Z = -0.2 para llevarlo al límite de la esquina.
-        LoadAsset("8504132994", "Briefcase", CFrame.new(8.2, 0.52, -0.2) * CFrame.Angles(0, math.rad(-125), 0))
+        LoadAsset("8504132994", "Briefcase", CFrame.new(8.2, 0.52, -0.2) * CFrame.Angles(0, math.rad(45), 0))
         
         -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
