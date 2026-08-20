@@ -2651,84 +2651,12 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end)
 
-                        -- ==================================================
-        -- 3. ESFERA VIVA REFLECTANTE (CON BRILLO Y MOVIMIENTO)
+                                -- ==================================================
+        -- [NUEVO] 3.3 LÍNEAS 3D (MERIDIANOS Y PARALELOS VERDES)
         -- ==================================================
-        
-        -- [CAPA 1] LA ESFERA EXTERNA
-        local SphereModel = Instance.new("Part")
-        SphereModel.Name = "KittyGlassSphere"
-        SphereModel.Shape = Enum.PartType.Ball
-        SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
-        SphereModel.Material = Enum.Material.ForceField 
-        SphereModel.Color = Color3.fromRGB(40, 255, 160) 
-        SphereModel.Transparency = 0.45
-        SphereModel.Reflectance = 1 
-        SphereModel.Anchored = true
-        SphereModel.CanCollide = false
-        SphereModel.Parent = PreviewFolder
-
-        local SphereHighlight = Instance.new("Highlight")
-        SphereHighlight.Name = "TechMeshHighlight"
-        SphereHighlight.Adornee = SphereModel
-        SphereHighlight.FillTransparency = 1 
-        SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
-        SphereHighlight.OutlineTransparency = 0.1
-        SphereHighlight.Parent = SphereModel
-
-        -- ==================================================
-        -- 3.1 CAPA INTERNA DE REFRACCIÓN (Cristal)
-        -- ==================================================
-        local InnerGlass = Instance.new("Part")
-        InnerGlass.Name = "InnerGlassReflector"
-        InnerGlass.Shape = Enum.PartType.Ball
-        InnerGlass.Size = Vector3.new(4.5, 4.5, 4.5) 
-        InnerGlass.Material = Enum.Material.Glass 
-        InnerGlass.Color = Color3.fromRGB(20, 255, 140)
-        InnerGlass.Transparency = 0.65 
-        InnerGlass.Reflectance = 0.9 
-        InnerGlass.Anchored = true
-        InnerGlass.CanCollide = false
-        InnerGlass.CFrame = SphereModel.CFrame
-        InnerGlass.Parent = SphereModel
-        
-        local WeldGlass = Instance.new("WeldConstraint")
-        WeldGlass.Part0 = SphereModel
-        WeldGlass.Part1 = InnerGlass
-        WeldGlass.Parent = InnerGlass
-
-        -- ==================================================
-        -- 3.2 NÚCLEO POLIGONAL (Múltiples facetas)
-        -- ==================================================
-        for i = 1, 3 do
-            local PolyPart = Instance.new("Part")
-            PolyPart.Name = "InternalPoly" .. i
-            PolyPart.Shape = Enum.PartType.Block
-            PolyPart.Size = Vector3.new(3.2, 3.2, 3.2) 
-            PolyPart.Material = Enum.Material.Neon 
-            PolyPart.Color = Color3.fromRGB(85, 255, 127)
-            PolyPart.Transparency = 0.88 
-            PolyPart.Anchored = true
-            PolyPart.CanCollide = false
-            
-            local rotX = math.rad(math.random(0, 360))
-            local rotY = math.rad(math.random(0, 360))
-            local rotZ = math.rad(math.random(0, 360))
-            PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
-            PolyPart.Parent = SphereModel
-
-            local WeldPoly = Instance.new("WeldConstraint")
-            WeldPoly.Part0 = SphereModel
-            WeldPoly.Part1 = PolyPart
-            WeldPoly.Parent = PolyPart
-        end
-
-        -- ==================================================
-        -- [NUEVO] 3.3 LÍNEAS 3D (MERIDIANOS Y PARALELOS)
-        -- ==================================================
-        -- Radio base (La esfera mide 4.8, así que el radio es 2.4)
-        local baseRadius = 2.42 -- Un poco más grande para que resalte en la superficie
-        local lineColor = Color3.fromRGB(85, 255, 255) -- Cyan neón
+        local baseRadius = 2.42 
+        -- Mismo verde de los bordes del Highlight original
+        local lineColor = Color3.fromRGB(85, 255, 127) 
         
         -- 1. Crear líneas verticales (Meridianos)
         for i = 1, 4 do
@@ -2736,12 +2664,12 @@ ClickBtn.MouseButton1Click:Connect(function()
             meridian.Name = "MeridianLine" .. i
             meridian.Adornee = SphereModel
             meridian.Radius = baseRadius
-            meridian.InnerRadius = baseRadius - 0.04 -- Grosor de la línea
-            meridian.Height = 0.04 -- Grosor lateral
+            meridian.InnerRadius = baseRadius - 0.04 
+            meridian.Height = 0.04 
             meridian.Color3 = lineColor
-            meridian.Transparency = 0.3
-            meridian.AlwaysOnTop = false
-            meridian.ZIndex = 1
+            meridian.Transparency = 0.55 -- Verde translúcido
+            meridian.AlwaysOnTop = false -- CLAVE: Evita que la parte trasera se dibuje sobre tu imagen
+            meridian.ZIndex = 0 -- Mantiene las líneas al nivel de la superficie de la esfera
             
             -- Rotamos en el eje Y para cruzar las líneas
             local angle = math.rad((180 / 4) * i)
@@ -2763,9 +2691,9 @@ ClickBtn.MouseButton1Click:Connect(function()
             parallel.InnerRadius = ringRadius - 0.04
             parallel.Height = 0.04
             parallel.Color3 = lineColor
-            parallel.Transparency = 0.3
-            parallel.AlwaysOnTop = false
-            parallel.ZIndex = 1
+            parallel.Transparency = 0.55 -- Verde translúcido
+            parallel.AlwaysOnTop = false -- Respeta la profundidad de los objetos internos
+            parallel.ZIndex = 0
             
             parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
             parallel.Parent = SphereModel
