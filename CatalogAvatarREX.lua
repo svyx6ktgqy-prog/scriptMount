@@ -2434,6 +2434,13 @@ ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
+    -- [NUEVO] INTERCEPTAR PREVIEW 3D SI SKIP ESTÁ ACTIVO
+    if SkipPreviewActive then
+        UpdateVisualizer(item.id, item.price or 0)
+        if Container then Container.Visible = true end
+        return -- Rompemos la función aquí, evitando todo el proceso de raycast y spawn 3D[span_4](start_span)[span_4](end_span).
+    end
+
     task.spawn(function()
         local Workspace = game:GetService("Workspace")
         local Players = game:GetService("Players")
