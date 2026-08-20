@@ -2680,18 +2680,28 @@ ClickBtn.MouseButton1Click:Connect(function()
         SphereHighlight.OutlineTransparency = 0.15
         SphereHighlight.Parent = SphereModel
 
-        -- [NUEVO] CAPA DE REFLEJO BLANCO (Efecto luz en vidrio)
+        -- Reemplazar la capa WhiteReflect por este código con especularidad
         local WhiteReflect = Instance.new("Part")
         WhiteReflect.Name = "WhiteGlassReflection"
         WhiteReflect.Shape = Enum.PartType.Ball
-        WhiteReflect.Size = Vector3.new(4.25, 4.25, 4.25)
-        WhiteReflect.Material = Enum.Material.ForceField
+        WhiteReflect.Size = Vector3.new(4.32, 4.32, 4.32) -- Ligeramente más grande que la esfera
+        WhiteReflect.Material = Enum.Material.SmoothPlastic 
         WhiteReflect.Color = Color3.fromRGB(255, 255, 255)
-        WhiteReflect.Transparency = 0.82
+        WhiteReflect.Transparency = 0.88 -- Muy transparente para solo reflejar luz
+        WhiteReflect.Reflectance = 0.95  -- Reflejo especular alto para la esfera
         WhiteReflect.Anchored = true
         WhiteReflect.CanCollide = false
         WhiteReflect.CFrame = SphereModel.CFrame
         WhiteReflect.Parent = SphereModel
+
+        -- Punto de luz dedicado a simular el reflejo de vidrio en la esfera
+        local GlassSpecGlint = Instance.new("PointLight")
+        GlassSpecGlint.Name = "GlassSpecGlint"
+        GlassSpecGlint.Color = Color3.fromRGB(255, 255, 255)
+        GlassSpecGlint.Brightness = 4.5
+        GlassSpecGlint.Range = 3.5
+        GlassSpecGlint.Shadows = false
+        GlassSpecGlint.Parent = WhiteReflect
 
         local WeldWhite = Instance.new("WeldConstraint")
         WeldWhite.Part0 = SphereModel
