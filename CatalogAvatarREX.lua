@@ -2603,20 +2603,20 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
                                                         -- ==================================================
-                        -- ==================================================
+                                -- ==================================================
         -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         
         -- NUEVA MESA (Cartel): 
-        -- Mantiene su posición base intacta (X = 5.0, Z = -2.0)
+        -- Intacta.
         LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
         
         -- MALETÍN / LAPTOP: 
-        -- Rotación diagonal: math.rad(55) para que mire de lado, rompiendo la vista frontal.
-        -- Empujoncito final: X = 7.9 y Z = -0.5 para llevarlo justo a la marca.
-        LoadAsset("9387964217", "Briefcase", CFrame.new(7.9, 0.52, -0.5) * CFrame.Angles(0, math.rad(25), 0))
+        -- Rotación ajustada a math.rad(25).
+        -- Deslizamiento final: X = 8.2 y Z = -0.2 para llevarlo al límite de la esquina.
+        LoadAsset("9387964217", "Briefcase", CFrame.new(8.2, 0.52, -0.2) * CFrame.Angles(0, math.rad(25), 0))
         
         -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
