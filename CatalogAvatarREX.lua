@@ -2561,7 +2561,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local SceneObjects = {}
         local currentLoadDelay = 0 
         
-        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, onLoaded)
+        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, collideWithFolder, onLoaded)
             currentLoadDelay = currentLoadDelay + 0.12 
             local thisDelay = currentLoadDelay
             
