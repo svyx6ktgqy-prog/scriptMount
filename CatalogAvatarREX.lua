@@ -3058,7 +3058,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             
             -- Horizontal <= 4.5 studs asegura que está tocando los bordes físicos de una mesa promedio.
             -- Vertical <= 6.5 asegura que el jugador no esté volando o en un piso superior.
-            if horizontalDist <= 4.5 and verticalDist <= 6.5 and promptState == "Waiting" then
+            if horizontalDist <= 2.5 and verticalDist <= 6.5 and promptState == "Waiting" then
                 promptState = "Prompting"
                 
                 ToggleUIVisibility(false)
