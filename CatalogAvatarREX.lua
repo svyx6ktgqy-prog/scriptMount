@@ -3533,6 +3533,15 @@ ExtraTab:CreateButton({
 
 ExtraTab:CreateSection("🖼️ Item Visualizer Control")
 
+-- [NUEVO] Módulo de Skip-Preview insertado aquí
+ExtraTab:CreateToggle({
+    Name = "🚀 Skip-Preview (Fast Equip)",
+    CurrentValue = false,
+    Flag = "SkipPreviewToggle", 
+    Callback = function(Value)
+        SkipPreviewActive = Value
+    end
+
 ExtraTab:CreateToggle({
     Name = "👁️ Toggle Item Visualizer",
     CurrentValue = false,
