@@ -2663,7 +2663,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         SphereModel.Material = Enum.Material.ForceField 
         SphereModel.Color = Color3.fromRGB(40, 255, 160) 
         SphereModel.Transparency = 0.60
-        SphereModel.Reflectance = 1.3 
+        SphereModel.Reflectance = 0.9
         SphereModel.Anchored = true
         SphereModel.CanCollide = false
         SphereModel.Parent = PreviewFolder
@@ -2774,11 +2774,15 @@ ClickBtn.MouseButton1Click:Connect(function()
             WeldPoly.Parent = PolyPart
         end
 
-        -- ==================================================
+                -- ==================================================
         -- 3.4 LÍNEAS 3D (PROFUNDIDAD VERDADERA PERFECTA)
         -- ==================================================
-        local baseRadius = 2.15 -- Ajuste perfecto para el radio de 4.3 (4.3 / 2)
+        local baseRadius = 2.15 
         local lineColor = Color3.fromRGB(85, 255, 127) 
+        
+        -- Grosor de las líneas (ajústalo aquí para cambiar todo rápido)
+        local grosorVisual = 0.015  -- Antes era 0.04 (Ancho de la línea)
+        local grosorProfundidad = 0.015 -- Antes era 0.045 (Profundidad de la línea)
 
         -- 1. Líneas verticales (Meridianos)
         for i = 1, 4 do
@@ -2786,8 +2790,11 @@ ClickBtn.MouseButton1Click:Connect(function()
             meridian.Name = "MeridianLine" .. i
             meridian.Adornee = SphereModel
             meridian.Radius = baseRadius
-            meridian.InnerRadius = baseRadius - 0.045 
-            meridian.Height = 0.04 
+            
+            -- AQUÍ SE APLICA EL GROSOR FINO:
+            meridian.InnerRadius = baseRadius - grosorProfundidad 
+            meridian.Height = grosorVisual 
+            
             meridian.Color3 = lineColor
             meridian.Transparency = 0.45 
             meridian.AlwaysOnTop = false 
@@ -2799,7 +2806,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- 2. Líneas horizontales (Paralelos)
-        local latitudes = {-1.0, 0, 1.0} -- Escala ajustada
+        local latitudes = {-1.0, 0, 1.0} 
         for i, yOffset in ipairs(latitudes) do
             local parallel = Instance.new("CylinderHandleAdornment")
             parallel.Name = "ParallelLine" .. i
@@ -2808,8 +2815,11 @@ ClickBtn.MouseButton1Click:Connect(function()
             local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
             
             parallel.Radius = ringRadius
-            parallel.InnerRadius = ringRadius - 0.045
-            parallel.Height = 0.04
+            
+            -- AQUÍ SE APLICA EL GROSOR FINO:
+            parallel.InnerRadius = ringRadius - grosorProfundidad
+            parallel.Height = grosorVisual
+            
             parallel.Color3 = lineColor
             parallel.Transparency = 0.45
             parallel.AlwaysOnTop = false 
