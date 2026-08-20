@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V25)
--- Detención Inteligente + Nuevos Items + Libro Custom 2 Caras + Reloj Real
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V26)
+-- Detención Inteligente + Escala de Reloj + Posiciones Ampliadas
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2613,23 +2613,29 @@ ClickBtn.MouseButton1Click:Connect(function()
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
 
         -- --- NUEVOS ITEMS ---
-        -- Cofre (Más adelante que el cartel Z=-5.5)
-        LoadAsset("134327951838106", "Cofre", CFrame.new(5.5, 0, -5.5) * CFrame.Angles(0, math.rad(-35), 0))
+        -- Cofre (Aún más alejado Z=-8.5)
+        LoadAsset("134327951838106", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(-35), 0))
         
-        -- Caja con armas (Alejada más hacia la derecha y un poco más atrás Z=-6.5, X=9.5)
-        LoadAsset("103693408325569", "WeaponBox", CFrame.new(9.5, 0, -6.5) * CFrame.Angles(0, math.rad(25), 0))
+        -- Caja con armas (Mucho más alejada del cofre y rotada hacia otra dirección)
+        LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
         
         -- Iphone (En el suelo en un lugar que no estorbe)
         LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
         
-        -- Dragón eliminado según solicitud
-        
-        -- Clock time (Alejado con texto BillboardGui flotando arriba)
-        LoadAsset("86136491298166", "ClockTime", CFrame.new(7.5, 0, 6.0) * CFrame.Angles(0, math.rad(-45), 0), nil, nil, function(clockModel)
+        -- Clock time (Escalado x6 para hacerlo mucho más grande)
+        LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(-45), 0), nil, nil, function(clockModel)
+            
+            -- ESCALADO DEL MODELO
+            if clockModel:IsA("Model") then
+                clockModel:ScaleTo(6)
+            elseif clockModel:IsA("BasePart") then
+                clockModel.Size = clockModel.Size * 6
+            end
+
             local bbGui = Instance.new("BillboardGui")
             bbGui.Name = "ClockGui"
-            bbGui.Size = UDim2.new(6, 0, 1.5, 0)
-            bbGui.StudsOffset = Vector3.new(0, 4, 0) -- Altura sobre el reloj
+            bbGui.Size = UDim2.new(8, 0, 2.5, 0)
+            bbGui.StudsOffset = Vector3.new(0, 8, 0) -- Subimos el texto un poco más debido a la nueva escala
             bbGui.AlwaysOnTop = true
             
             local txt = Instance.new("TextLabel")
@@ -3040,8 +3046,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
     end)
 end)
----
-                --fin
+
                 ---
 
             end
