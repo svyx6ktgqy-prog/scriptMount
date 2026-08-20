@@ -2659,11 +2659,11 @@ ClickBtn.MouseButton1Click:Connect(function()
         local SphereModel = Instance.new("Part")
         SphereModel.Name = "KittyGlassSphere"
         SphereModel.Shape = Enum.PartType.Ball
-        SphereModel.Size = Vector3.new(4.3, 4.3, 4.3) -- Tamaño Reducido
+        SphereModel.Size = Vector3.new(3.6, 3.6, 3.6) -- Tamaño Reducido
         SphereModel.Material = Enum.Material.ForceField 
         SphereModel.Color = Color3.fromRGB(40, 255, 160) 
-        SphereModel.Transparency = 0.45
-        SphereModel.Reflectance = 0.8 
+        SphereModel.Transparency = 0.60
+        SphereModel.Reflectance = 1.3 
         SphereModel.Anchored = true
         SphereModel.CanCollide = false
         SphereModel.Parent = PreviewFolder
