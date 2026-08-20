@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V28)
--- Fix Lag Inicial (Carga Escalonada) + Esfera Nativa + Orbital
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V29)
+-- Fix Lag Inicial + Esfera Nativa (Achicada) + Profundidad Verdadera + Blur Fix
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2559,10 +2559,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- CARGA MODULAR ESCALONADA (ANTI-LAG)
         -- ==================================================
         local SceneObjects = {}
-        local currentLoadDelay = 0 -- Contador de retraso
+        local currentLoadDelay = 0 
         
         local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, onLoaded)
-            currentLoadDelay = currentLoadDelay + 0.12 -- Añade 120ms por objeto para no ahogar la red
+            currentLoadDelay = currentLoadDelay + 0.12 
             local thisDelay = currentLoadDelay
             
             task.spawn(function()
@@ -2651,157 +2651,173 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end)
 
-                                        -- ==================================================
--- 3. ESFERA VIVA REFLECTANTE Y CONGELADA (EXPERT DEPTH)
--- ==================================================
+        -- ==================================================
+        -- 3. ESFERA VIVA REFLECTANTE Y CONGELADA (EXPERT DEPTH)
+        -- ==================================================
 
--- [CAPA 1] ESFERA EXTERNA (Bordes y contenedor)
-local SphereModel = Instance.new("Part")
-SphereModel.Name = "KittyGlassSphere"
-SphereModel.Shape = Enum.PartType.Ball
-SphereModel.Size = Vector3.new(4.8, 4.8, 4.8)
-SphereModel.Material = Enum.Material.ForceField 
-SphereModel.Color = Color3.fromRGB(40, 255, 160) 
-SphereModel.Transparency = 0.45
-SphereModel.Reflectance = 0.8 
-SphereModel.Anchored = true
-SphereModel.CanCollide = false
-SphereModel.Parent = PreviewFolder
+        -- [CAPA 1] ESFERA EXTERNA (Ligeramente achicada)
+        local SphereModel = Instance.new("Part")
+        SphereModel.Name = "KittyGlassSphere"
+        SphereModel.Shape = Enum.PartType.Ball
+        SphereModel.Size = Vector3.new(4.3, 4.3, 4.3) -- Tamaño Reducido
+        SphereModel.Material = Enum.Material.ForceField 
+        SphereModel.Color = Color3.fromRGB(40, 255, 160) 
+        SphereModel.Transparency = 0.45
+        SphereModel.Reflectance = 0.8 
+        SphereModel.Anchored = true
+        SphereModel.CanCollide = false
+        SphereModel.Parent = PreviewFolder
 
--- Bordes verdes brillantes
-local SphereHighlight = Instance.new("Highlight")
-SphereHighlight.Name = "TechMeshHighlight"
-SphereHighlight.Adornee = SphereModel
-SphereHighlight.FillTransparency = 1 
-SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
-SphereHighlight.OutlineTransparency = 0.15
-SphereHighlight.Parent = SphereModel
+        -- Bordes verdes brillantes
+        local SphereHighlight = Instance.new("Highlight")
+        SphereHighlight.Name = "TechMeshHighlight"
+        SphereHighlight.Adornee = SphereModel
+        SphereHighlight.FillTransparency = 1 
+        SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
+        SphereHighlight.OutlineTransparency = 0.15
+        SphereHighlight.Parent = SphereModel
 
--- ==================================================
--- 3.1 CAPA DE CRISTAL INTERNO (Oclusión de Profundidad)
--- ==================================================
--- El cristal procesa la profundidad real y permite que el ítem del centro
--- oculte las líneas que quedan detrás de él.
-local InnerGlass = Instance.new("Part")
-InnerGlass.Name = "InnerGlassReflector"
-InnerGlass.Shape = Enum.PartType.Ball
-InnerGlass.Size = Vector3.new(4.5, 4.5, 4.5) 
-InnerGlass.Material = Enum.Material.Glass 
-InnerGlass.Color = Color3.fromRGB(20, 255, 140)
-InnerGlass.Transparency = 0.60 
-InnerGlass.Reflectance = 0.85 
-InnerGlass.Anchored = true
-InnerGlass.CanCollide = false
-InnerGlass.CFrame = SphereModel.CFrame
-InnerGlass.Parent = SphereModel
+        -- [NUEVO] CAPA DE REFLEJO BLANCO (Efecto luz en vidrio)
+        local WhiteReflect = Instance.new("Part")
+        WhiteReflect.Name = "WhiteGlassReflection"
+        WhiteReflect.Shape = Enum.PartType.Ball
+        WhiteReflect.Size = Vector3.new(4.25, 4.25, 4.25)
+        WhiteReflect.Material = Enum.Material.ForceField
+        WhiteReflect.Color = Color3.fromRGB(255, 255, 255)
+        WhiteReflect.Transparency = 0.82
+        WhiteReflect.Anchored = true
+        WhiteReflect.CanCollide = false
+        WhiteReflect.CFrame = SphereModel.CFrame
+        WhiteReflect.Parent = SphereModel
 
-local WeldGlass = Instance.new("WeldConstraint")
-WeldGlass.Part0 = SphereModel
-WeldGlass.Part1 = InnerGlass
-WeldGlass.Parent = InnerGlass
+        local WeldWhite = Instance.new("WeldConstraint")
+        WeldWhite.Part0 = SphereModel
+        WeldWhite.Part1 = WhiteReflect
+        WeldWhite.Parent = WhiteReflect
 
--- ==================================================
--- 3.2 EFECTO DE CONGELAMIENTO Y FROST GLOW (Aura verde helada)
--- ==================================================
--- Luz central difusa para efecto helado
-local FrostLight = Instance.new("PointLight")
-FrostLight.Name = "FrostGlow"
-FrostLight.Color = Color3.fromRGB(85, 255, 127)
-FrostLight.Brightness = 1.8
-FrostLight.Range = 6.5
-FrostLight.Shadows = false
-FrostLight.Parent = InnerGlass
+        -- ==================================================
+        -- 3.1 CAPA DE CRISTAL INTERNO (Oclusión de Profundidad Fix)
+        -- ==================================================
+        -- NOTA: Se cambia "Glass" a "SmoothPlastic" para arreglar el bug de Roblox 
+        -- donde el Glass oculta la profundidad verdadera de objetos e imágenes internas.
+        local InnerGlass = Instance.new("Part")
+        InnerGlass.Name = "InnerGlassReflector"
+        InnerGlass.Shape = Enum.PartType.Ball
+        InnerGlass.Size = Vector3.new(4.0, 4.0, 4.0) -- Escalado proporcionalmente
+        InnerGlass.Material = Enum.Material.SmoothPlastic 
+        InnerGlass.Color = Color3.fromRGB(20, 255, 140)
+        InnerGlass.Transparency = 0.65 
+        InnerGlass.Reflectance = 0.75 
+        InnerGlass.Anchored = true
+        InnerGlass.CanCollide = false
+        InnerGlass.CFrame = SphereModel.CFrame
+        InnerGlass.Parent = SphereModel
 
--- Emisor de bruma congelada (Efecto "bola congelada suave")
-local FrostParticles = Instance.new("ParticleEmitter")
-FrostParticles.Name = "IceFrostAura"
-FrostParticles.Texture = "rbxassetid://243660364" -- Textura difusa/suave
-FrostParticles.Color = ColorSequence.new(Color3.fromRGB(120, 255, 180))
-FrostParticles.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1),
-    NumberSequenceKeypoint.new(0.5, 0.75),
-    NumberSequenceKeypoint.new(1, 1)
-})
-FrostParticles.Size = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 1.2),
-    NumberSequenceKeypoint.new(1, 2.5)
-})
-FrostParticles.Lifetime = NumberRange.new(1.5, 2.5)
-FrostParticles.Rate = 8
-FrostParticles.Speed = NumberRange.new(0.1, 0.4)
-FrostParticles.LightEmission = 0.35
-FrostParticles.Parent = InnerGlass
+        local WeldGlass = Instance.new("WeldConstraint")
+        WeldGlass.Part0 = SphereModel
+        WeldGlass.Part1 = InnerGlass
+        WeldGlass.Parent = InnerGlass
 
--- ==================================================
--- 3.3 NÚCLEO POLIGONAL (Facetas de hielo interno)
--- ==================================================
-for i = 1, 3 do
-    local PolyPart = Instance.new("Part")
-    PolyPart.Name = "InternalPoly" .. i
-    PolyPart.Shape = Enum.PartType.Block
-    PolyPart.Size = Vector3.new(3.0, 3.0, 3.0) 
-    PolyPart.Material = Enum.Material.Ice -- Material Ice para reforzar el congelamiento
-    PolyPart.Color = Color3.fromRGB(85, 255, 127)
-    PolyPart.Transparency = 0.82 
-    PolyPart.Anchored = true
-    PolyPart.CanCollide = false
-    
-    local rotX = math.rad(math.random(0, 360))
-    local rotY = math.rad(math.random(0, 360))
-    local rotZ = math.rad(math.random(0, 360))
-    PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
-    PolyPart.Parent = SphereModel
+        -- ==================================================
+        -- 3.2 EFECTO DE CONGELAMIENTO Y FROST GLOW (Aura verde helada)
+        -- ==================================================
+        local FrostLight = Instance.new("PointLight")
+        FrostLight.Name = "FrostGlow"
+        FrostLight.Color = Color3.fromRGB(85, 255, 127)
+        FrostLight.Brightness = 1.8
+        FrostLight.Range = 6.5
+        FrostLight.Shadows = false
+        FrostLight.Parent = InnerGlass
 
-    local WeldPoly = Instance.new("WeldConstraint")
-    WeldPoly.Part0 = SphereModel
-    WeldPoly.Part1 = PolyPart
-    WeldPoly.Parent = PolyPart
-end
+        local FrostParticles = Instance.new("ParticleEmitter")
+        FrostParticles.Name = "IceFrostAura"
+        FrostParticles.Texture = "rbxassetid://243660364" 
+        FrostParticles.Color = ColorSequence.new(Color3.fromRGB(120, 255, 180))
+        FrostParticles.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1),
+            NumberSequenceKeypoint.new(0.5, 0.75),
+            NumberSequenceKeypoint.new(1, 1)
+        })
+        FrostParticles.Size = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1.2),
+            NumberSequenceKeypoint.new(1, 2.5)
+        })
+        FrostParticles.Lifetime = NumberRange.new(1.5, 2.5)
+        FrostParticles.Rate = 8
+        FrostParticles.Speed = NumberRange.new(0.1, 0.4)
+        FrostParticles.LightEmission = 0.35
+        FrostParticles.Parent = InnerGlass
 
--- ==================================================
--- 3.4 LÍNEAS 3D (RESPETANDO PROFUNDIDAD Y CONGELAMIENTO)
--- ==================================================
-local baseRadius = 2.42 
-local lineColor = Color3.fromRGB(85, 255, 127) 
+        -- ==================================================
+        -- 3.3 NÚCLEO POLIGONAL (Facetas de hielo interno)
+        -- ==================================================
+        for i = 1, 3 do
+            local PolyPart = Instance.new("Part")
+            PolyPart.Name = "InternalPoly" .. i
+            PolyPart.Shape = Enum.PartType.Block
+            PolyPart.Size = Vector3.new(2.5, 2.5, 2.5) -- Escala ajustada
+            PolyPart.Material = Enum.Material.Ice 
+            PolyPart.Color = Color3.fromRGB(85, 255, 127)
+            PolyPart.Transparency = 0.82 
+            PolyPart.Anchored = true
+            PolyPart.CanCollide = false
+            
+            local rotX = math.rad(math.random(0, 360))
+            local rotY = math.rad(math.random(0, 360))
+            local rotZ = math.rad(math.random(0, 360))
+            PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
+            PolyPart.Parent = SphereModel
 
--- 1. Líneas verticales (Meridianos)
-for i = 1, 4 do
-    local meridian = Instance.new("CylinderHandleAdornment")
-    meridian.Name = "MeridianLine" .. i
-    meridian.Adornee = SphereModel
-    meridian.Radius = baseRadius
-    meridian.InnerRadius = baseRadius - 0.045 
-    meridian.Height = 0.04 
-    meridian.Color3 = lineColor
-    meridian.Transparency = 0.45 -- Un poco más visible para acentuar el marco congelado
-    meridian.AlwaysOnTop = false -- Habilita el cálculo de profundidad 3D
-    meridian.ZIndex = 1
-    
-    local angle = math.rad((180 / 4) * i)
-    meridian.CFrame = CFrame.Angles(0, angle, math.rad(90))
-    meridian.Parent = SphereModel
-end
+            local WeldPoly = Instance.new("WeldConstraint")
+            WeldPoly.Part0 = SphereModel
+            WeldPoly.Part1 = PolyPart
+            WeldPoly.Parent = PolyPart
+        end
 
--- 2. Líneas horizontales (Paralelos)
-local latitudes = {-1.2, 0, 1.2} 
-for i, yOffset in ipairs(latitudes) do
-    local parallel = Instance.new("CylinderHandleAdornment")
-    parallel.Name = "ParallelLine" .. i
-    parallel.Adornee = SphereModel
-    
-    local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
-    
-    parallel.Radius = ringRadius
-    parallel.InnerRadius = ringRadius - 0.045
-    parallel.Height = 0.04
-    parallel.Color3 = lineColor
-    parallel.Transparency = 0.45
-    parallel.AlwaysOnTop = false -- Habilita el cálculo de profundidad 3D
-    parallel.ZIndex = 1
-    
-    parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
-    parallel.Parent = SphereModel
-end
+        -- ==================================================
+        -- 3.4 LÍNEAS 3D (PROFUNDIDAD VERDADERA PERFECTA)
+        -- ==================================================
+        local baseRadius = 2.15 -- Ajuste perfecto para el radio de 4.3 (4.3 / 2)
+        local lineColor = Color3.fromRGB(85, 255, 127) 
+
+        -- 1. Líneas verticales (Meridianos)
+        for i = 1, 4 do
+            local meridian = Instance.new("CylinderHandleAdornment")
+            meridian.Name = "MeridianLine" .. i
+            meridian.Adornee = SphereModel
+            meridian.Radius = baseRadius
+            meridian.InnerRadius = baseRadius - 0.045 
+            meridian.Height = 0.04 
+            meridian.Color3 = lineColor
+            meridian.Transparency = 0.45 
+            meridian.AlwaysOnTop = false 
+            meridian.ZIndex = 0
+            
+            local angle = math.rad((180 / 4) * i)
+            meridian.CFrame = CFrame.Angles(0, angle, math.rad(90))
+            meridian.Parent = SphereModel
+        end
+
+        -- 2. Líneas horizontales (Paralelos)
+        local latitudes = {-1.0, 0, 1.0} -- Escala ajustada
+        for i, yOffset in ipairs(latitudes) do
+            local parallel = Instance.new("CylinderHandleAdornment")
+            parallel.Name = "ParallelLine" .. i
+            parallel.Adornee = SphereModel
+            
+            local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
+            
+            parallel.Radius = ringRadius
+            parallel.InnerRadius = ringRadius - 0.045
+            parallel.Height = 0.04
+            parallel.Color3 = lineColor
+            parallel.Transparency = 0.45
+            parallel.AlwaysOnTop = false 
+            parallel.ZIndex = 0
+            
+            parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
+            parallel.Parent = SphereModel
+        end
 
         task.delay(0.65, function() 
             for i = 1, 10 do
@@ -2966,28 +2982,22 @@ end
 
         local CustomBook = CreateFloatingBook()
 
-        -- Imagen del item (REDUCIDO: 3x3)
+        -- Imagen del item (Usando Decal para Profundidad 3D perfecta dentro de la Esfera)
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
         ImagePart.Size = Vector3.new(3, 3, 0.05) 
         ImagePart.Anchored = true; ImagePart.CanCollide = false
         ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
 
-        local SurfaceFront = Instance.new("SurfaceGui", ImagePart)
-        SurfaceFront.Face = Enum.NormalId.Front
-        SurfaceFront.AlwaysOnTop = false; SurfaceFront.LightInfluence = 0 
+        local DecalFront = Instance.new("Decal", ImagePart)
+        DecalFront.Face = Enum.NormalId.Front
+        DecalFront.Texture = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
+        DecalFront.Transparency = 0
 
-        local ImgFront = Instance.new("ImageLabel", SurfaceFront)
-        ImgFront.Size = UDim2.new(1, 0, 1, 0)
-        ImgFront.BackgroundTransparency = 1
-        ImgFront.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
-
-        local SurfaceBack = Instance.new("SurfaceGui", ImagePart)
-        SurfaceBack.Face = Enum.NormalId.Back
-        SurfaceBack.AlwaysOnTop = false; SurfaceBack.LightInfluence = 0 
-
-        local ImgBack = ImgFront:Clone()
-        ImgBack.Parent = SurfaceBack
+        local DecalBack = Instance.new("Decal", ImagePart)
+        DecalBack.Face = Enum.NormalId.Back
+        DecalBack.Texture = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
+        DecalBack.Transparency = 0
 
         local rotConnection
         local floatTime = 0
@@ -3051,6 +3061,9 @@ end
                         if proximityConn then proximityConn:Disconnect() end
                         RainActive = false 
                         
+                        -- EL BLUR SE DESACTIVA JUSTO ANTES DE INICIAR EL IMÁN
+                        if blurEffect then blurEffect:Destroy() end
+                        
                         if PreviewFolder and PreviewFolder.Parent then PreviewFolder.Name = "Kitty3DPreview_Sinking" end
                         
                         task.spawn(function()
@@ -3087,9 +3100,8 @@ end
                                 ImagePart.CFrame = finalCFrame
 
                                 -- Fundido Crossfade
-                                ImagePart.Transparency = ease
-                                if ImgFront then ImgFront.ImageTransparency = ease end
-                                if ImgBack then ImgBack.ImageTransparency = ease end
+                                if DecalFront then DecalFront.Transparency = ease end
+                                if DecalBack then DecalBack.Transparency = ease end
 
                                 -- Crossfade de la Esfera Nativa
                                 if SphereModel and SphereModel.Parent then
@@ -3124,7 +3136,6 @@ end
                                     for _, b in ipairs(AllRainBills) do SinkAndDestroy(b) end
 
                                     task.delay(1.5, function() if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end end)
-                                    if blurEffect then blurEffect:Destroy() end
                                     
                                     UpdateVisualizer(item.id, item.price or "Gratis")
                                     NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
