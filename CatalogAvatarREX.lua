@@ -2582,7 +2582,13 @@ ClickBtn.MouseButton1Click:Connect(function()
                     
                     local raycastParamsIndividual = RaycastParams.new()
                     raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
-                    local individualIgnoreList = {char, model}
+                                        -- Por defecto ignoramos la carpeta para que la mesa y demás no se pisen entre sí
+                    local individualIgnoreList = {char, PreviewFolder}
+                    
+                    -- Pero si activamos el permiso, el objeto (el maletín) podrá chocar con la mesa
+                    if collideWithFolder then
+                        individualIgnoreList = {char, model}
+                    end
                     
                     for i = 1, 10 do
                         raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
