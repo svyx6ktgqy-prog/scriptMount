@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V24)
--- Detención Inteligente + Nuevos Items + Libro Custom + Reloj Real
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V25)
+-- Detención Inteligente + Nuevos Items + Libro Custom 2 Caras + Reloj Real
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2594,7 +2594,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                     
                     table.insert(SceneObjects, model)
                     
-                    -- Disparamos el callback si existe (útil para el reloj)
                     if onLoaded then
                         task.spawn(function() onLoaded(model) end)
                     end
@@ -2617,14 +2616,13 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- Cofre (Más adelante que el cartel Z=-5.5)
         LoadAsset("134327951838106", "Cofre", CFrame.new(5.5, 0, -5.5) * CFrame.Angles(0, math.rad(-35), 0))
         
-        -- Caja con armas (Cerca del cofre sin chocar Z=-4.5)
-        LoadAsset("103693408325569", "WeaponBox", CFrame.new(8.0, 0, -4.5) * CFrame.Angles(0, math.rad(15), 0))
+        -- Caja con armas (Alejada más hacia la derecha y un poco más atrás Z=-6.5, X=9.5)
+        LoadAsset("103693408325569", "WeaponBox", CFrame.new(9.5, 0, -6.5) * CFrame.Angles(0, math.rad(25), 0))
         
         -- Iphone (En el suelo en un lugar que no estorbe)
         LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
         
-        -- Dragon product (En el suelo pero alejado)
-        LoadAsset("33356860", "DragonProduct", CFrame.new(-8.0, 0, -5.5) * CFrame.Angles(0, math.rad(115), 0))
+        -- Dragón eliminado según solicitud
         
         -- Clock time (Alejado con texto BillboardGui flotando arriba)
         LoadAsset("86136491298166", "ClockTime", CFrame.new(7.5, 0, 6.0) * CFrame.Angles(0, math.rad(-45), 0), nil, nil, function(clockModel)
@@ -2819,22 +2817,39 @@ ClickBtn.MouseButton1Click:Connect(function()
             spine.CFrame = pages.CFrame * CFrame.new(-0.925, 0, 0)
             spine.Parent = book
 
-            -- Texto en Tapa Superior
-            local surfaceGui = Instance.new("SurfaceGui")
-            surfaceGui.Face = Enum.NormalId.Top
-            surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-            surfaceGui.PixelsPerStud = 100
-            surfaceGui.Parent = topCover
+            -- Texto en Tapa Superior (Cara Top)
+            local topSurfaceGui = Instance.new("SurfaceGui")
+            topSurfaceGui.Face = Enum.NormalId.Top
+            topSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+            topSurfaceGui.PixelsPerStud = 100
+            topSurfaceGui.Parent = topCover
 
-            local textLabel = Instance.new("TextLabel")
-            textLabel.Size = UDim2.new(1, 0, 1, 0)
-            textLabel.BackgroundTransparency = 1
-            textLabel.Text = "REAL SCRIPT ON BACK ☠️"
-            textLabel.TextColor3 = Color3.new(1, 1, 1) -- White
-            textLabel.Font = Enum.Font.GothamBlack -- Bold negrita
-            textLabel.TextScaled = true
-            textLabel.Rotation = -90 -- Apaisado
-            textLabel.Parent = surfaceGui
+            local topTextLabel = Instance.new("TextLabel")
+            topTextLabel.Size = UDim2.new(1, 0, 1, 0)
+            topTextLabel.BackgroundTransparency = 1
+            topTextLabel.Text = "REAL SCRIPT ON BACK ☠️"
+            topTextLabel.TextColor3 = Color3.new(1, 1, 1) -- White
+            topTextLabel.Font = Enum.Font.GothamBlack
+            topTextLabel.TextScaled = true
+            topTextLabel.Rotation = -90 -- Apaisado
+            topTextLabel.Parent = topSurfaceGui
+
+            -- Texto en Tapa Inferior (Cara Bottom)
+            local bottomSurfaceGui = Instance.new("SurfaceGui")
+            bottomSurfaceGui.Face = Enum.NormalId.Bottom -- Orientado hacia abajo
+            bottomSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+            bottomSurfaceGui.PixelsPerStud = 100
+            bottomSurfaceGui.Parent = bottomCover
+
+            local bottomTextLabel = Instance.new("TextLabel")
+            bottomTextLabel.Size = UDim2.new(1, 0, 1, 0)
+            bottomTextLabel.BackgroundTransparency = 1
+            bottomTextLabel.Text = "REAL SCRIPT.. 🖤"
+            bottomTextLabel.TextColor3 = Color3.new(1, 1, 1) -- White
+            bottomTextLabel.Font = Enum.Font.GothamBlack
+            bottomTextLabel.TextScaled = true
+            bottomTextLabel.Rotation = -90 -- Apaisado para mantener consistencia
+            bottomTextLabel.Parent = bottomSurfaceGui
 
             -- Fijar físicas
             for _, p in ipairs(book:GetDescendants()) do
@@ -2842,7 +2857,7 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
 
             book.Parent = PreviewFolder
-            table.insert(SceneObjects, book) -- Lo agregamos a SceneObjects para que se hunda/elimine al final
+            table.insert(SceneObjects, book) 
 
             return book
         end
@@ -3025,9 +3040,9 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
     end)
 end)
-                ----
-                --fin del metodo--
-                ----
+---
+                --fin
+                ---
 
             end
         else
