@@ -2614,7 +2614,7 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         -- --- NUEVOS ITEMS ---
         -- Cofre (Aún más alejado Z=-8.5)
-        LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(-35), 0))
+        LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(124), 0))
         
         -- Caja con armas (Mucho más alejada del cofre y rotada hacia otra dirección)
         LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
@@ -2623,7 +2623,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
         
         -- Clock time (Escalado x6 para hacerlo mucho más grande)
-        LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(-45), 0), nil, nil, function(clockModel)
+        LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(-250), 0), nil, nil, function(clockModel)
             
             -- ESCALADO DEL MODELO
             if clockModel:IsA("Model") then
