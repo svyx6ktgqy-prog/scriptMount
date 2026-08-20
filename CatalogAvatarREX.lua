@@ -2424,7 +2424,7 @@ PerformKittySearch = function(isPagination)
                 
                 -- ==========================================================
 -- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V30)
--- Fix Hitbox Esfera (Tacto Exacto) + Físicas Adaptativas a Terreno/Escaleras
+-- Fix Lag Inicial + Esfera Nativa + Profundidad + Gravedad Individual + Toque Estricto
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2494,12 +2494,33 @@ ClickBtn.MouseButton1Click:Connect(function()
         local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
         -- ==================================================
-        -- CONFIGURACIÓN DE RAYCAST GLOBAL (IGNORAR PREVIEW)
+        -- ESCANEO DE SUELO UNIFICADO (Centro para la mesa)
         -- ==================================================
+        local rayOrigin = spawnPos + Vector3.new(0, 50, 0)
         local ignoreList = {char, PreviewFolder}
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-        raycastParams.FilterDescendantsInstances = ignoreList
+        
+        local trueGroundY = spawnPos.Y 
+        
+        for i = 1, 10 do
+            raycastParams.FilterDescendantsInstances = ignoreList
+            local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+            
+            if result then
+                local inst = result.Instance
+                if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                    table.insert(ignoreList, inst)
+                else
+                    trueGroundY = result.Position.Y
+                    break
+                end
+            else
+                break
+            end
+        end
+
+        spawnPos = Vector3.new(spawnPos.X, trueGroundY, spawnPos.Z)
 
         -- ==================================================
         -- FUNCIONES DE FÍSICAS Y CAÍDA
@@ -2535,7 +2556,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- CARGA MODULAR Y ADAPTATIVA A TERRENO (ANTI-LAG)
+        -- CARGA MODULAR ESCALONADA CON CAÍDA INDEPENDIENTE (ANTI-FLOTE)
         -- ==================================================
         local SceneObjects = {}
         local currentLoadDelay = 0 
@@ -2554,36 +2575,47 @@ ClickBtn.MouseButton1Click:Connect(function()
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
-                    local rawBaseCFrame = CFrame.new(spawnPos) * offsetCFrame
+                    -- [NUEVO]: Raycast individual para cada elemento decorativo basado en su offset (X, Z)
+                    local rawTargetPos = (CFrame.new(spawnPos) * offsetCFrame).Position
+                    local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
+                    local itemGroundY = rawTargetPos.Y -- Fallback si no encuentra nada
                     
-                    -- Detección de suelo individual para escaleras/rampas
-                    local rayOrigin = rawBaseCFrame.Position + Vector3.new(0, 50, 0)
-                    local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+                    local raycastParamsIndividual = RaycastParams.new()
+                    raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
+                    local individualIgnoreList = {char, PreviewFolder}
                     
-                    local hitPos = rawBaseCFrame.Position
-                    local hitNormal = Vector3.new(0, 1, 0)
-                    
-                    if result then
-                        hitPos = result.Position
-                        hitNormal = result.Normal
+                    for i = 1, 10 do
+                        raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
+                        local result = Workspace:Raycast(itemRayOrigin, Vector3.new(0, -100, 0), raycastParamsIndividual)
+                        
+                        if result then
+                            local inst = result.Instance
+                            if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                                table.insert(individualIgnoreList, inst)
+                            else
+                                itemGroundY = result.Position.Y
+                                break
+                            end
+                        else
+                            break
+                        end
                     end
                     
-                    -- Ajuste perfecto al ras del suelo sin margen
-                    local boundsCFrame, size = model:GetBoundingBox()
-                    local pivotY = model:GetPivot().Position.Y
-                    local bottomY = boundsCFrame.Position.Y - (size.Y / 2)
-                    local liftOffset = pivotY - bottomY 
+                    -- Posicionar basándose en SU suelo real, no en el suelo de la mesa
+                    local baseCFrame = CFrame.new(rawTargetPos.X, itemGroundY, rawTargetPos.Z) * offsetCFrame.Rotation
+                    local finalCFrame
                     
-                    if size.Y < 0.1 or liftOffset ~= liftOffset then liftOffset = 0.05 end
-                    if manualLift then liftOffset = manualLift end
-                    
-                    -- Inclinación adaptativa al desnivel del suelo (Normal Vector)
-                    local axis = Vector3.new(0, 1, 0):Cross(hitNormal)
-                    local dot = math.clamp(Vector3.new(0, 1, 0):Dot(hitNormal), -1, 1)
-                    local angle = math.acos(dot)
-                    local tiltRot = (axis.Magnitude > 0.001) and CFrame.fromAxisAngle(axis.Unit, angle) or CFrame.identity
-                    
-                    local finalCFrame = CFrame.new(hitPos + hitNormal * liftOffset) * tiltRot * rawBaseCFrame.Rotation
+                    if manualLift then
+                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + manualLift, baseCFrame.Z) * baseCFrame.Rotation
+                    else
+                        local boundsCFrame, size = model:GetBoundingBox()
+                        local pivotY = model:GetPivot().Y
+                        local bottomY = boundsCFrame.Y - (size.Y / 2)
+                        local liftOffset = pivotY - bottomY 
+                        
+                        if size.Y < 0.1 or liftOffset ~= liftOffset then liftOffset = 0.05 end
+                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
+                    end
                     
                     if skipDrop then
                         if model:IsA("Model") then model:PivotTo(finalCFrame) else model.CFrame = finalCFrame end
@@ -2598,7 +2630,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA SECUENCIAL
+        -- 2. CARGA DE ESCENOGRAFÍA SECUENCIAL
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
@@ -2647,7 +2679,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. ESFERA VIVA REFLECTANTE Y CONGELADA (EXPERT DEPTH)
+        -- 3. ESFERA VIVA REFLECTANTE Y CONGELADA
         -- ==================================================
         local SphereModel = Instance.new("Part")
         SphereModel.Name = "KittyGlassSphere"
@@ -2676,7 +2708,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         WhiteReflect.Material = Enum.Material.SmoothPlastic 
         WhiteReflect.Color = Color3.fromRGB(255, 255, 255)
         WhiteReflect.Transparency = 0.88 
-        WhiteReflect.Reflectance = 0.95  
+        WhiteReflect.Reflectance = 0.95 
         WhiteReflect.Anchored = true
         WhiteReflect.CanCollide = false
         WhiteReflect.CFrame = SphereModel.CFrame
@@ -2765,8 +2797,8 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         local baseRadius = 2.15 
         local lineColor = Color3.fromRGB(85, 255, 127) 
-        local grosorVisual = 0.015
-        local grosorProfundidad = 0.015
+        local grosorVisual = 0.015 
+        local grosorProfundidad = 0.015 
 
         for i = 1, 4 do
             local meridian = Instance.new("CylinderHandleAdornment")
@@ -2790,15 +2822,18 @@ ClickBtn.MouseButton1Click:Connect(function()
             local parallel = Instance.new("CylinderHandleAdornment")
             parallel.Name = "ParallelLine" .. i
             parallel.Adornee = SphereModel
+            
             local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
             
             parallel.Radius = ringRadius
             parallel.InnerRadius = ringRadius - grosorProfundidad
             parallel.Height = grosorVisual
+            
             parallel.Color3 = lineColor
             parallel.Transparency = 0.45
             parallel.AlwaysOnTop = false 
             parallel.ZIndex = 0
+            
             parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
             parallel.Parent = SphereModel
         end
@@ -2818,7 +2853,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. EFECTO: LLUVIA DE BILLETES ADAPTATIVA
+        -- 4. EFECTO: LLUVIA DE BILLETES (Método intacto)
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2873,26 +2908,21 @@ ClickBtn.MouseButton1Click:Connect(function()
                     if not bill or not bill.Parent or not RainActive then if fallConn then fallConn:Disconnect() end return end
 
                     local currentPos = isModel and bill:GetPivot().Position or bill.Position
+                    local rayParams = RaycastParams.new()
+                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    rayParams.FilterDescendantsInstances = AllRainBills 
                     
-                    -- Raycast profundo para prevenir atravesar escaleras
-                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -3.5, 0), raycastParams)
+                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), rayParams)
 
                     if result then
                         fallConn:Disconnect()
-                        
-                        -- Inclinación del billete adaptándose a la normal del terreno/baldoza/escalón
-                        local axis = Vector3.new(0, 1, 0):Cross(result.Normal)
-                        local dot = math.clamp(Vector3.new(0, 1, 0):Dot(result.Normal), -1, 1)
-                        local tiltRot = (axis.Magnitude > 0.001) and CFrame.fromAxisAngle(axis.Unit, math.acos(dot)) or CFrame.identity
-
                         if isModel then
                             for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true end end
-                            bill:PivotTo(CFrame.new(result.Position + result.Normal * 0.05) * tiltRot * CFrame.Angles(0, math.random(0, 360), 0))
+                            bill:PivotTo(CFrame.new(result.Position + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.random(0, 360), 0))
                         else
                             bill.Anchored = true
-                            bill.CFrame = CFrame.new(result.Position + result.Normal * (bill.Size.Y/2)) * tiltRot * CFrame.Angles(0, math.random(0, 360), 0)
+                            bill.CFrame = CFrame.new(result.Position + Vector3.new(0, bill.Size.Y/2, 0)) * CFrame.Angles(0, math.random(0, 360), 0)
                         end
-                        
                         table.insert(GroundedBills, bill)
 
                         if #GroundedBills > 10 then
@@ -3011,7 +3041,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 6. DETECCIÓN EXACTA DE TACTO (Líneas Esfera)
+        -- 6. DETECCIÓN POR CONTACTO ESTRICTO Y ANIMACIÓN
         -- ==================================================
         local promptState = "Waiting" 
         local proximityConn
@@ -3022,15 +3052,13 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
 
-            -- Cálculo 3D Distancia Exacta a la Esfera Flotante
-            local dist = 999
-            if SphereModel and SphereModel.Parent then
-                dist = (hrp.Position - SphereModel.Position).Magnitude
-            end
+            -- [NUEVO]: Verificación Cilíndrica para asegurar que está "chocando" con la mesa y no flotando/lejos.
+            local horizontalDist = Vector2.new(hrp.Position.X - spawnPos.X, hrp.Position.Z - spawnPos.Z).Magnitude
+            local verticalDist = math.abs(hrp.Position.Y - spawnPos.Y)
             
-            -- La linea tiene radius 2.15 + El Personaje ocupa aprox 1.0 (2.15 + 1.0 = 3.15)
-            -- Con 3.2 de rango saltará LITERALMENTE en el instante en que toques las líneas 3D
-            if dist <= 3.2 and promptState == "Waiting" then
+            -- Horizontal <= 4.5 studs asegura que está tocando los bordes físicos de una mesa promedio.
+            -- Vertical <= 6.5 asegura que el jugador no esté volando o en un piso superior.
+            if horizontalDist <= 4.5 and verticalDist <= 6.5 and promptState == "Waiting" then
                 promptState = "Prompting"
                 
                 ToggleUIVisibility(false)
@@ -3052,7 +3080,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                         RainActive = false 
                         
                         if blurEffect then blurEffect:Destroy() end
-                        
                         if PreviewFolder and PreviewFolder.Parent then PreviewFolder.Name = "Kitty3DPreview_Sinking" end
                         
                         task.spawn(function()
@@ -3147,8 +3174,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                     })
                 end)
                 
-            -- Reset de estado al alejarse
-            elseif dist > 4.8 and promptState == "Cooldown" then
+            -- Reseteo de Cooldown: Si el jugador se aleja (distancia horizontal > 7.5), podrá volver a tocar la mesa después
+            elseif horizontalDist > 7.5 and promptState == "Cooldown" then
                 promptState = "Waiting"
             end
         end)
