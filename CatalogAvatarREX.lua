@@ -2602,18 +2602,18 @@ ClickBtn.MouseButton1Click:Connect(function()
             end)
         end
 
-                -- ==================================================
+                        -- ==================================================
         -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
         
-        -- NUEVA MESA: Cartel anclado sin físicas para evitar colapso
-        LoadAsset("121348416036836", "KittySignTable", CFrame.new(3.5, 0, -1.5) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
+        -- NUEVA MESA: Elevada a Y = 0.35 para que no traspase el suelo
+        LoadAsset("121348416036836", "KittySignTable", CFrame.new(3.5, 0.35, -1.5) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
         
-        -- MALETÍN: Trasladado a la esquina izquierda/fondo del cartel (X=2.6, Z=-2.5)
-        -- Altura base en 0 para que el Bounding Box lo apoye perfecto sobre el cartel
-        LoadAsset("9387964217", "Briefcase", CFrame.new(2.6, 0, -2.5) * CFrame.Angles(0, math.rad(35), 0))
+        -- MALETÍN: Mismo nivel de elevación (Y = 0.35) para tocar el cartel. 
+        -- Posicionado en el rincón izquierdo (X = 1.2, Z = -3.2)
+        LoadAsset("9387964217", "Briefcase", CFrame.new(1.2, 0.35, -3.2) * CFrame.Angles(0, math.rad(45), 0))
         
         -- DECORACIÓN
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
