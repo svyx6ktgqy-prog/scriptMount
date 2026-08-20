@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V26)
--- Detención Inteligente + Escala de Reloj + Posiciones Ampliadas
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V27)
+-- Esfera Traslúcida + Fix Blur de Texto + Absorción Orbital y Crossfade
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2494,7 +2494,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
         -- ==================================================
-        -- ESCANEO DE SUELO UNIFICADO (Solo se hace una vez)
+        -- ESCANEO DE SUELO UNIFICADO
         -- ==================================================
         local rayOrigin = spawnPos + Vector3.new(0, 50, 0)
         local ignoreList = {char, PreviewFolder}
@@ -2556,7 +2556,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- DETENCIÓN INTELIGENTE Y CARGA MODULAR CON CALLBACK
+        -- CARGA MODULAR
         -- ==================================================
         local SceneObjects = {}
         local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, onLoaded)
@@ -2579,10 +2579,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                         local bottomY = boundsCFrame.Y - (size.Y / 2)
                         local liftOffset = pivotY - bottomY 
                         
-                        if size.Y < 0.1 or liftOffset ~= liftOffset then
-                            liftOffset = 0.05
-                        end
-                        
+                        if size.Y < 0.1 or liftOffset ~= liftOffset then liftOffset = 0.05 end
                         finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
                     end
                     
@@ -2593,76 +2590,92 @@ ClickBtn.MouseButton1Click:Connect(function()
                     end
                     
                     table.insert(SceneObjects, model)
-                    
-                    if onLoaded then
-                        task.spawn(function() onLoaded(model) end)
-                    end
+                    if onLoaded then task.spawn(function() onLoaded(model) end) end
                 end
             end)
         end
 
         -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA + NUEVOS ITEMS
+        -- 2. CARGA DE ESCENOGRAFÍA MILLONARIA
         -- ==================================================
         LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
         LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
-        
         LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
         LoadAsset("8504132994", "Briefcase", CFrame.new(8.4, 0.52, -0.0) * CFrame.Angles(0, math.rad(-250), 0))
         LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
         LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
-
-        -- --- NUEVOS ITEMS ---
-        -- Cofre (Aún más alejado Z=-8.5)
         LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(124), 0))
-        
-        -- Caja con armas (Mucho más alejada del cofre y rotada hacia otra dirección)
         LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
-        
-        -- Iphone (En el suelo en un lugar que no estorbe)
         LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
         
-        -- Clock time (Escalado x6 para hacerlo mucho más grande)
+        -- FIX BLUR TEXTO RELOJ: Asignado a PlayerGui y manejado independientemente
         LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(25), 0), nil, nil, function(clockModel)
-            
-            -- ESCALADO DEL MODELO
-            if clockModel:IsA("Model") then
-                clockModel:ScaleTo(20)
-            elseif clockModel:IsA("BasePart") then
-                clockModel.Size = clockModel.Size * 20
-            end
+            if clockModel:IsA("Model") then clockModel:ScaleTo(20)
+            elseif clockModel:IsA("BasePart") then clockModel.Size = clockModel.Size * 20 end
 
             local bbGui = Instance.new("BillboardGui")
-            bbGui.Name = "ClockGui"
+            bbGui.Name = "KittyClockGui"
             bbGui.Size = UDim2.new(8, 0, 2.5, 0)
-            bbGui.StudsOffset = Vector3.new(0, 8, 0) -- Subimos el texto un poco más debido a la nueva escala
+            bbGui.StudsOffset = Vector3.new(0, 8, 0) 
             bbGui.AlwaysOnTop = true
             
             local txt = Instance.new("TextLabel")
             txt.Size = UDim2.new(1, 0, 1, 0)
             txt.BackgroundTransparency = 1
             txt.TextScaled = true
-            txt.Font = Enum.Font.GothamBlack -- White bold text
+            txt.Font = Enum.Font.GothamBlack 
             txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-            txt.TextStrokeTransparency = 0 -- Borde negro para legibilidad
+            txt.TextStrokeTransparency = 0 
             txt.Parent = bbGui
             
             local parentPart = clockModel:IsA("Model") and (clockModel.PrimaryPart or clockModel:FindFirstChildWhichIsA("BasePart")) or clockModel
-            if parentPart then
-                bbGui.Parent = parentPart
+            bbGui.Adornee = parentPart or clockModel
+            
+            local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+            if PlayerGui then
+                bbGui.Parent = PlayerGui
             else
                 bbGui.Parent = PreviewFolder
-                bbGui.Adornee = clockModel
             end
             
-            -- Loop de actualización en tiempo real
             task.spawn(function()
                 while clockModel and clockModel.Parent do
                     local date = os.date("*t")
                     txt.Text = string.format("%02d:%02d:%02d", date.hour, date.min, date.sec)
                     task.wait(1)
                 end
+                if bbGui then bbGui:Destroy() end
             end)
+        end)
+
+        -- ==================================================
+        -- CARGA DE ESFERA TRASLÚCIDA
+        -- ==================================================
+        local SphereModel = nil
+        local SphereParts = {}
+        LoadAsset("1782830048", "KittyGlassSphere", CFrame.new(0, 5.2, 0), nil, true, function(sphere)
+            SphereModel = sphere
+            local function applyGlassStyle(obj)
+                if obj:IsA("BasePart") then
+                    obj.Material = Enum.Material.Glass
+                    obj.Transparency = 0.55
+                    obj.Color = Color3.fromRGB(15, 15, 15) -- Tinte dark/carbonic
+                    obj.Anchored = true
+                    obj.CanCollide = false
+                    table.insert(SphereParts, obj)
+                end
+            end
+            applyGlassStyle(sphere)
+            for _, d in ipairs(sphere:GetDescendants()) do applyGlassStyle(d) end
+            
+            -- Escalar la esfera para que envuelva el ítem de 3x3
+            if sphere:IsA("Model") then
+                local extents = sphere:GetExtentsSize()
+                local maxDim = math.max(extents.X, extents.Y, extents.Z)
+                if maxDim > 0 then sphere:ScaleTo(4.8 / maxDim) end 
+            elseif sphere:IsA("BasePart") then
+                sphere.Size = Vector3.new(4.8, 4.8, 4.8)
+            end
         end)
 
         task.delay(0.65, function() 
@@ -2680,7 +2693,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 3. EFECTO: LLUVIA DE BILLETES (INTACTO)
+        -- 3. EFECTO: LLUVIA DE BILLETES
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2688,8 +2701,7 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         task.spawn(function()
             local success, rainObjs = pcall(function() return game:GetObjects("rbxassetid://439712421") end)
-            local BillTemplate = nil
-            if success and rainObjs and #rainObjs > 0 then BillTemplate = rainObjs[1] end
+            local BillTemplate = (success and rainObjs and #rainObjs > 0) and rainObjs[1] or nil
 
             if not BillTemplate then
                 BillTemplate = Instance.new("Part")
@@ -2699,14 +2711,12 @@ ClickBtn.MouseButton1Click:Connect(function()
             end
 
             local function GetSeparatedSpawnOffset()
-                local offset
-                local attempts = 0
+                local offset, attempts = nil, 0
                 repeat
                     attempts = attempts + 1
                     offset = Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))
                     local tooClose = false
                     local testPos = spawnPos + Vector3.new(offset.X, 0, offset.Z)
-                    
                     for _, b in ipairs(GroundedBills) do
                         if b.Parent and (Vector3.new(b.Position.X, 0, b.Position.Z) - Vector3.new(testPos.X, 0, testPos.Z)).Magnitude < 2.5 then
                             tooClose = true; break
@@ -2721,10 +2731,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                 bill.Parent = PreviewFolder
                 table.insert(AllRainBills, bill)
                 
-                for _, p in ipairs(bill:GetDescendants()) do
-                    if p:IsA("BasePart") then p.Anchored = false; p.CanCollide = false end
-                end
-                
+                for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = false; p.CanCollide = false end end
                 local isModel = bill:IsA("Model")
                 local mainPart = isModel and bill.PrimaryPart or bill
 
@@ -2733,28 +2740,22 @@ ClickBtn.MouseButton1Click:Connect(function()
                     mainPart.AssemblyAngularVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
                 end
 
-                local offset = GetSeparatedSpawnOffset()
-                local startCFrame = CFrame.new(spawnPos + offset) * CFrame.Angles(math.random(), math.random(), math.random())
-                
+                local startCFrame = CFrame.new(spawnPos + GetSeparatedSpawnOffset()) * CFrame.Angles(math.random(), math.random(), math.random())
                 if isModel then bill:PivotTo(startCFrame) else bill.CFrame = startCFrame end
 
                 local fallConn
                 fallConn = RunService.Heartbeat:Connect(function()
-                    if not bill or not bill.Parent or not RainActive then 
-                        if fallConn then fallConn:Disconnect() end 
-                        return 
-                    end
+                    if not bill or not bill.Parent or not RainActive then if fallConn then fallConn:Disconnect() end return end
 
                     local currentPos = isModel and bill:GetPivot().Position or bill.Position
-                    local raycastParamsRain = RaycastParams.new()
-                    raycastParamsRain.FilterType = Enum.RaycastFilterType.Exclude
-                    raycastParamsRain.FilterDescendantsInstances = AllRainBills 
+                    local rayParams = RaycastParams.new()
+                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    rayParams.FilterDescendantsInstances = AllRainBills 
                     
-                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), raycastParamsRain)
+                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), rayParams)
 
                     if result then
                         fallConn:Disconnect()
-                        
                         if isModel then
                             for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true end end
                             bill:PivotTo(CFrame.new(result.Position + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.random(0, 360), 0))
@@ -2762,7 +2763,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                             bill.Anchored = true
                             bill.CFrame = CFrame.new(result.Position + Vector3.new(0, bill.Size.Y/2, 0)) * CFrame.Angles(0, math.random(0, 360), 0)
                         end
-
                         table.insert(GroundedBills, bill)
 
                         if #GroundedBills > 10 then
@@ -2770,9 +2770,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                             if oldBill and oldBill.Parent then
                                 local tInfo = TweenInfo.new(0.5)
                                 if oldBill:IsA("Model") then
-                                    for _, p in ipairs(oldBill:GetDescendants()) do
-                                        if p:IsA("BasePart") then TweenService:Create(p, tInfo, {Transparency = 1}):Play() end
-                                    end
+                                    for _, p in ipairs(oldBill:GetDescendants()) do if p:IsA("BasePart") then TweenService:Create(p, tInfo, {Transparency = 1}):Play() end end
                                 else
                                     TweenService:Create(oldBill, tInfo, {Transparency = 1}):Play()
                                 end
@@ -2786,114 +2784,82 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. CONSTRUCCIÓN DEL LIBRO CUSTOM Y LA IMAGEN FLOTANTE
+        -- 4. CONSTRUCCIÓN DEL LIBRO Y LA IMAGEN FLOTANTE
         -- ==================================================
         local function CreateFloatingBook()
             local book = Instance.new("Model")
             book.Name = "CustomBook"
 
-            -- Interior (Hojas Amarillas)
             local pages = Instance.new("Part")
-            pages.Name = "Pages"
             pages.Size = Vector3.new(1.8, 0.4, 2.5)
             pages.Color = Color3.fromRGB(255, 204, 0) 
             pages.Material = Enum.Material.SmoothPlastic
             pages.Parent = book
             book.PrimaryPart = pages
 
-            -- Tapa Superior Negra
             local topCover = Instance.new("Part")
-            topCover.Name = "TopCover"
             topCover.Size = Vector3.new(1.9, 0.05, 2.6)
             topCover.Color = Color3.fromRGB(15, 15, 15)
             topCover.CFrame = pages.CFrame * CFrame.new(0, 0.225, 0)
             topCover.Parent = book
 
-            -- Tapa Inferior Negra
             local bottomCover = topCover:Clone()
-            bottomCover.Name = "BottomCover"
             bottomCover.CFrame = pages.CFrame * CFrame.new(0, -0.225, 0)
             bottomCover.Parent = book
 
-            -- Lomo / Franja Negra (Spine)
             local spine = Instance.new("Part")
-            spine.Name = "Spine"
             spine.Size = Vector3.new(0.05, 0.5, 2.6)
             spine.Color = Color3.fromRGB(15, 15, 15)
             spine.CFrame = pages.CFrame * CFrame.new(-0.925, 0, 0)
             spine.Parent = book
 
-            -- Texto en Tapa Superior (Cara Top)
-            local topSurfaceGui = Instance.new("SurfaceGui")
+            local topSurfaceGui = Instance.new("SurfaceGui", topCover)
             topSurfaceGui.Face = Enum.NormalId.Top
-            topSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-            topSurfaceGui.PixelsPerStud = 100
-            topSurfaceGui.Parent = topCover
-
-            local topTextLabel = Instance.new("TextLabel")
+            topSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; topSurfaceGui.PixelsPerStud = 100
+            
+            local topTextLabel = Instance.new("TextLabel", topSurfaceGui)
             topTextLabel.Size = UDim2.new(1, 0, 1, 0)
-            topTextLabel.BackgroundTransparency = 1
-            topTextLabel.Text = "REAL SCRIPT ON BACK ☠️"
-            topTextLabel.TextColor3 = Color3.new(1, 1, 1) -- White
-            topTextLabel.Font = Enum.Font.GothamBlack
-            topTextLabel.TextScaled = true
-            topTextLabel.Rotation = -90 -- Apaisado
-            topTextLabel.Parent = topSurfaceGui
+            topTextLabel.BackgroundTransparency = 1; topTextLabel.Text = "REAL SCRIPT ON BACK ☠️"
+            topTextLabel.TextColor3 = Color3.new(1, 1, 1)
+            topTextLabel.Font = Enum.Font.GothamBlack; topTextLabel.TextScaled = true; topTextLabel.Rotation = -90 
 
-            -- Texto en Tapa Inferior (Cara Bottom)
-            local bottomSurfaceGui = Instance.new("SurfaceGui")
-            bottomSurfaceGui.Face = Enum.NormalId.Bottom -- Orientado hacia abajo
-            bottomSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-            bottomSurfaceGui.PixelsPerStud = 100
-            bottomSurfaceGui.Parent = bottomCover
-
-            local bottomTextLabel = Instance.new("TextLabel")
+            local bottomSurfaceGui = Instance.new("SurfaceGui", bottomCover)
+            bottomSurfaceGui.Face = Enum.NormalId.Bottom
+            bottomSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; bottomSurfaceGui.PixelsPerStud = 100
+            
+            local bottomTextLabel = Instance.new("TextLabel", bottomSurfaceGui)
             bottomTextLabel.Size = UDim2.new(1, 0, 1, 0)
-            bottomTextLabel.BackgroundTransparency = 1
-            bottomTextLabel.Text = "REAL SCRIPT.. 🖤"
-            bottomTextLabel.TextColor3 = Color3.new(1, 1, 1) -- White
-            bottomTextLabel.Font = Enum.Font.GothamBlack
-            bottomTextLabel.TextScaled = true
-            bottomTextLabel.Rotation = -90 -- Apaisado para mantener consistencia
-            bottomTextLabel.Parent = bottomSurfaceGui
+            bottomTextLabel.BackgroundTransparency = 1; bottomTextLabel.Text = "REAL SCRIPT.. 🖤"
+            bottomTextLabel.TextColor3 = Color3.new(1, 1, 1)
+            bottomTextLabel.Font = Enum.Font.GothamBlack; bottomTextLabel.TextScaled = true; bottomTextLabel.Rotation = -90 
 
-            -- Fijar físicas
-            for _, p in ipairs(book:GetDescendants()) do
-                if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end
-            end
-
+            for _, p in ipairs(book:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end end
             book.Parent = PreviewFolder
             table.insert(SceneObjects, book) 
-
             return book
         end
 
         local CustomBook = CreateFloatingBook()
 
-        -- Imagen del item
+        -- Imagen del item (REDUCIDO: 3x3)
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
-        ImagePart.Size = Vector3.new(5, 5, 0.05) 
+        ImagePart.Size = Vector3.new(3, 3, 0.05) 
         ImagePart.Anchored = true; ImagePart.CanCollide = false
         ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
 
-        local SurfaceFront = Instance.new("SurfaceGui")
+        local SurfaceFront = Instance.new("SurfaceGui", ImagePart)
         SurfaceFront.Face = Enum.NormalId.Front
-        SurfaceFront.AlwaysOnTop = false 
-        SurfaceFront.LightInfluence = 0 
-        SurfaceFront.Parent = ImagePart
+        SurfaceFront.AlwaysOnTop = false; SurfaceFront.LightInfluence = 0 
 
-        local ImgFront = Instance.new("ImageLabel")
+        local ImgFront = Instance.new("ImageLabel", SurfaceFront)
         ImgFront.Size = UDim2.new(1, 0, 1, 0)
         ImgFront.BackgroundTransparency = 1
         ImgFront.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
-        ImgFront.Parent = SurfaceFront
 
-        local SurfaceBack = Instance.new("SurfaceGui")
+        local SurfaceBack = Instance.new("SurfaceGui", ImagePart)
         SurfaceBack.Face = Enum.NormalId.Back
-        SurfaceBack.AlwaysOnTop = false 
-        SurfaceBack.LightInfluence = 0 
-        SurfaceBack.Parent = ImagePart
+        SurfaceBack.AlwaysOnTop = false; SurfaceBack.LightInfluence = 0 
 
         local ImgBack = ImgFront:Clone()
         ImgBack.Parent = SurfaceBack
@@ -2901,22 +2867,25 @@ ClickBtn.MouseButton1Click:Connect(function()
         local rotConnection
         local floatTime = 0
         rotConnection = RunService.RenderStepped:Connect(function(dt)
-            if not ImagePart or not ImagePart.Parent then
-                rotConnection:Disconnect()
-                return
-            end
+            if not ImagePart or not ImagePart.Parent then rotConnection:Disconnect() return end
             floatTime = floatTime + dt
             local basePos = spawnPos + Vector3.new(0, 5.2 + math.sin(floatTime * 1.8) * 0.4, 0)
             
-            -- Flote y rotación estándar de la imagen del item
-            ImagePart.CFrame = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
+            -- Ítem
+            local itemCF = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
+            ImagePart.CFrame = itemCF
 
-            -- Flote y rotación excéntrica del Libro (diagonal y desde una punta)
+            -- Esfera: Rotación constante abarcando el ítem
+            if SphereModel and SphereModel.Parent then
+                local sphereCF = CFrame.new(basePos) * CFrame.Angles(floatTime * 0.5, -floatTime * 1.2, floatTime * 0.8)
+                if SphereModel:IsA("Model") then SphereModel:PivotTo(sphereCF) else SphereModel.CFrame = sphereCF end
+            end
+
+            -- Libro
             if CustomBook and CustomBook.Parent then
-                local bookBasePos = basePos + Vector3.new(0, 4.0, 0) -- Situado más arriba de la imagen
-                local pivotOffset = CFrame.new(0.9, 0, 1.25) -- Offset para rotar desde la esquina (punta)
-                local spinCFrame = CFrame.Angles(floatTime * 1.4, floatTime * 2.1, floatTime * 1.6) -- Giro en X,Y,Z
-                
+                local bookBasePos = basePos + Vector3.new(0, 4.0, 0) 
+                local pivotOffset = CFrame.new(0.9, 0, 1.25) 
+                local spinCFrame = CFrame.Angles(floatTime * 1.4, floatTime * 2.1, floatTime * 1.6) 
                 CustomBook:PivotTo(CFrame.new(bookBasePos) * spinCFrame * pivotOffset:Inverse())
             end
         end)
@@ -2940,6 +2909,10 @@ ClickBtn.MouseButton1Click:Connect(function()
                 
                 ToggleUIVisibility(false)
 
+                -- FIX BLUR: Ocultamos limpiamente el reloj antes del efecto Blur
+                local clockGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("KittyClockGui")
+                if clockGui then clockGui.Enabled = false end
+
                 local blurEffect = Instance.new("BlurEffect")
                 blurEffect.Name = "KittyPreviewBlur"
                 blurEffect.Size = 15
@@ -2961,7 +2934,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                             
                             local head = char:FindFirstChild("Head") or hrp
                             local startTime = tick()
-                            local duration = 1.8 
+                            local duration = 2.2 -- Tiempo aumentado para apreciar la espiral y el crossfade
                             local startPos = ImagePart.Position
 
                             local attractConn
@@ -2971,25 +2944,44 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 local t = math.clamp((tick() - startTime) / duration, 0, 1)
                                 local ease = t * t * (3 - 2 * t) 
                                 
-                                local angle = ease * math.pi * 5 
-                                local radius = 7 * (1 - ease) 
+                                -- Animación Orbital en Espiral
+                                local startDist = (startPos - head.Position).Magnitude
+                                local currentRadius = startDist * (1 - ease)
+                                local angle = ease * math.pi * 12 -- 6 vueltas completas
+                                local heightOffset = math.sin(ease * math.pi) * 3.5 -- Curva parabólica vertical
                                 
-                                local orbitPos = head.Position + Vector3.new(math.cos(angle) * radius, (1 - ease) * 1.5, math.sin(angle) * radius)
+                                local orbitPos = head.Position + Vector3.new(
+                                    math.cos(angle) * currentRadius, 
+                                    heightOffset + (1 - ease) * (startPos.Y - head.Position.Y), 
+                                    math.sin(angle) * currentRadius
+                                )
                                 
-                                local snake = 0
-                                if t > 0.6 then
-                                    local snakeT = (t - 0.6) / 0.4
-                                    snake = math.sin(snakeT * 25) * (1 - snakeT) * 1.8
+                                local spinSpeed = 15 + (ease * 30)
+                                local finalCFrame = CFrame.new(orbitPos) * CFrame.Angles(tick() * spinSpeed, tick() * spinSpeed, math.sin(tick() * 10))
+                                
+                                ImagePart.CFrame = finalCFrame
+
+                                -- Fundido Crossfade del Item
+                                ImagePart.Transparency = ease
+                                if ImgFront then ImgFront.ImageTransparency = ease end
+                                if ImgBack then ImgBack.ImageTransparency = ease end
+
+                                -- Animación y Crossfade de la Esfera
+                                if SphereModel and SphereModel.Parent then
+                                    local sphereCF = finalCFrame * CFrame.Angles(math.rad(45), tick() * spinSpeed * -0.5, 0)
+                                    if SphereModel:IsA("Model") then SphereModel:PivotTo(sphereCF) else SphereModel.CFrame = sphereCF end
+                                    
+                                    local sphereTargetTrans = 0.55 + (0.45 * ease)
+                                    for _, p in ipairs(SphereParts) do
+                                        if p.Parent then p.Transparency = sphereTargetTrans end
+                                    end
                                 end
-                                
-                                local finalTarget = orbitPos + (head.CFrame.RightVector * snake)
-                                local newPos = startPos:Lerp(finalTarget, ease)
-                                
-                                ImagePart.CFrame = CFrame.new(newPos) * CFrame.Angles(0, tick() * 15, math.sin(tick() * 10) * 0.5)
 
                                 if t >= 1 then
                                     attractConn:Disconnect()
                                     ImagePart:Destroy()
+                                    if SphereModel then SphereModel:Destroy() end
+                                    if clockGui then clockGui:Destroy() end
 
                                     local function SinkAndDestroy(obj)
                                         if not obj then return end
@@ -3011,10 +3003,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                                     for _, sceneObj in ipairs(SceneObjects) do SinkAndDestroy(sceneObj) end
                                     for _, b in ipairs(AllRainBills) do SinkAndDestroy(b) end
 
-                                    task.delay(1.5, function()
-                                        if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end
-                                    end)
-
+                                    task.delay(1.5, function() if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end end)
                                     if blurEffect then blurEffect:Destroy() end
                                     
                                     UpdateVisualizer(item.id, item.price or "Gratis")
@@ -3024,6 +3013,7 @@ ClickBtn.MouseButton1Click:Connect(function()
                         end)
                     else
                         if blurEffect then blurEffect:Destroy() end
+                        if clockGui then clockGui.Enabled = true end -- Restauramos el texto
                         promptState = "Cooldown"
                     end
                 end
