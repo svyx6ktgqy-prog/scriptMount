@@ -2614,7 +2614,7 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         -- --- NUEVOS ITEMS ---
         -- Cofre (Aún más alejado Z=-8.5)
-        LoadAsset("134327951838106", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(-35), 0))
+        LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(-35), 0))
         
         -- Caja con armas (Mucho más alejada del cofre y rotada hacia otra dirección)
         LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
@@ -2627,9 +2627,9 @@ ClickBtn.MouseButton1Click:Connect(function()
             
             -- ESCALADO DEL MODELO
             if clockModel:IsA("Model") then
-                clockModel:ScaleTo(6)
+                clockModel:ScaleTo(20)
             elseif clockModel:IsA("BasePart") then
-                clockModel.Size = clockModel.Size * 6
+                clockModel.Size = clockModel.Size * 20
             end
 
             local bbGui = Instance.new("BillboardGui")
