@@ -2423,8 +2423,8 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V29)
--- Fix Lag Inicial + Esfera Nativa (Achicada) + Profundidad Verdadera + Blur Fix
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V30)
+-- Fix Hitbox Esfera (Tacto Exacto) + Físicas Adaptativas a Terreno/Escaleras
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Id = tostring(item.id)
@@ -2494,33 +2494,12 @@ ClickBtn.MouseButton1Click:Connect(function()
         local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
         -- ==================================================
-        -- ESCANEO DE SUELO UNIFICADO
+        -- CONFIGURACIÓN DE RAYCAST GLOBAL (IGNORAR PREVIEW)
         -- ==================================================
-        local rayOrigin = spawnPos + Vector3.new(0, 50, 0)
         local ignoreList = {char, PreviewFolder}
         local raycastParams = RaycastParams.new()
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-        
-        local trueGroundY = spawnPos.Y 
-        
-        for i = 1, 10 do
-            raycastParams.FilterDescendantsInstances = ignoreList
-            local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
-            
-            if result then
-                local inst = result.Instance
-                if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
-                    table.insert(ignoreList, inst)
-                else
-                    trueGroundY = result.Position.Y
-                    break
-                end
-            else
-                break
-            end
-        end
-
-        spawnPos = Vector3.new(spawnPos.X, trueGroundY, spawnPos.Z)
+        raycastParams.FilterDescendantsInstances = ignoreList
 
         -- ==================================================
         -- FUNCIONES DE FÍSICAS Y CAÍDA
@@ -2556,7 +2535,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end
 
         -- ==================================================
-        -- CARGA MODULAR ESCALONADA (ANTI-LAG)
+        -- CARGA MODULAR Y ADAPTATIVA A TERRENO (ANTI-LAG)
         -- ==================================================
         local SceneObjects = {}
         local currentLoadDelay = 0 
@@ -2575,20 +2554,36 @@ ClickBtn.MouseButton1Click:Connect(function()
                     LockPhysics(model) 
                     model.Parent = PreviewFolder 
                     
-                    local baseCFrame = CFrame.new(spawnPos) * offsetCFrame
-                    local finalCFrame
+                    local rawBaseCFrame = CFrame.new(spawnPos) * offsetCFrame
                     
-                    if manualLift then
-                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + manualLift, baseCFrame.Z) * baseCFrame.Rotation
-                    else
-                        local boundsCFrame, size = model:GetBoundingBox()
-                        local pivotY = model:GetPivot().Y
-                        local bottomY = boundsCFrame.Y - (size.Y / 2)
-                        local liftOffset = pivotY - bottomY 
-                        
-                        if size.Y < 0.1 or liftOffset ~= liftOffset then liftOffset = 0.05 end
-                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
+                    -- Detección de suelo individual para escaleras/rampas
+                    local rayOrigin = rawBaseCFrame.Position + Vector3.new(0, 50, 0)
+                    local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+                    
+                    local hitPos = rawBaseCFrame.Position
+                    local hitNormal = Vector3.new(0, 1, 0)
+                    
+                    if result then
+                        hitPos = result.Position
+                        hitNormal = result.Normal
                     end
+                    
+                    -- Ajuste perfecto al ras del suelo sin margen
+                    local boundsCFrame, size = model:GetBoundingBox()
+                    local pivotY = model:GetPivot().Position.Y
+                    local bottomY = boundsCFrame.Position.Y - (size.Y / 2)
+                    local liftOffset = pivotY - bottomY 
+                    
+                    if size.Y < 0.1 or liftOffset ~= liftOffset then liftOffset = 0.05 end
+                    if manualLift then liftOffset = manualLift end
+                    
+                    -- Inclinación adaptativa al desnivel del suelo (Normal Vector)
+                    local axis = Vector3.new(0, 1, 0):Cross(hitNormal)
+                    local dot = math.clamp(Vector3.new(0, 1, 0):Dot(hitNormal), -1, 1)
+                    local angle = math.acos(dot)
+                    local tiltRot = (axis.Magnitude > 0.001) and CFrame.fromAxisAngle(axis.Unit, angle) or CFrame.identity
+                    
+                    local finalCFrame = CFrame.new(hitPos + hitNormal * liftOffset) * tiltRot * rawBaseCFrame.Rotation
                     
                     if skipDrop then
                         if model:IsA("Model") then model:PivotTo(finalCFrame) else model.CFrame = finalCFrame end
@@ -2654,12 +2649,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- ==================================================
         -- 3. ESFERA VIVA REFLECTANTE Y CONGELADA (EXPERT DEPTH)
         -- ==================================================
-
-        -- [CAPA 1] ESFERA EXTERNA (Ligeramente achicada)
         local SphereModel = Instance.new("Part")
         SphereModel.Name = "KittyGlassSphere"
         SphereModel.Shape = Enum.PartType.Ball
-        SphereModel.Size = Vector3.new(3.6, 3.6, 3.6) -- Tamaño Reducido
+        SphereModel.Size = Vector3.new(3.6, 3.6, 3.6)
         SphereModel.Material = Enum.Material.ForceField 
         SphereModel.Color = Color3.fromRGB(40, 255, 160) 
         SphereModel.Transparency = 0.60
@@ -2668,7 +2661,6 @@ ClickBtn.MouseButton1Click:Connect(function()
         SphereModel.CanCollide = false
         SphereModel.Parent = PreviewFolder
 
-        -- Bordes verdes brillantes
         local SphereHighlight = Instance.new("Highlight")
         SphereHighlight.Name = "TechMeshHighlight"
         SphereHighlight.Adornee = SphereModel
@@ -2677,21 +2669,19 @@ ClickBtn.MouseButton1Click:Connect(function()
         SphereHighlight.OutlineTransparency = 0.15
         SphereHighlight.Parent = SphereModel
 
-        -- Reemplazar la capa WhiteReflect por este código con especularidad
         local WhiteReflect = Instance.new("Part")
         WhiteReflect.Name = "WhiteGlassReflection"
         WhiteReflect.Shape = Enum.PartType.Ball
-        WhiteReflect.Size = Vector3.new(3.62, 3.62, 3.62) -- Ligeramente más grande que la esfera
+        WhiteReflect.Size = Vector3.new(3.62, 3.62, 3.62)
         WhiteReflect.Material = Enum.Material.SmoothPlastic 
         WhiteReflect.Color = Color3.fromRGB(255, 255, 255)
-        WhiteReflect.Transparency = 0.88 -- Muy transparente para solo reflejar luz
-        WhiteReflect.Reflectance = 0.95  -- Reflejo especular alto para la esfera
+        WhiteReflect.Transparency = 0.88 
+        WhiteReflect.Reflectance = 0.95  
         WhiteReflect.Anchored = true
         WhiteReflect.CanCollide = false
         WhiteReflect.CFrame = SphereModel.CFrame
         WhiteReflect.Parent = SphereModel
 
-        -- Punto de luz dedicado a simular el reflejo de vidrio en la esfera
         local GlassSpecGlint = Instance.new("PointLight")
         GlassSpecGlint.Name = "GlassSpecGlint"
         GlassSpecGlint.Color = Color3.fromRGB(255, 255, 255)
@@ -2705,15 +2695,10 @@ ClickBtn.MouseButton1Click:Connect(function()
         WeldWhite.Part1 = WhiteReflect
         WeldWhite.Parent = WhiteReflect
 
-        -- ==================================================
-        -- 3.1 CAPA DE CRISTAL INTERNO (Oclusión de Profundidad Fix)
-        -- ==================================================
-        -- NOTA: Se cambia "Glass" a "SmoothPlastic" para arreglar el bug de Roblox 
-        -- donde el Glass oculta la profundidad verdadera de objetos e imágenes internas.
         local InnerGlass = Instance.new("Part")
         InnerGlass.Name = "InnerGlassReflector"
         InnerGlass.Shape = Enum.PartType.Ball
-        InnerGlass.Size = Vector3.new(4.0, 4.0, 4.0) -- Escalado proporcionalmente
+        InnerGlass.Size = Vector3.new(4.0, 4.0, 4.0)
         InnerGlass.Material = Enum.Material.SmoothPlastic 
         InnerGlass.Color = Color3.fromRGB(20, 255, 140)
         InnerGlass.Transparency = 0.65 
@@ -2728,9 +2713,6 @@ ClickBtn.MouseButton1Click:Connect(function()
         WeldGlass.Part1 = InnerGlass
         WeldGlass.Parent = InnerGlass
 
-        -- ==================================================
-        -- 3.2 EFECTO DE CONGELAMIENTO Y FROST GLOW (Aura verde helada)
-        -- ==================================================
         local FrostLight = Instance.new("PointLight")
         FrostLight.Name = "FrostGlow"
         FrostLight.Color = Color3.fromRGB(85, 255, 127)
@@ -2758,14 +2740,11 @@ ClickBtn.MouseButton1Click:Connect(function()
         FrostParticles.LightEmission = 0.35
         FrostParticles.Parent = InnerGlass
 
-        -- ==================================================
-        -- 3.3 NÚCLEO POLIGONAL (Facetas de hielo interno)
-        -- ==================================================
         for i = 1, 3 do
             local PolyPart = Instance.new("Part")
             PolyPart.Name = "InternalPoly" .. i
             PolyPart.Shape = Enum.PartType.Block
-            PolyPart.Size = Vector3.new(2.5, 2.5, 2.5) -- Escala ajustada
+            PolyPart.Size = Vector3.new(2.5, 2.5, 2.5)
             PolyPart.Material = Enum.Material.Ice 
             PolyPart.Color = Color3.fromRGB(85, 255, 127)
             PolyPart.Transparency = 0.82 
@@ -2784,27 +2763,18 @@ ClickBtn.MouseButton1Click:Connect(function()
             WeldPoly.Parent = PolyPart
         end
 
-                -- ==================================================
-        -- 3.4 LÍNEAS 3D (PROFUNDIDAD VERDADERA PERFECTA)
-        -- ==================================================
         local baseRadius = 2.15 
         local lineColor = Color3.fromRGB(85, 255, 127) 
-        
-        -- Grosor de las líneas (ajústalo aquí para cambiar todo rápido)
-        local grosorVisual = 0.015  -- Antes era 0.04 (Ancho de la línea)
-        local grosorProfundidad = 0.015 -- Antes era 0.045 (Profundidad de la línea)
+        local grosorVisual = 0.015
+        local grosorProfundidad = 0.015
 
-        -- 1. Líneas verticales (Meridianos)
         for i = 1, 4 do
             local meridian = Instance.new("CylinderHandleAdornment")
             meridian.Name = "MeridianLine" .. i
             meridian.Adornee = SphereModel
             meridian.Radius = baseRadius
-            
-            -- AQUÍ SE APLICA EL GROSOR FINO:
             meridian.InnerRadius = baseRadius - grosorProfundidad 
             meridian.Height = grosorVisual 
-            
             meridian.Color3 = lineColor
             meridian.Transparency = 0.45 
             meridian.AlwaysOnTop = false 
@@ -2815,26 +2785,20 @@ ClickBtn.MouseButton1Click:Connect(function()
             meridian.Parent = SphereModel
         end
 
-        -- 2. Líneas horizontales (Paralelos)
         local latitudes = {-1.0, 0, 1.0} 
         for i, yOffset in ipairs(latitudes) do
             local parallel = Instance.new("CylinderHandleAdornment")
             parallel.Name = "ParallelLine" .. i
             parallel.Adornee = SphereModel
-            
             local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
             
             parallel.Radius = ringRadius
-            
-            -- AQUÍ SE APLICA EL GROSOR FINO:
             parallel.InnerRadius = ringRadius - grosorProfundidad
             parallel.Height = grosorVisual
-            
             parallel.Color3 = lineColor
             parallel.Transparency = 0.45
             parallel.AlwaysOnTop = false 
             parallel.ZIndex = 0
-            
             parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
             parallel.Parent = SphereModel
         end
@@ -2854,7 +2818,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 4. EFECTO: LLUVIA DE BILLETES
+        -- 4. EFECTO: LLUVIA DE BILLETES ADAPTATIVA
         -- ==================================================
         local RainActive = true
         local GroundedBills = {}
@@ -2909,21 +2873,26 @@ ClickBtn.MouseButton1Click:Connect(function()
                     if not bill or not bill.Parent or not RainActive then if fallConn then fallConn:Disconnect() end return end
 
                     local currentPos = isModel and bill:GetPivot().Position or bill.Position
-                    local rayParams = RaycastParams.new()
-                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
-                    rayParams.FilterDescendantsInstances = AllRainBills 
                     
-                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), rayParams)
+                    -- Raycast profundo para prevenir atravesar escaleras
+                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -3.5, 0), raycastParams)
 
                     if result then
                         fallConn:Disconnect()
+                        
+                        -- Inclinación del billete adaptándose a la normal del terreno/baldoza/escalón
+                        local axis = Vector3.new(0, 1, 0):Cross(result.Normal)
+                        local dot = math.clamp(Vector3.new(0, 1, 0):Dot(result.Normal), -1, 1)
+                        local tiltRot = (axis.Magnitude > 0.001) and CFrame.fromAxisAngle(axis.Unit, math.acos(dot)) or CFrame.identity
+
                         if isModel then
                             for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true end end
-                            bill:PivotTo(CFrame.new(result.Position + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.random(0, 360), 0))
+                            bill:PivotTo(CFrame.new(result.Position + result.Normal * 0.05) * tiltRot * CFrame.Angles(0, math.random(0, 360), 0))
                         else
                             bill.Anchored = true
-                            bill.CFrame = CFrame.new(result.Position + Vector3.new(0, bill.Size.Y/2, 0)) * CFrame.Angles(0, math.random(0, 360), 0)
+                            bill.CFrame = CFrame.new(result.Position + result.Normal * (bill.Size.Y/2)) * tiltRot * CFrame.Angles(0, math.random(0, 360), 0)
                         end
+                        
                         table.insert(GroundedBills, bill)
 
                         if #GroundedBills > 10 then
@@ -3002,7 +2971,6 @@ ClickBtn.MouseButton1Click:Connect(function()
 
         local CustomBook = CreateFloatingBook()
 
-        -- Imagen del item (Usando Decal para Profundidad 3D perfecta dentro de la Esfera)
         local ImagePart = Instance.new("Part")
         ImagePart.Name = "KittyItemImage"
         ImagePart.Size = Vector3.new(3, 3, 0.05) 
@@ -3026,17 +2994,14 @@ ClickBtn.MouseButton1Click:Connect(function()
             floatTime = floatTime + dt
             local basePos = spawnPos + Vector3.new(0, 5.2 + math.sin(floatTime * 1.8) * 0.4, 0)
             
-            -- Ítem
             local itemCF = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
             ImagePart.CFrame = itemCF
 
-            -- Esfera: Misma posición central, rotación envolvente
             if SphereModel and SphereModel.Parent then
                 local sphereCF = CFrame.new(basePos) * CFrame.Angles(floatTime * 0.5, -floatTime * 1.2, floatTime * 0.8)
                 SphereModel.CFrame = sphereCF
             end
 
-            -- Libro
             if CustomBook and CustomBook.Parent then
                 local bookBasePos = basePos + Vector3.new(0, 4.0, 0) 
                 local pivotOffset = CFrame.new(0.9, 0, 1.25) 
@@ -3046,7 +3011,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         end)
 
         -- ==================================================
-        -- 6. DETECCIÓN Y ANIMACIÓN DE ABSORCIÓN ÉPICA
+        -- 6. DETECCIÓN EXACTA DE TACTO (Líneas Esfera)
         -- ==================================================
         local promptState = "Waiting" 
         local proximityConn
@@ -3057,14 +3022,19 @@ ClickBtn.MouseButton1Click:Connect(function()
                 return
             end
 
-            local dist = (hrp.Position - spawnPos).Magnitude
+            -- Cálculo 3D Distancia Exacta a la Esfera Flotante
+            local dist = 999
+            if SphereModel and SphereModel.Parent then
+                dist = (hrp.Position - SphereModel.Position).Magnitude
+            end
             
-            if dist <= 8.5 and promptState == "Waiting" then
+            -- La linea tiene radius 2.15 + El Personaje ocupa aprox 1.0 (2.15 + 1.0 = 3.15)
+            -- Con 3.2 de rango saltará LITERALMENTE en el instante en que toques las líneas 3D
+            if dist <= 3.2 and promptState == "Waiting" then
                 promptState = "Prompting"
                 
                 ToggleUIVisibility(false)
 
-                -- Ocultamos limpiamente el reloj antes del efecto Blur
                 local clockGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("KittyClockGui")
                 if clockGui then clockGui.Enabled = false end
 
@@ -3081,7 +3051,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                         if proximityConn then proximityConn:Disconnect() end
                         RainActive = false 
                         
-                        -- EL BLUR SE DESACTIVA JUSTO ANTES DE INICIAR EL IMÁN
                         if blurEffect then blurEffect:Destroy() end
                         
                         if PreviewFolder and PreviewFolder.Parent then PreviewFolder.Name = "Kitty3DPreview_Sinking" end
@@ -3102,7 +3071,6 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 local t = math.clamp((tick() - startTime) / duration, 0, 1)
                                 local ease = t * t * (3 - 2 * t) 
                                 
-                                -- Animación Orbital en Espiral
                                 local startDist = (startPos - head.Position).Magnitude
                                 local currentRadius = startDist * (1 - ease)
                                 local angle = ease * math.pi * 12 
@@ -3119,11 +3087,9 @@ ClickBtn.MouseButton1Click:Connect(function()
                                 
                                 ImagePart.CFrame = finalCFrame
 
-                                -- Fundido Crossfade
                                 if DecalFront then DecalFront.Transparency = ease end
                                 if DecalBack then DecalBack.Transparency = ease end
 
-                                -- Crossfade de la Esfera Nativa
                                 if SphereModel and SphereModel.Parent then
                                     SphereModel.CFrame = finalCFrame * CFrame.Angles(math.rad(45), tick() * spinSpeed * -0.5, 0)
                                     SphereModel.Transparency = 0.55 + (0.45 * ease)
@@ -3181,7 +3147,8 @@ ClickBtn.MouseButton1Click:Connect(function()
                     })
                 end)
                 
-            elseif dist > 11.5 and promptState == "Cooldown" then
+            -- Reset de estado al alejarse
+            elseif dist > 4.8 and promptState == "Cooldown" then
                 promptState = "Waiting"
             end
         end)
