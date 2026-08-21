@@ -3549,7 +3549,7 @@ ExtraTab:CreateToggle({
     Callback = function(Value)
         SkipPreviewActive = Value
     end
-}) -- <-- ¡FALTABA ESTO AQUÍ!
+})
 
 ExtraTab:CreateToggle({
     Name = "👁️ Toggle Item Visualizer",
