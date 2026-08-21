@@ -3306,6 +3306,9 @@ end)
 -- ==========================================================
 -- MAPEOS Y LIBRERÍA RAYFIELD
 -- ==========================================================
+-- ==========================================================
+-- MAPEOS Y LIBRERÍA RAYFIELD (DELTA iOS SAFE)
+-- ==========================================================
 local AssetTypeNames = {
     [2] = "T-Shirt", [5] = "Script LUA", [8] = "Sombrero", [9] = "Place", [10] = "Modelo", 
     [11] = "Camisa", [12] = "Pantalón", [13] = "Decal", [17] = "Cabeza", [18] = "Cara", [19] = "Gear", 
@@ -3318,37 +3321,96 @@ local AssetTypeNames = {
 
 local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
 
--- IMPORTANTE: resetear el flag del fork para que no devuelva nil al re-ejecutar
+-- Limpiar locks (muy importante en Delta al re-ejecutar)
 pcall(function()
     getgenv().TrasherMenuLoaded = nil
     getgenv().TrasherFallbackBound = nil
     getgenv().TrasherMasterConn = nil
+    getgenv().rayfieldCached = nil
 end)
 
-local Rayfield
-local rayOk, rayErr = pcall(function()
-    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
-end)
-
-if not rayOk or typeof(Rayfield) ~= "table" or typeof(Rayfield.CreateWindow) ~= "function" then
-    warn("[Catalog] Falló la carga de Rayfield:", rayErr or "Rayfield es nil / inválido")
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "Error Rayfield",
-            Text = "No se pudo cargar el menú. Re-ejecuta o revisa HttpGet.",
-            Duration = 8
-        })
+local function SafeHttpGet(url)
+    local ok, result = pcall(function()
+        return game:HttpGet(url)
     end)
-    return -- evita el crash de CreateWindow
+    if ok and type(result) == "string" and #result > 100 then
+        return result
+    end
+    -- fallback request (algunos builds Delta)
+    ok, result = pcall(function()
+        if request then
+            local r = request({Url = url, Method = "GET"})
+            return r and (r.Body or r.body)
+        elseif http_request then
+            local r = http_request({Url = url, Method = "GET"})
+            return r and (r.Body or r.body)
+        elseif syn and syn.request then
+            local r = syn.request({Url = url, Method = "GET"})
+            return r and (r.Body or r.body)
+        end
+        return nil
+    end)
+    if ok and type(result) == "string" and #result > 100 then
+        return result
+    end
+    return nil
 end
 
-local Window = Rayfield:CreateWindow({
-   Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6 Ultra-Async",
-   LoadingTitle = "Cargando optimizaciones Anti-Lag...",
-   LoadingSubtitle = "Frame Slicing + Preload Activo",
-   ConfigurationSaving = { Enabled = false },
-   KeySystem = false
-})
+local Rayfield = nil
+local sources = {
+    "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua",
+    "https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua",
+}
+
+for _, url in ipairs(sources) do
+    local src = SafeHttpGet(url)
+    if src then
+        local ok, lib = pcall(function()
+            return loadstring(src)()
+        end)
+        if ok and type(lib) == "table" and type(lib.CreateWindow) == "function" then
+            Rayfield = lib
+            print("[Catalog] Rayfield OK desde:", url)
+            break
+        else
+            warn("[Catalog] loadstring falló:", url, lib)
+            -- si el fork devolvió nil por TrasherMenuLoaded, limpiar y reintentar una vez
+            pcall(function() getgenv().TrasherMenuLoaded = nil end)
+        end
+    else
+        warn("[Catalog] HttpGet vacío:", url)
+    end
+end
+
+if not Rayfield then
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Error Rayfield",
+            Text = "Delta no pudo descargar la UI. Revisa consola.",
+            Duration = 10
+        })
+    end)
+    warn("[Catalog] Rayfield = nil. No se puede abrir el menú.")
+    return
+end
+
+local Window
+local winOk, winErr = pcall(function()
+    Window = Rayfield:CreateWindow({
+        Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6",
+        LoadingTitle = "Cargando...",
+        LoadingSubtitle = "Delta iOS",
+        ConfigurationSaving = { Enabled = false },
+        KeySystem = false
+    })
+end)
+
+if not winOk or not Window then
+    warn("[Catalog] CreateWindow falló:", winErr)
+    return
+end
+
+print("[Catalog] Ventana Rayfield creada OK")
 
 -- ==========================================================
 -- TAB: CATÁLOGO REAL
