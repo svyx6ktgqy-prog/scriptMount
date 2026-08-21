@@ -1914,15 +1914,34 @@ FloatingBtn.BackgroundTransparency = 1
 FloatingBtn.Visible = false 
 FloatingBtn.Parent = KittyGui
 
-local KittyMain = Instance.new("Frame")
+local KittyMain = Instance.new("ImageLabel")
 KittyMain.Size = UDim2.new(0.95, 0, 0.9, 0) 
 KittyMain.Position = UDim2.new(0.5, 0, 0.5, 0) 
 KittyMain.AnchorPoint = Vector2.new(0.5, 0.5) 
 KittyMain.BackgroundColor3 = Color3.fromRGB(255, 182, 193) 
 KittyMain.BackgroundTransparency = 0.15 
+KittyMain.ImageColor3 = Color3.fromRGB(255, 182, 193) -- Aplica el tinte rosa directamente sobre la imagen
+KittyMain.ScaleType = Enum.ScaleType.Crop
 KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
+
+task.spawn(function()
+    local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeScript.jpg"
+    if getcustomasset and writefile then
+        local fileName = "likeScript_bg.jpg"
+        if not isfile or not isfile(fileName) then
+            pcall(function() writefile(fileName, game:HttpGet(imgUrl)) end)
+        end
+        if isfile and isfile(fileName) then
+            KittyMain.Image = getcustomasset(fileName)
+        else
+            KittyMain.Image = imgUrl
+        end
+    else
+        KittyMain.Image = imgUrl
+    end
+end)
 
 local isDraggingBtn = false
 local dragStartPos = Vector2.new()
