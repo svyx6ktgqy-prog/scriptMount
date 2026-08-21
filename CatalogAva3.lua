@@ -1914,33 +1914,41 @@ FloatingBtn.BackgroundTransparency = 1
 FloatingBtn.Visible = false 
 FloatingBtn.Parent = KittyGui
 
-local KittyMain = Instance.new("ImageLabel")
+local KittyMain = Instance.new("Frame")
 KittyMain.Size = UDim2.new(0.95, 0, 0.9, 0) 
 KittyMain.Position = UDim2.new(0.5, 0, 0.5, 0) 
 KittyMain.AnchorPoint = Vector2.new(0.5, 0.5) 
 KittyMain.BackgroundColor3 = Color3.fromRGB(255, 182, 193) 
 KittyMain.BackgroundTransparency = 0.15 
-KittyMain.ImageColor3 = Color3.fromRGB(255, 182, 193) -- Aplica el tinte rosa directamente sobre la imagen
-KittyMain.ScaleType = Enum.ScaleType.Crop
 KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
 
+local KittyBgImage = Instance.new("ImageLabel")
+KittyBgImage.Name = "KittyBgImage"
+KittyBgImage.Size = UDim2.new(1, 0, 1, 0)
+KittyBgImage.BackgroundTransparency = 1
+KittyBgImage.ScaleType = Enum.ScaleType.Crop
+KittyBgImage.ImageTransparency = 0.4 -- Imagen al 60% de opacidad (40% transparencia)
+KittyBgImage.ZIndex = 0
+KittyBgImage.Parent = KittyMain
+
 task.spawn(function()
     local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeLuaScript.jpg"
-    if getcustomasset and writefile then
-        local fileName = "likeLuaScript_bg.jpg"
-        if not isfile or not isfile(fileName) then
-            pcall(function() writefile(fileName, game:HttpGet(imgUrl)) end)
+    
+    pcall(function()
+        if getcustomasset and writefile then
+            local fileName = "likeLuaScript_bg.jpg"
+            if isfile and not isfile(fileName) then
+                writefile(fileName, game:HttpGet(imgUrl))
+            end
+            if isfile and isfile(fileName) then
+                KittyBgImage.Image = getcustomasset(fileName)
+                return
+            end
         end
-        if isfile and isfile(fileName) then
-            KittyMain.Image = getcustomasset(fileName)
-        else
-            KittyMain.Image = imgUrl
-        end
-    else
-        KittyMain.Image = imgUrl
-    end
+        KittyBgImage.Image = imgUrl
+    end)
 end)
 
 local isDraggingBtn = false
