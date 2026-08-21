@@ -2497,10 +2497,11 @@ PerformKittySearch = function(isPagination)
 -- Fix Lag Inicial + Esfera Nativa + Profundidad + Gravedad Individual + Toque Estricto
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
-    CurrentData.Id = tostring(bannerData.Id)
-    CurrentData.Name = bannerData.Name
-    CurrentData.Price = bannerData.Price and (tostring(bannerData.Price) .. " R$") or "Gratis"
-    CurrentData.ItemType = bannerData.ItemType or "Asset"
+    -- 1. Asignación correcta de datos usando 'item'
+    CurrentData.Id = tostring(item.id)
+    CurrentData.Name = item.name or "Objeto"
+    CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
+    CurrentData.ItemType = item.itemType or "Asset"
     
     -- Actualizar visualizador de forma inmediata
     UpdateVisualizer(CurrentData.Id, CurrentData.Price)
@@ -2509,24 +2510,23 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- Salta la animación/caída y equipa/muestra directo
         UniversalEquip(CurrentData.Id, false)
     else
-        if bannerData.OnSelectCallback then
-            bannerData.OnSelectCallback(bannerData.Id, bannerData.Price or "Gratis")
+        -- 2. La escena 3D / Callback se ejecuta SOLO si SkipPreview está desactivado
+        if item.OnSelectCallback then
+            item.OnSelectCallback(item.id, item.price or "Gratis")
         end
-    end
-end)
 
-    task.spawn(function()
-        local Workspace = game:GetService("Workspace")
-        local Players = game:GetService("Players")
-        local TweenService = game:GetService("TweenService")
-        local RunService = game:GetService("RunService")
-        local Debris = game:GetService("Debris")
-        local StarterGui = game:GetService("StarterGui")
-        local Lighting = game:GetService("Lighting")
-        local CoreGui = game:GetService("CoreGui")
-        local LocalPlayer = Players.LocalPlayer
+        task.spawn(function()
+            local Workspace = game:GetService("Workspace")
+            local Players = game:GetService("Players")
+            local TweenService = game:GetService("TweenService")
+            local RunService = game:GetService("RunService")
+            local Debris = game:GetService("Debris")
+            local StarterGui = game:GetService("StarterGui")
+            local Lighting = game:GetService("Lighting")
+            local CoreGui = game:GetService("CoreGui")
+            local LocalPlayer = Players.LocalPlayer
 
-        -- ==================================================
+         -- ==================================================
         -- CONTROL DEL SCREENGUI
         -- ==================================================
         local function ToggleUIVisibility(state)
