@@ -1918,11 +1918,46 @@ local KittyMain = Instance.new("Frame")
 KittyMain.Size = UDim2.new(0.95, 0, 0.9, 0) 
 KittyMain.Position = UDim2.new(0.5, 0, 0.5, 0) 
 KittyMain.AnchorPoint = Vector2.new(0.5, 0.5) 
-KittyMain.BackgroundColor3 = Color3.fromRGB(255, 182, 193) 
-KittyMain.BackgroundTransparency = 0.15 
+KittyMain.BackgroundTransparency = 1 
 KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
+
+-- 1. Imagen de fondo
+local KittyBgImage = Instance.new("ImageLabel")
+KittyBgImage.Name = "KittyBgImage"
+KittyBgImage.Size = UDim2.new(1, 0, 1, 0)
+KittyBgImage.BackgroundTransparency = 1
+KittyBgImage.ScaleType = Enum.ScaleType.Crop
+KittyBgImage.ZIndex = 0
+KittyBgImage.Parent = KittyMain
+
+task.spawn(function()
+    local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeScript.jpg"
+    if getcustomasset and writefile then
+        local fileName = "likeScript_bg.jpg"
+        if not isfile or not isfile(fileName) then
+            pcall(function() writefile(fileName, game:HttpGet(imgUrl)) end)
+        end
+        if isfile and isfile(fileName) then
+            KittyBgImage.Image = getcustomasset(fileName)
+        else
+            KittyBgImage.Image = imgUrl
+        end
+    else
+        KittyBgImage.Image = imgUrl
+    end
+end)
+
+-- 2. Capa rosa traslúcida sobre la imagen
+local KittyPinkOverlay = Instance.new("Frame")
+KittyPinkOverlay.Name = "KittyPinkOverlay"
+KittyPinkOverlay.Size = UDim2.new(1, 0, 1, 0)
+KittyPinkOverlay.BackgroundColor3 = Color3.fromRGB(255, 182, 193)
+KittyPinkOverlay.BackgroundTransparency = 0.15
+KittyPinkOverlay.BorderSizePixel = 0
+KittyPinkOverlay.ZIndex = 0
+KittyPinkOverlay.Parent = KittyMain
 
 local isDraggingBtn = false
 local dragStartPos = Vector2.new()
