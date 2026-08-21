@@ -25,9 +25,6 @@ local PlayingAnimationTracks = {}
 local ItemAdjustments = {}
 local EqPanel, RefreshEquippedItems 
 
--- Variable de estado global para persistencia portable
-_G.SkipPreview = _G.SkipPreview or false
-
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 
@@ -3650,7 +3647,10 @@ ExtraTab:CreateInput({
     end
 })
 
--- Toggle para el menú Rayfield
+-- Variable de estado global
+_G.SkipPreview = _G.SkipPreview or false
+
+-- Toggle para Rayfield
 ExtraTab:CreateToggle({
     Name = "Skip-Preview",
     CurrentValue = _G.SkipPreview,
@@ -3658,8 +3658,14 @@ ExtraTab:CreateToggle({
     Callback = function(Value)
         _G.SkipPreview = Value
         
-        if _G.SkipPreview then
-            NotifyUser("Skip-Preview", "Modo directo activado. Se omitirán las animaciones de caída.")
+        -- Si quieres notificaciones, usa la API nativa de Rayfield:
+        if _G.SkipPreview and Rayfield and Rayfield.Notify then
+            Rayfield:Notify({
+                Title = "Skip-Preview",
+                Content = "Modo directo activado. Se omitirán animaciones.",
+                Duration = 3,
+                Image = 4483362458,
+            })
         end
     end,
 })
