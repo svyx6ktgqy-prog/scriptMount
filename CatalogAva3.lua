@@ -2377,7 +2377,7 @@ PerformKittySearch = function(isPagination)
         success, response = pcall(function() return game:HttpGet(url) end)
     end
 
-    if success and response then
+    ifif success and response then
         local decoded = HttpService:JSONDecode(response)
         if decoded and decoded.data then
             KittyNextCursor = decoded.nextPageCursor
@@ -2387,13 +2387,15 @@ PerformKittySearch = function(isPagination)
 
             for _, item in ipairs(decoded.data) do
                 local Card = Instance.new("Frame")
-                Card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                Card.BackgroundColor3 = Color3.fromRGB(255, 153, 204)
+                Card.BackgroundTransparency = 0.5
                 Card.Parent = KittyResults
                 local CardCorner = Instance.new("UICorner"); CardCorner.CornerRadius = UDim.new(0, 10); CardCorner.Parent = Card
                 
                 local CardImg = Instance.new("ImageLabel")
                 CardImg.Size = UDim2.new(1, 0, 0, 100)
-                CardImg.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+                CardImg.BackgroundColor3 = Color3.fromRGB(10, 20, 80)
+                CardImg.BackgroundTransparency = 0.5
                 CardImg.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150"
                 CardImg.Parent = Card
                 local ImgCorner = Instance.new("UICorner"); ImgCorner.CornerRadius = UDim.new(0, 10); ImgCorner.Parent = CardImg
