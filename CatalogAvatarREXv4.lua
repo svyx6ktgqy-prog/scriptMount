@@ -5,6 +5,8 @@
 -- + EDIT PARTS (Eliminar partes del cuerpo guardables) [FIX ZINDEX UI]
 -- ==========================================================
 
+local SkipPreview = false -- Control para saltar animaciones de vista previa
+
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
@@ -2427,10 +2429,23 @@ PerformKittySearch = function(isPagination)
 -- Fix Lag Inicial + Esfera Nativa + Profundidad + Gravedad Individual + Toque Estricto
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
-    CurrentData.Id = tostring(item.id)
-    CurrentData.Name = item.name
-    CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
-    CurrentData.ItemType = item.itemType or "Asset"
+    CurrentData.Id = tostring(bannerData.Id)
+    CurrentData.Name = bannerData.Name
+    CurrentData.Price = bannerData.Price and (tostring(bannerData.Price) .. " R$") or "Gratis"
+    CurrentData.ItemType = bannerData.ItemType or "Asset"
+    
+    -- Actualizar visualizador de forma inmediata
+    UpdateVisualizer(CurrentData.Id, CurrentData.Price)
+    
+    if SkipPreview then
+        -- Salta la animación/caída y equipa/muestra directo
+        UniversalEquip(CurrentData.Id, false)
+    else
+        if bannerData.OnSelectCallback then
+            bannerData.OnSelectCallback(bannerData.Id, bannerData.Price or "Gratis")
+        end
+    end
+end)
 
     task.spawn(function()
         local Workspace = game:GetService("Workspace")
@@ -3633,6 +3648,22 @@ ExtraTab:CreateInput({
             UniversalAlert({Text = "Please enter valid numbers only.", Duration = 3})
         end
     end
+})
+
+-- Creación de la Tab #EXTRA (Si no existe previamente)
+local ExtraTab = Window:CreateTab("#conf", 4483362458)
+
+-- Switch Skip-Preview
+ExtraTab:CreateToggle({
+    Name = "Skip-Preview",
+    CurrentValue = false,
+    Flag = "SkipPreview_Toggle",
+    Callback = function(Value)
+        SkipPreview = Value
+        if NotifyUser then
+            NotifyUser("Skip-Preview", Value and "Activado: Vista previa omitida" or "Desactivado: Vista previa normal")
+        end
+    end,
 })
 
 Rayfield:LoadConfiguration()
