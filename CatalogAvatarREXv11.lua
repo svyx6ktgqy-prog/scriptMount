@@ -3576,7 +3576,7 @@ local TrashClasses = {
 }
 
 -- ==========================================================
--- 🌑 ENGINE ECLIPSE & PERFORMANCE
+-- 🌑 ENGINE ECLIPSE & PERFORMANCE (DELTA iOS SAFE)
 -- ==========================================================
 local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
 local TrashClasses = {
@@ -3585,52 +3585,63 @@ local TrashClasses = {
     Fire = true, Smoke = true, Sparkles = true, Decal = true, Texture = true
 }
 
-if not getgenv().EclipseRenderHook then
-    getgenv().EclipseRenderHook = true
-    
-    local oldNewindex
-    oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
-        if index == "Parent" and not checkcaller() then
-            if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                task.spawn(function()
-                    pcall(function()
-                        if self.ClassName == "Model" then
-                            for _, v in ipairs(self:GetDescendants()) do
-                                local cName = v.ClassName
-                                if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
-                                    v.CastShadow = false
-                                    v.CanCollide = false
-                                    v.CanTouch = false
-                                    v.CanQuery = false
-                                    v.Anchored = true
-                                    v.Massless = true
-                                    v.CustomPhysicalProperties = ZeroPhysics
-                                    pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
-                                    if cName == "MeshPart" then
-                                        pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
-                                    end
-                                elseif cName == "Humanoid" then
-                                    v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-                                    v.RequiresNeck = false
-                                    pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
-                                    for _, humanoidState in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
-                                        pcall(function() v:SetStateEnabled(humanoidState, false) end)
-                                    end
-                                elseif TrashClasses[cName] then
-                                    if (cName == "Decal" or cName == "Texture") then
-                                        if v.Transparency == 1 then v:Destroy() end
-                                    else
-                                        v:Destroy()
+if typeof(hookmetamethod) == "function" and typeof(checkcaller) == "function" then
+    if not getgenv().EclipseRenderHook then
+        getgenv().EclipseRenderHook = true
+        
+        local okHook, errHook = pcall(function()
+            local oldNewindex
+            oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
+                if index == "Parent" and not checkcaller() then
+                    if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
+                        task.spawn(function()
+                            pcall(function()
+                                if self.ClassName == "Model" then
+                                    for _, v in ipairs(self:GetDescendants()) do
+                                        local cName = v.ClassName
+                                        if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
+                                            v.CastShadow = false
+                                            v.CanCollide = false
+                                            v.CanTouch = false
+                                            v.CanQuery = false
+                                            v.Anchored = true
+                                            v.Massless = true
+                                            v.CustomPhysicalProperties = ZeroPhysics
+                                            pcall(function() v.CollisionFidelity = Enum.CollisionFidelity.Box end)
+                                            if cName == "MeshPart" then
+                                                pcall(function() v.RenderFidelity = Enum.RenderFidelity.Performance end)
+                                            end
+                                        elseif cName == "Humanoid" then
+                                            v.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+                                            v.RequiresNeck = false
+                                            pcall(function() v:ChangeState(Enum.HumanoidStateType.Dead) end)
+                                            for _, humanoidState in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+                                                pcall(function() v:SetStateEnabled(humanoidState, false) end)
+                                            end
+                                        elseif TrashClasses[cName] then
+                                            if (cName == "Decal" or cName == "Texture") then
+                                                if v.Transparency == 1 then v:Destroy() end
+                                            else
+                                                v:Destroy()
+                                            end
+                                        end
                                     end
                                 end
-                            end
-                        end
-                    end)
-                end)
-            end
+                            end)
+                        end)
+                    end
+                end
+                return oldNewindex(self, index, value)
+            end)
+        end)
+        
+        if not okHook then
+            getgenv().EclipseRenderHook = nil
+            warn("[Catalog] Eclipse hook falló (Delta):", errHook)
         end
-        return oldNewindex(self, index, value)
-    end)
+    end
+else
+    warn("[Catalog] hookmetamethod no disponible en este Delta — Eclipse desactivado")
 end
 
 -- ==========================================================
