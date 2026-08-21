@@ -2398,7 +2398,7 @@ PerformKittySearch = function(isPagination)
                 CardImg.Position = UDim2.new(0.5, 0, 0, 5)
                 CardImg.ScaleType = Enum.ScaleType.Fit
                 CardImg.BackgroundColor3 = Color3.fromRGB(0, 0, 128)
-                CardImg.BackgroundTransparency = 0.5
+                CardImg.BackgroundTransparency = 0
                 CardImg.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150"
                 CardImg.Parent = Card
                 local ImgCorner = Instance.new("UICorner"); ImgCorner.CornerRadius = UDim.new(0, 10); ImgCorner.Parent = CardImg
