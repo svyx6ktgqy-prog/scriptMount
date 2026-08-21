@@ -2438,8 +2438,16 @@ ClickBtn.MouseButton1Click:Connect(function()
     if SkipPreviewActive then
         UpdateVisualizer(item.id, item.price or 0)
         if Container then Container.Visible = true end
-        return -- Rompemos la función aquí, evitando todo el proceso de raycast y spawn 3D[span_4](start_span)[span_4](end_span).
+        return -- Rompemos la función aquí, evitando todo el proceso de raycast y spawn 3D.
     end
+
+    -- Si Skip-Preview NO está activo, sigue el curso normal:
+    task.spawn(function()
+        local Workspace = game:GetService("Workspace")
+        -- ... [Resto de tu código intacto] ...
+        
+    end) -- <-- ¡FALTA ESTE CIERRE para el task.spawn!
+end) -- <-- ¡FALTA ESTE CIERRE para el ClickBtn!
 
     task.spawn(function()
         local Workspace = game:GetService("Workspace")
