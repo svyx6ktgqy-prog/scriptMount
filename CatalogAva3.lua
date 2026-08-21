@@ -1914,45 +1914,33 @@ FloatingBtn.BackgroundTransparency = 1
 FloatingBtn.Visible = false 
 FloatingBtn.Parent = KittyGui
 
--- Contenedor Principal (Frame nativo para no bloquear botones ni scripts)
-local KittyMain = Instance.new("Frame")
-KittyMain.Name = "KittyMain"
+local KittyMain = Instance.new("ImageLabel")
 KittyMain.Size = UDim2.new(0.95, 0, 0.9, 0) 
 KittyMain.Position = UDim2.new(0.5, 0, 0.5, 0) 
 KittyMain.AnchorPoint = Vector2.new(0.5, 0.5) 
 KittyMain.BackgroundColor3 = Color3.fromRGB(255, 182, 193) 
 KittyMain.BackgroundTransparency = 0.15 
+KittyMain.ImageColor3 = Color3.fromRGB(255, 182, 193) -- Aplica el tinte rosa directamente sobre la imagen
+KittyMain.ScaleType = Enum.ScaleType.Crop
 KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
 
--- Imagen de Fondo (Opacidad al 60% e Inerte a clics)
-local KittyBgImage = Instance.new("ImageLabel")
-KittyBgImage.Name = "KittyBgImage"
-KittyBgImage.Size = UDim2.new(1, 0, 1, 0)
-KittyBgImage.BackgroundTransparency = 1
-KittyBgImage.ImageTransparency = 0.4 -- 60% de opacidad
-KittyBgImage.ImageColor3 = Color3.fromRGB(255, 182, 193)
-KittyBgImage.ScaleType = Enum.ScaleType.Crop
-KittyBgImage.Active = false -- Evita que absorba clics del menú
-KittyBgImage.ZIndex = 0
-KittyBgImage.Parent = KittyMain
-
 task.spawn(function()
     local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeLuaScript.jpg"
-    pcall(function()
-        if getcustomasset and writefile then
-            local fileName = "likeLuaScript_bg.jpg"
-            if isfile and not isfile(fileName) then
-                writefile(fileName, game:HttpGet(imgUrl))
-            end
-            if isfile and isfile(fileName) then
-                KittyBgImage.Image = getcustomasset(fileName)
-                return
-            end
+    if getcustomasset and writefile then
+        local fileName = "likeLuaScript_bg.jpg"
+        if not isfile or not isfile(fileName) then
+            pcall(function() writefile(fileName, game:HttpGet(imgUrl)) end)
         end
-        KittyBgImage.Image = imgUrl
-    end)
+        if isfile and isfile(fileName) then
+            KittyMain.Image = getcustomasset(fileName)
+        else
+            KittyMain.Image = imgUrl
+        end
+    else
+        KittyMain.Image = imgUrl
+    end
 end)
 
 local isDraggingBtn = false
