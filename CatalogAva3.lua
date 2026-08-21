@@ -1927,9 +1927,9 @@ KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
 
 task.spawn(function()
-    local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeLua.png"
+    local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeLuaScript.jpg"
     if getcustomasset and writefile then
-        local fileName = "likeLua_bg.png"
+        local fileName = "likeLuaScript_bg.jpg"
         if not isfile or not isfile(fileName) then
             pcall(function() writefile(fileName, game:HttpGet(imgUrl)) end)
         end
