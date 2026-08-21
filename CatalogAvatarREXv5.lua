@@ -3559,7 +3559,12 @@ ExtraTab:CreateToggle({
     Flag = "SkipPreview_Toggle",
     Callback = function(Value)
         SkipPreview = Value
-        UniversalAlert({Text = Value and "Skip-Preview: Activado" or "Skip-Preview: Desactivado", Duration = 2})
+        Rayfield:Notify({
+            Title = "Skip-Preview",
+            Content = Value and "Activado" or "Desactivado",
+            Duration = 2,
+            Image = 4483362458,
+        })
     end,
 })
 
