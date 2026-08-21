@@ -3318,7 +3318,29 @@ local AssetTypeNames = {
 
 local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
 
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
+-- IMPORTANTE: resetear el flag del fork para que no devuelva nil al re-ejecutar
+pcall(function()
+    getgenv().TrasherMenuLoaded = nil
+    getgenv().TrasherFallbackBound = nil
+    getgenv().TrasherMasterConn = nil
+end)
+
+local Rayfield
+local rayOk, rayErr = pcall(function()
+    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
+end)
+
+if not rayOk or typeof(Rayfield) ~= "table" or typeof(Rayfield.CreateWindow) ~= "function" then
+    warn("[Catalog] Falló la carga de Rayfield:", rayErr or "Rayfield es nil / inválido")
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Error Rayfield",
+            Text = "No se pudo cargar el menú. Re-ejecuta o revisa HttpGet.",
+            Duration = 8
+        })
+    end)
+    return -- evita el crash de CreateWindow
+end
 
 local Window = Rayfield:CreateWindow({
    Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6 Ultra-Async",
