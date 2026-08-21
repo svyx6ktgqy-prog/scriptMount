@@ -3307,7 +3307,10 @@ local SpinnerDropdown = Panel:CreateDropdown({
            CurrentData.Id = tostring(item.Id); CurrentData.Name = item.Name; CurrentData.Price = item.Price
            CurrentData.Category = item.Category; CurrentData.ItemType = item.ItemType
            UpdateVisualizer(item.Id, item.Price)
-           Rayfield:Notify({Title = "Seleccionado", Content = item.Name, Duration = 2})
+if SkipPreview then
+    UniversalEquip(item.Id, false)
+end
+Rayfield:Notify({Title = "Seleccionado", Content = item.Name, Duration = 2})
        end
    end,
 })
