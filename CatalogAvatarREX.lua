@@ -2425,6 +2425,7 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
+-- ==========================================================
 -- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V30)
 -- Fix Lag Inicial + Esfera Nativa + Profundidad + Gravedad Individual + Toque Estricto
 -- ==========================================================
@@ -2440,14 +2441,6 @@ ClickBtn.MouseButton1Click:Connect(function()
         if Container then Container.Visible = true end
         return -- Rompemos la función aquí, evitando todo el proceso de raycast y spawn 3D.
     end
-
-    -- Si Skip-Preview NO está activo, sigue el curso normal:
-    task.spawn(function()
-        local Workspace = game:GetService("Workspace")
-        -- ... [Resto de tu código intacto] ...
-        
-    end) -- <-- ¡FALTA ESTE CIERRE para el task.spawn!
-end) -- <-- ¡FALTA ESTE CIERRE para el ClickBtn!
 
     task.spawn(function()
         local Workspace = game:GetService("Workspace")
