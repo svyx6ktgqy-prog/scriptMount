@@ -5,7 +5,75 @@
 -- + EDIT PARTS (Eliminar partes del cuerpo guardables) [FIX ZINDEX UI]
 -- ==========================================================
 
-local SkipPreview = false -- Control para saltar animaciones de vista previa
+-- ==========================================================
+-- SERVICIOS Y DECLARACIÓN DE VARIABLES GLOBALES
+-- ==========================================================
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui") 
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+
+-- Variables de Estado / Entorno Sanitizadas
+local SkipPreview = false
+local SearchResultsCache = {}
+local ItemCache = {}
+local DEFAULT_FLOATING_POS = UDim2.new(0.5, 0, 0.5, 0)
+
+-- Tablas mock de compatibilidad (Evita crash por llamadas nil)
+getgenv().CurrentData = getgenv().CurrentData or { Id = "0", Name = "", Price = "0", Category = "", ItemType = "" }
+getgenv().KittyGui = getgenv().KittyGui or { Enabled = false }
+getgenv().KittyMain = getgenv().KittyMain or { Visible = false }
+getgenv().FloatingBtn = getgenv().FloatingBtn or { Visible = false, Position = DEFAULT_FLOATING_POS }
+getgenv().EqPanel = getgenv().EqPanel or { Visible = false }
+getgenv().EditPanel = getgenv().EditPanel or { Visible = false }
+getgenv().PartsPanel = getgenv().PartsPanel or { Visible = false }
+getgenv().CharMenu = getgenv().CharMenu or { Visible = false }
+getgenv().KeepEquippedOnDeath = false
+
+-- Funciones Auxiliares Seguras
+local function UpdateVisualizer(id, price)
+    if typeof(getgenv().UpdateVisualizer) == "function" then
+        pcall(getgenv().UpdateVisualizer, id, price)
+    end
+end
+
+local function UniversalEquip(id, state)
+    if typeof(getgenv().UniversalEquip) == "function" then
+        pcall(getgenv().UniversalEquip, id, state)
+    end
+end
+
+local function ResetToDefaultAvatar()
+    if typeof(getgenv().ResetToDefaultAvatar) == "function" then
+        pcall(getgenv().ResetToDefaultAvatar)
+    end
+end
+
+local function UniversalAlert(config)
+    task.spawn(function()
+        pcall(function()
+            local rawText = config.Text or config.Content or ""
+            local alertData = {
+                Title = (Players.LocalPlayer and Players.LocalPlayer.DisplayName or "Usuario") .. " 💬",
+                Text = rawText,
+                Icon = "rbxassetid://9322622699",
+                Duration = config.Duration or 5
+            }
+
+            if config.Button1 then
+                alertData.Button1 = config.Button1
+                if config.Button2 then alertData.Button2 = config.Button2 end
+                if config.Callback then alertData.Callback = config.Callback end
+            end
+
+            StarterGui:SetCore("SendNotification", alertData)
+        end)
+    end)
+end
 
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
