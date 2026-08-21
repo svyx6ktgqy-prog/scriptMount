@@ -3549,7 +3549,7 @@ end
 -- ==========================================================
 -- TAB: #EXTRA
 -- ==========================================================
-local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
+local ExtraTab = Window:CreateTab("EXTRA", 0)
 
 ExtraTab:CreateSection("⚡ Skip & Preview Control")
 
@@ -3559,12 +3559,6 @@ ExtraTab:CreateToggle({
     Flag = "SkipPreview_Toggle",
     Callback = function(Value)
         SkipPreview = Value
-        Rayfield:Notify({
-            Title = "Skip-Preview",
-            Content = Value and "Activado" or "Desactivado",
-            Duration = 2,
-            Image = 4483362458,
-        })
     end,
 })
 
