@@ -2426,13 +2426,68 @@ PerformKittySearch = function(isPagination)
 -- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V30)
 -- Fix Lag Inicial + Esfera Nativa + Profundidad + Gravedad Individual + Toque Estricto
 -- ==========================================================
+-- Toque corto = preview 3D | Mantener = solo visualizador
+local holding = false
+local holdStart = 0
+local longPress = false
+local HOLD_TIME = 0.45
+
+ClickBtn.InputBegan:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+    holding = true
+    longPress = false
+    holdStart = tick()
+
+    task.spawn(function()
+        while holding do
+            if tick() - holdStart >= HOLD_TIME then
+                longPress = true
+                holding = false
+
+                -- Mantener: datos + visualizador (sin escena 3D)
+                CurrentData.Id = tostring(item.id)
+                CurrentData.Name = item.name or "Objeto"
+                CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
+                CurrentData.ItemType = item.itemType or "Asset"
+
+                if UpdateVisualizer then
+                    UpdateVisualizer(CurrentData.Id, CurrentData.Price)
+                end
+                if NotifyUser then
+                    NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar.")
+                end
+                break
+            end
+            task.wait(0.03)
+        end
+    end)
+end)
+
+ClickBtn.InputEnded:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+    holding = false
+end)
+
 ClickBtn.MouseButton1Click:Connect(function()
+    -- Si fue long-press, no abrir la escena 3D
+    if longPress then
+        longPress = false
+        return
+    end
+
     CurrentData.Id = tostring(item.id)
     CurrentData.Name = item.name
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
     task.spawn(function()
+        -- ... AQUÍ SIGUE TODA TU ESCENA 3D SIN CAMBIOS ...
         local Workspace = game:GetService("Workspace")
         local Players = game:GetService("Players")
         local TweenService = game:GetService("TweenService")
