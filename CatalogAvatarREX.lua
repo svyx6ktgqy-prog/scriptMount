@@ -25,6 +25,9 @@ local PlayingAnimationTracks = {}
 local ItemAdjustments = {}
 local EqPanel, RefreshEquippedItems 
 
+-- Variable de estado global para persistencia portable
+_G.SkipPreview = _G.SkipPreview or false
+
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 
@@ -2427,10 +2430,22 @@ PerformKittySearch = function(isPagination)
 -- Fix Lag Inicial + Esfera Nativa + Profundidad + Gravedad Individual + Toque Estricto
 -- ==========================================================
 ClickBtn.MouseButton1Click:Connect(function()
-    CurrentData.Id = tostring(item.id)
-    CurrentData.Name = item.name
-    CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
-    CurrentData.ItemType = item.itemType or "Asset"
+    CurrentData.Id = tostring(bannerData.Id)
+    CurrentData.Name = bannerData.Name
+    CurrentData.Price = bannerData.Price and (tostring(bannerData.Price) .. " R$") or "Gratis"
+    CurrentData.ItemType = bannerData.ItemType or "Asset"
+    
+    -- Si Skip-Preview está activo, enviamos directamente al visualizador omitiendo animaciones intermedias
+    if _G.SkipPreview then
+        UpdateVisualizer(bannerData.Id, bannerData.Price or "Gratis")
+        return
+    end
+
+    -- Flujo normal con animaciones/preview de caída si el switch está apagado
+    if bannerData.OnSelectCallback then
+        bannerData.OnSelectCallback(bannerData.Id, bannerData.Price or "Gratis")
+    end
+end)
 
     task.spawn(function()
         local Workspace = game:GetService("Workspace")
@@ -3633,6 +3648,20 @@ ExtraTab:CreateInput({
             UniversalAlert({Text = "Please enter valid numbers only.", Duration = 3})
         end
     end
+})
+
+-- Toggle para el menú Rayfield
+ExtraTab:CreateToggle({
+    Name = "Skip-Preview",
+    CurrentValue = _G.SkipPreview,
+    Flag = "SkipPreviewToggle",
+    Callback = function(Value)
+        _G.SkipPreview = Value
+        
+        if _G.SkipPreview then
+            NotifyUser("Skip-Preview", "Modo directo activado. Se omitirán las animaciones de caída.")
+        end
+    end,
 })
 
 Rayfield:LoadConfiguration()
