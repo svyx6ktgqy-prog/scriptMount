@@ -3301,7 +3301,7 @@ PagiPrevBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==========================================================
--- INTEGRACIÓN RAYFIELD & INTERFAZ
+-- MAPEOS Y LIBRERÍA RAYFIELD
 -- ==========================================================
 local AssetTypeNames = {
     [2] = "T-Shirt", [5] = "Script LUA", [8] = "Sombrero", [9] = "Place", [10] = "Modelo", 
@@ -3325,7 +3325,9 @@ local Window = Rayfield:CreateWindow({
    KeySystem = false
 })
 
-local SearchResultsCache = {}
+-- ==========================================================
+-- TAB: CATÁLOGO REAL
+-- ==========================================================
 local Panel = Window:CreateTab("🏥 Catálogo Real", 4483362458)
 
 Panel:CreateToggle({
@@ -3333,25 +3335,27 @@ Panel:CreateToggle({
    CurrentValue = false,
    Flag = "KittyMenuToggle", 
    Callback = function(Value)
-       KittyGui.Enabled = Value
-       KeepEquippedOnDeath = Value
-       
-       if Value then
-           KittyMain.Visible = true
-           FloatingBtn.Visible = false
-           FloatingBtn.Position = DEFAULT_FLOATING_POS
-           Rayfield:Notify({Title = "Sistema Unificado", Content = "Menú visual y persistencia de avatar ACTIVADOS.", Duration = 3})
-       else
-           ResetToDefaultAvatar()
-           KittyMain.Visible = false
-           FloatingBtn.Visible = false
-           FloatingBtn.Position = DEFAULT_FLOATING_POS
-           EqPanel.Visible = false
-           EditPanel.Visible = false
-           PartsPanel.Visible = false
-           CharMenu.Visible = false
-           Rayfield:Notify({Title = "Restaurado", Content = "Avatar desequipado y reseteado al estado original (Muerte Real).", Duration = 3.5})
-       end
+       pcall(function()
+           KittyGui.Enabled = Value
+           KeepEquippedOnDeath = Value
+           
+           if Value then
+               KittyMain.Visible = true
+               FloatingBtn.Visible = false
+               FloatingBtn.Position = DEFAULT_FLOATING_POS
+               Rayfield:Notify({Title = "Sistema Unificado", Content = "Menú visual y persistencia de avatar ACTIVADOS.", Duration = 3})
+           else
+               ResetToDefaultAvatar()
+               KittyMain.Visible = false
+               FloatingBtn.Visible = false
+               FloatingBtn.Position = DEFAULT_FLOATING_POS
+               EqPanel.Visible = false
+               EditPanel.Visible = false
+               PartsPanel.Visible = false
+               CharMenu.Visible = false
+               Rayfield:Notify({Title = "Restaurado", Content = "Avatar desequipado y reseteado al estado original (Muerte Real).", Duration = 3.5})
+           end
+       end)
    end,
 })
 
@@ -3377,7 +3381,12 @@ local SpinnerDropdown = Panel:CreateDropdown({
            local item = SearchResultsCache[selectedText]
            CurrentData.Id = tostring(item.Id); CurrentData.Name = item.Name; CurrentData.Price = item.Price
            CurrentData.Category = item.Category; CurrentData.ItemType = item.ItemType
+           
            UpdateVisualizer(item.Id, item.Price)
+           if SkipPreview then
+               UniversalEquip(item.Id, false)
+           end
+           
            Rayfield:Notify({Title = "Seleccionado", Content = item.Name, Duration = 2})
        end
    end,
@@ -3480,42 +3489,15 @@ local TrashClasses = {
 }
 
 -- ==========================================================
--- 🌑 "ECLIPSE" SYSTEM
+-- 🌑 ENGINE ECLIPSE & PERFORMANCE
 -- ==========================================================
-local function ToggleEclipse(state)
-    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-    local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
-    
-    if state then
-        if not eclipseUI then
-            eclipseUI = Instance.new("ScreenGui")
-            eclipseUI.Name = "OptiEclipseBlackout"
-            eclipseUI.IgnoreGuiInset = true
-            eclipseUI.DisplayOrder = 9999 
-            
-            local blackoutFrame = Instance.new("Frame")
-            blackoutFrame.Name = "BlackBackground"
-            blackoutFrame.Size = UDim2.new(1, 0, 1, 0)
-            blackoutFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            blackoutFrame.BackgroundTransparency = 1
-            blackoutFrame.Parent = eclipseUI
-            eclipseUI.Parent = playerGui
-        end
-        pcall(function() settings().Rendering.QualityLevel = 1 end)
-        eclipseUI.BlackBackground.BackgroundTransparency = 0
-    else
-        if eclipseUI and eclipseUI:FindFirstChild("BlackBackground") then
-            pcall(function() settings().Rendering.QualityLevel = "Automatic" end)
-            local tween = TweenService:Create(eclipseUI.BlackBackground, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-            tween:Play()
-            tween.Completed:Connect(function() eclipseUI:Destroy() end)
-        end
-    end
-end
+local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
+local TrashClasses = {
+    FaceControls = true, Animator = true, Animation = true, Script = true, 
+    LocalScript = true, Sound = true, ParticleEmitter = true, Trail = true, 
+    Fire = true, Smoke = true, Sparkles = true, Decal = true, Texture = true
+}
 
--- ==========================================================
--- 🛡️ ECLIPSE ENGINE (INTERCEPTOR WITH HASH DICTIONARY)
--- ==========================================================
 if not getgenv().EclipseRenderHook then
     getgenv().EclipseRenderHook = true
     
@@ -3523,13 +3505,11 @@ if not getgenv().EclipseRenderHook then
     oldNewindex = hookmetamethod(game, "__newindex", function(self, index, value)
         if index == "Parent" and not checkcaller() then
             if typeof(value) == "Instance" and value.ClassName == "ViewportFrame" then
-                
                 task.spawn(function()
                     pcall(function()
                         if self.ClassName == "Model" then
                             for _, v in ipairs(self:GetDescendants()) do
                                 local cName = v.ClassName
-                                
                                 if cName == "Part" or cName == "MeshPart" or cName == "WedgePart" or cName == "CornerWedgePart" then
                                     v.CastShadow = false
                                     v.CanCollide = false
@@ -3565,9 +3545,23 @@ if not getgenv().EclipseRenderHook then
         return oldNewindex(self, index, value)
     end)
 end
--- ==========================================================
 
+-- ==========================================================
+-- TAB: #EXTRA
+-- ==========================================================
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
+
+ExtraTab:CreateSection("⚡ Skip & Preview Control")
+
+ExtraTab:CreateToggle({
+    Name = "⚡ Skip-Preview (Equipado Directo)",
+    CurrentValue = false,
+    Flag = "SkipPreview_Toggle",
+    Callback = function(Value)
+        SkipPreview = Value
+        UniversalAlert({Text = Value and "Skip-Preview: Activado" or "Skip-Preview: Desactivado", Duration = 2})
+    end,
+})
 
 ExtraTab:CreateSection("⚡ Extreme Optimization & Performance")
 
@@ -3588,7 +3582,6 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        -- Botones actualizados a Dev English
         UniversalAlert({Text = "The map will lose textures. Continue?", Duration = 10, Button1 = "Accept", Button2 = "Cancel", Callback = bindable})
     end
 })
@@ -3607,7 +3600,6 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        -- Botones actualizados a Dev English
         UniversalAlert({Text = "Do you want to restore original graphics?", Duration = 10, Button1 = "Accept", Button2 = "Cancel", Callback = bindable})
     end
 })
@@ -3620,11 +3612,14 @@ ExtraTab:CreateToggle({
     Flag = "ToggleItemVisualizer",
     Callback = function(Value)
         pcall(function()
-            if Container then Container.Visible = Value
-            else
-                local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-                local visualizerUI = CoreGui:FindFirstChild("VisualizadorItemGUI") or playerGui:FindFirstChild("VisualizadorItemGUI")
-                if visualizerUI then if visualizerUI:IsA("ScreenGui") then visualizerUI.Enabled = Value else visualizerUI.Visible = Value end end
+            local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+            local visualizerUI = CoreGui:FindFirstChild("VisualizadorItemGUI") or playerGui:FindFirstChild("VisualizadorItemGUI")
+            if visualizerUI then 
+                if visualizerUI:IsA("ScreenGui") then 
+                    visualizerUI.Enabled = Value 
+                else 
+                    visualizerUI.Visible = Value 
+                end 
             end
         end)
     end
@@ -3636,11 +3631,10 @@ ExtraTab:CreateButton({
     Name = "📁 Toggle Outfit Menu",
     Callback = function()
         task.spawn(function()
-            local success, err = pcall(function()
-                local targetMenu = nil
+            pcall(function()
+                local targetMenu = CharMenu
                 
-                if CharMenu then targetMenu = CharMenu
-                else
+                if not targetMenu then
                     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
                     local visualizerUI = CoreGui:FindFirstChild("QuirurgicoVisualizer") or playerGui:FindFirstChild("QuirurgicoVisualizer")
                     if visualizerUI then
@@ -3655,14 +3649,10 @@ ExtraTab:CreateButton({
 
                 if targetMenu then
                     targetMenu.Visible = not targetMenu.Visible 
-                    
                     if targetMenu.Visible then
                         UniversalAlert({Text = "Loading saved avatars...", Duration = 2})
-                        
-                        if RefreshSavedCharactersGrid then
-                            task.spawn(function()
-                                pcall(RefreshSavedCharactersGrid)
-                            end)
+                        if typeof(getgenv().RefreshSavedCharactersGrid) == "function" then
+                            pcall(getgenv().RefreshSavedCharactersGrid)
                         end
                     end
                 else
@@ -3691,11 +3681,9 @@ ExtraTab:CreateInput({
     Callback = function(Text)
         local itemID = tonumber(Text)
         if itemID and itemID > 0 then
+            local itemInfo = ItemCache[itemID]
             
-            local itemInfo
-            if ItemCache[itemID] then
-                itemInfo = ItemCache[itemID]
-            else
+            if not itemInfo then
                 local success, data = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
                 if success and data then
                     itemInfo = data
@@ -3705,8 +3693,17 @@ ExtraTab:CreateInput({
 
             if itemInfo then
                 pcall(function()
-                    if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
-                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Free") end
+                    if CurrentData then 
+                        CurrentData.Id = tostring(itemID)
+                        CurrentData.Price = tostring(itemInfo.PriceInRobux or 0)
+                        if itemInfo.Name then CurrentData.Name = itemInfo.Name end 
+                    end
+                    
+                    UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Free")
+                    
+                    if SkipPreview then
+                        UniversalEquip(itemID, false)
+                    end
                 end)
                 UniversalAlert({Text = "Showing: " .. (itemInfo.Name or "Unknown Item"), Duration = 3})
             else
@@ -3716,22 +3713,6 @@ ExtraTab:CreateInput({
             UniversalAlert({Text = "Please enter valid numbers only.", Duration = 3})
         end
     end
-})
-
--- Creación de la Tab #EXTRA (Si no existe previamente)
-local ExtraTab = Window:CreateTab("#conf", 4483362458)
-
--- Switch Skip-Preview
-ExtraTab:CreateToggle({
-    Name = "Skip-Preview",
-    CurrentValue = false,
-    Flag = "SkipPreview_Toggle",
-    Callback = function(Value)
-        SkipPreview = Value
-        if NotifyUser then
-            NotifyUser("Skip-Preview", Value and "Activado: Vista previa omitida" or "Desactivado: Vista previa normal")
-        end
-    end,
 })
 
 Rayfield:LoadConfiguration()
