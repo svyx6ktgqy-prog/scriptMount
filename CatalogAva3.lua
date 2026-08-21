@@ -2031,7 +2031,8 @@ local PerformKittySearch
 local KittyResults = Instance.new("ScrollingFrame")
 KittyResults.Size = UDim2.new(0.75, 0, 1, -100)
 KittyResults.Position = UDim2.new(0.25, 0, 0, 60)
-KittyResults.BackgroundTransparency = 1
+KittyResults.BackgroundColor3 = Color3.fromRGB(255, 182, 193) -- O usa Color3.fromRGB(25, 25, 25) para tono oscuro
+KittyResults.BackgroundTransparency = 0.4 -- Traslúcido
 KittyResults.ScrollBarThickness = 6
 KittyResults.ScrollBarImageColor3 = Color3.fromRGB(255, 105, 180)
 KittyResults.AutomaticCanvasSize = Enum.AutomaticSize.Y 
