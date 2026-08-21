@@ -17,7 +17,8 @@ local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
-local CurrentData = { Name = "Ninguno", Id = "0", Price = "0 R$", Category = "Desconocido", ItemType = "Asset" }
+local CurrentData = { Name = "Ninguno", Id = "0", Price = "0 R$", Category = "Desconocido", ItemType = "Asset"}
+local SkipPreview = false -- true = equipa directo, sin escena 3D
 local KeepEquippedOnDeath = false 
 local SavedEquippedIDs = {}
 local SavedBodyModifiers = {} 
@@ -2432,6 +2433,17 @@ ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
+    -- Actualiza visualizador siempre
+    if UpdateVisualizer then
+        UpdateVisualizer(CurrentData.Id, CurrentData.Price)
+    end
+
+    -- SKIP PREVIEW: equipa y sale (no abre la escena 3D)
+    if SkipPreview then
+        UniversalEquip(CurrentData.Id, false)
+        return
+    end
+
     task.spawn(function()
         local Workspace = game:GetService("Workspace")
         local Players = game:GetService("Players")
@@ -3485,6 +3497,30 @@ end
 -- ==========================================================
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
+
+ExtraTab:CreateSection("⚡ Skip & Preview Control")
+
+ExtraTab:CreateToggle({
+    Name = "⚡ Skip-Preview (Equipado Directo)",
+    CurrentValue = false,
+    Flag = "SkipPreview_Toggle",
+    Callback = function(Value)
+        SkipPreview = Value
+        if Value then
+            Rayfield:Notify({
+                Title = "Skip-Preview ON",
+                Content = "Al tocar un ítem se equipa directo (sin escena 3D).",
+                Duration = 3
+            })
+        else
+            Rayfield:Notify({
+                Title = "Skip-Preview OFF",
+                Content = "Vuelve la preview 3D al tocar ítems.",
+                Duration = 3
+            })
+        end
+    end,
+})
 
 ExtraTab:CreateSection("⚡ Extreme Optimization & Performance")
 
