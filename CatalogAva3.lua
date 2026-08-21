@@ -1034,6 +1034,7 @@ local function RefreshSavedCharactersGrid()
                 local Card = Instance.new("Frame")
                 Card.Size = UDim2.new(0, 105, 0, 140)
                 Card.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                Card.BackgroundTransparency = 0.3 -- Traslúcido
                 Card.ClipsDescendants = true
                 Card.ZIndex = 32
                 Card.Parent = CharScroll
