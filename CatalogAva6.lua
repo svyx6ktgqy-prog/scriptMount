@@ -2397,7 +2397,7 @@ PerformKittySearch = function(isPagination)
                 CardImg.Size = UDim2.new(0.9, 0, 0, 90)
                 CardImg.Position = UDim2.new(0.5, 0, 0, 5)
                 CardImg.ScaleType = Enum.ScaleType.Fit
-                CardImg.BackgroundColor3 = Color3.fromRGB(194, 85, 139)
+                CardImg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
                 CardImg.BackgroundTransparency = 0
                 CardImg.Image = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150"
                 CardImg.Parent = Card
