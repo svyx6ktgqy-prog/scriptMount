@@ -1659,6 +1659,7 @@ RefreshEquippedItems = function()
     for _, item in ipairs(items) do
         local frame = Instance.new("Frame")
         frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        frame.BackgroundTransparency = 0.3 -- Traslúcido
         frame.ZIndex = 12
         frame.Parent = EqScroll
         local fCorner = Instance.new("UICorner"); fCorner.CornerRadius = UDim.new(0, 8); fCorner.Parent = frame
