@@ -2510,11 +2510,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         -- Salta la animación/caída y equipa/muestra directo
         UniversalEquip(CurrentData.Id, false)
     else
-        -- 2. La escena 3D / Callback se ejecuta SOLO si SkipPreview está desactivado
-        if item.OnSelectCallback then
-            item.OnSelectCallback(item.id, item.price or "Gratis")
-        end
-
+        -- 2. La escena 3D se ejecuta SOLO si SkipPreview está desactivado
         task.spawn(function()
             local Workspace = game:GetService("Workspace")
             local Players = game:GetService("Players")
@@ -2526,34 +2522,34 @@ ClickBtn.MouseButton1Click:Connect(function()
             local CoreGui = game:GetService("CoreGui")
             local LocalPlayer = Players.LocalPlayer
 
-         -- ==================================================
-        -- CONTROL DEL SCREENGUI
-        -- ==================================================
-        local function ToggleUIVisibility(state)
-            pcall(function()
-                local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
-                
-                if Container then Container.Visible = state end
-                
-                local hubNames = {"VisualizadorItemGUI", "Kitty", "KittyHub"} 
-                for _, name in ipairs(hubNames) do
-                    local ui = (CoreGui and CoreGui:FindFirstChild(name)) or (PlayerGui and PlayerGui:FindFirstChild(name))
-                    if ui then
-                        if ui:IsA("ScreenGui") then ui.Enabled = state else ui.Visible = state end
-                    end
-                end
-
-                if PlayerGui then
-                    for _, gui in ipairs(PlayerGui:GetChildren()) do
-                        if gui:IsA("ScreenGui") then
-                            gui.Enabled = state
-                        elseif gui:IsA("Frame") or gui:IsA("ScrollingFrame") then
-                            gui.Visible = state
+            -- ==================================================
+            -- CONTROL DEL SCREENGUI
+            -- ==================================================
+            local function ToggleUIVisibility(state)
+                pcall(function()
+                    local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                    
+                    if Container then Container.Visible = state end
+                    
+                    local hubNames = {"VisualizadorItemGUI", "Kitty", "KittyHub"} 
+                    for _, name in ipairs(hubNames) do
+                        local ui = (CoreGui and CoreGui:FindFirstChild(name)) or (PlayerGui and PlayerGui:FindFirstChild(name))
+                        if ui then
+                            if ui:IsA("ScreenGui") then ui.Enabled = state else ui.Visible = state end
                         end
                     end
-                end
-            end)
-        end
+
+                    if PlayerGui then
+                        for _, gui in ipairs(PlayerGui:GetChildren()) do
+                            if gui:IsA("ScreenGui") then
+                                gui.Enabled = state
+                            elseif gui:IsA("Frame") or gui:IsA("ScrollingFrame") then
+                                gui.Visible = state
+                            end
+                        end
+                    end
+                end)
+            end
 
         -- ==================================================
         -- 1. LIMPIEZA SEGURA DE PREVIEWS ANTERIORES
@@ -3263,27 +3259,34 @@ ClickBtn.MouseButton1Click:Connect(function()
                     })
                 end)
                 
-            -- Reseteo de Cooldown: Si el jugador se aleja (distancia horizontal > 7.5), podrá volver a tocar la mesa después
+                        -- Reseteo de Cooldown: Si el jugador se aleja (distancia horizontal > 7.5), podrá volver a tocar la mesa después
             elseif horizontalDist > 7.5 and promptState == "Cooldown" then
                 promptState = "Waiting"
             end
-        end)
-    end)
-end)
+        end)   -- cierra RunService.Heartbeat:Connect (proximityConn)
+    end)       -- cierra task.spawn (escena 3D)
+    end        -- cierra el else de if SkipPreview
+end)           -- cierra ClickBtn.MouseButton1Click:Connect
 
-                ---
+            end -- cierra el for _, item in ipairs(decoded.data)
 
-            end
         else
             PagiLabel.Text = "Sin resultados"
         end
     else
         PagiLabel.Text = "Error de Red"
     end
-end
+end -- cierra PerformKittySearch
 
-KittySearch.FocusLost:Connect(function(enterPressed) if enterPressed then PerformKittySearch(false) end end)
-KittySearchBtn.MouseButton1Click:Connect(function() PerformKittySearch(false) end)
+KittySearch.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        PerformKittySearch(false)
+    end
+end)
+
+KittySearchBtn.MouseButton1Click:Connect(function()
+    PerformKittySearch(false)
+end)
 
 PagiNextBtn.MouseButton1Click:Connect(function()
     if KittyNextCursor and KittyNextCursor ~= "" and KittyCurrentPage < KittyMaxPages then
