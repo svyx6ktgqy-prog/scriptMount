@@ -123,14 +123,16 @@ function BannerSystem.RenderBanner(bannerData)
     end
 
     local Card = Instance.new("Frame")
-    Card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Card.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Cambiado a un tono oscuro (o el color que gustes)
+    Card.BackgroundTransparency = 0.35 -- Haces la tarjeta traslúcida (0 = sólido, 1 = invisible)
     Card.Parent = bannerData.ParentContainer
     
     local CardCorner = Instance.new("UICorner"); CardCorner.CornerRadius = UDim.new(0, 10); CardCorner.Parent = Card
     
     local CardImg = Instance.new("ImageLabel")
     CardImg.Size = UDim2.new(1, 0, 0, 100)
-    CardImg.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    CardImg.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Fondo de la imagen más oscuro
+    CardImg.BackgroundTransparency = 0.5 -- Fondo de la imagen traslúcido
     CardImg.Parent = Card
     local ImgCorner = Instance.new("UICorner"); ImgCorner.CornerRadius = UDim.new(0, 10); ImgCorner.Parent = CardImg
     
