@@ -3472,12 +3472,14 @@ Panel:CreateToggle({
            KittyMain.Visible = true
            FloatingBtn.Visible = false
            FloatingBtn.Position = DEFAULT_FLOATING_POS
+           if _0xbal_fr then _0xbal_fr.Visible = true end
            Rayfield:Notify({Title = "Sistema Unificado", Content = "Menú visual y persistencia de avatar ACTIVADOS.", Duration = 3})
        else
            ResetToDefaultAvatar()
            KittyMain.Visible = false
            FloatingBtn.Visible = false
            FloatingBtn.Position = DEFAULT_FLOATING_POS
+           if _0xbal_fr then _0xbal_fr.Visible = false end
            EqPanel.Visible = false
            EditPanel.Visible = false
            PartsPanel.Visible = false
