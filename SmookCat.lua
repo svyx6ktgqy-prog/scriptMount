@@ -3486,10 +3486,22 @@ local SpinnerDropdown = Panel:CreateDropdown({
        local selectedText = type(Option) == "table" and Option[1] or Option
        if SearchResultsCache[selectedText] then
            local item = SearchResultsCache[selectedText]
-           CurrentData.Id = tostring(item.Id); CurrentData.Name = item.Name; CurrentData.Price = item.Price
-           CurrentData.Category = item.Category; CurrentData.ItemType = item.ItemType
+           CurrentData.Id = tostring(item.Id)
+           CurrentData.Name = item.Name
+           CurrentData.Price = item.Price
+           CurrentData.Category = item.Category
+           CurrentData.ItemType = item.ItemType
+
+           local _sp = _0xprc_mnt(item.Price)
+
            UpdateVisualizer(item.Id, item.Price)
-           Rayfield:Notify({Title = "Seleccionado", Content = item.Name, Duration = 2})
+
+           local extra = (_sp > 0) and ("  -" .. tostring(_sp) .. " R$") or ""
+           Rayfield:Notify({
+               Title = "Seleccionado",
+               Content = item.Name .. extra,
+               Duration = 2
+           })
        end
    end,
 })
