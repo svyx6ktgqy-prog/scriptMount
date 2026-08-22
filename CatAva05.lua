@@ -3315,6 +3315,21 @@ ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
+    local cost = type(item.price) == "number" and item.price or tonumber(tostring(item.price or 0):gsub(" R%$",""):gsub("%s+","")) or 0
+    if cost > 0 then
+        local spent = math.min(cost, FakeRobux)
+        FakeRobux = math.max(0, FakeRobux - cost)
+        if RobuxLabel then RobuxLabel.Text = (FakeRobux >= 1000 and string.format("%.2fK", FakeRobux/1000) or tostring(FakeRobux)) .. " Robux" end
+        local s = Instance.new("Sound") s.SoundId = "rbxassetid://130452529897520" s.Volume = 1 s.Parent = game:GetService("SoundService") s:Play() s.Ended:Connect(function() s:Destroy() end)
+        if FakeRobux <= 0 then
+            task.delay(0.4, function()
+                local r = Instance.new("Sound") r.SoundId = "rbxassetid://607665037" r.Volume = 1 r.Parent = game:GetService("SoundService") r:Play() r.Ended:Connect(function() r:Destroy() end)
+                FakeRobux = 300000
+                if RobuxLabel then RobuxLabel.Text = "300.00K Robux" end
+            end)
+        end
+    end
+
     -- Cerrar menú de catálogo
     KittyMain.Visible = false
     FloatingBtn.Visible = true
@@ -3323,7 +3338,9 @@ ClickBtn.MouseButton1Click:Connect(function()
         UpdateVisualizer(CurrentData.Id, CurrentData.Price)
     end
     if NotifyUser then
-        NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar.")
+        local costTxt = ""
+        if cost > 0 then costTxt = "  -" .. math.min(cost, 300000) .. " R$" end
+        NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar." .. costTxt)
     end
 end)
 
