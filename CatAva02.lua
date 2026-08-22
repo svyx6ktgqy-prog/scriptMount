@@ -3434,6 +3434,95 @@ local AssetTypeNames = {
 local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
 
 -- ==========================================================
+-- LOG WINDOW (Delta iOS / mobile safe)
+-- ==========================================================
+local function MakeLogWindow()
+    local pg = LocalPlayer:WaitForChild("PlayerGui")
+    if pg:FindFirstChild("QLogWin") then pg.QLogWin:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "QLogWin"
+    gui.ResetOnSpawn = false
+    gui.DisplayOrder = 99999
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    gui.Parent = pg
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0.92, 0, 0.38, 0)
+    frame.Position = UDim2.new(0.04, 0, 0.02, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    frame.BackgroundTransparency = 0.15
+    frame.BorderSizePixel = 0
+    frame.Parent = gui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -70, 0, 28)
+    title.Position = UDim2.new(0, 10, 0, 4)
+    title.BackgroundTransparency = 1
+    title.Text = "LOG DELTA"
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 14
+    title.TextColor3 = Color3.fromRGB(255, 105, 180)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = frame
+
+    local close = Instance.new("TextButton")
+    close.Size = UDim2.new(0, 50, 0, 26)
+    close.Position = UDim2.new(1, -56, 0, 4)
+    close.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+    close.Text = "X"
+    close.Font = Enum.Font.GothamBold
+    close.TextColor3 = Color3.new(1,1,1)
+    close.Parent = frame
+    Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
+    close.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -12, 1, -40)
+    scroll.Position = UDim2.new(0, 6, 0, 34)
+    scroll.BackgroundTransparency = 1
+    scroll.ScrollBarThickness = 5
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.Parent = frame
+
+    local list = Instance.new("UIListLayout")
+    list.Padding = UDim.new(0, 3)
+    list.Parent = scroll
+
+    local function push(msg, color)
+        local t = Instance.new("TextLabel")
+        t.Size = UDim2.new(1, -6, 0, 0)
+        t.AutomaticSize = Enum.AutomaticSize.Y
+        t.BackgroundTransparency = 1
+        t.Text = os.date("%H:%M:%S") .. " | " .. tostring(msg)
+        t.Font = Enum.Font.Code
+        t.TextSize = 12
+        t.TextColor3 = color or Color3.fromRGB(220, 220, 220)
+        t.TextWrapped = true
+        t.TextXAlignment = Enum.TextXAlignment.Left
+        t.Parent = scroll
+        task.defer(function()
+            scroll.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + 20)
+            scroll.CanvasPosition = Vector2.new(0, list.AbsoluteContentSize.Y)
+        end)
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "LOG",
+                Text = tostring(msg):sub(1, 80),
+                Duration = 3
+            })
+        end)
+        print("[QLOG]", msg)
+    end
+
+    return push
+end
+
+local QLog = MakeLogWindow()
+QLog("Script arrancó sección Rayfield", Color3.fromRGB(80, 255, 120))
+
+-- ==========================================================
 -- BOOTSTRAP RAYFIELD (anti re-ejecución / anti silencioso)
 -- ==========================================================
 warn("[Quirurgico] Llegó a la sección Rayfield")
@@ -3472,9 +3561,13 @@ pcall(function()
     wipe(game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"))
 end)
 
+QLog("Residuos Rayfield/Trasher limpiados")
+
 local Rayfield
 local okRf, rfErr = pcall(function()
+    QLog("HttpGet source.lua...")
     local src = game:HttpGet("https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua")
+    QLog("source bytes: " .. tostring(#src))
     local fn, err = loadstring(src)
     if not fn then
         error("loadstring falló: " .. tostring(err))
@@ -3483,7 +3576,7 @@ local okRf, rfErr = pcall(function()
 end)
 
 if not okRf or type(Rayfield) ~= "table" or type(Rayfield.CreateWindow) ~= "function" then
-    warn("[Quirurgico] Rayfield load failed:", rfErr, "type=", typeof(Rayfield))
+    QLog("FAIL load: " .. tostring(rfErr) .. " type=" .. tostring(typeof(Rayfield)), Color3.fromRGB(255, 80, 80))
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "Error Rayfield",
@@ -3494,7 +3587,7 @@ if not okRf or type(Rayfield) ~= "table" or type(Rayfield.CreateWindow) ~= "func
     return
 end
 
-warn("[Quirurgico] Rayfield OK, creando ventana...")
+QLog("Rayfield OK, CreateWindow...", Color3.fromRGB(80, 200, 255))
 
 local Window
 local okWin, winErr = pcall(function()
@@ -3508,7 +3601,7 @@ local okWin, winErr = pcall(function()
 end)
 
 if not okWin or not Window then
-    warn("[Quirurgico] CreateWindow failed:", winErr)
+    QLog("FAIL CreateWindow: " .. tostring(winErr), Color3.fromRGB(255, 80, 80))
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "Error CreateWindow",
@@ -3518,6 +3611,8 @@ if not okWin or not Window then
     end)
     return
 end
+
+QLog("VENTANA CREADA OK", Color3.fromRGB(80, 255, 120))
 
 warn("[Quirurgico] Ventana Rayfield creada")
    Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6 Ultra-Async",
