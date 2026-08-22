@@ -3488,6 +3488,8 @@ local AssetTypeNames = {
 
 local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
 
+EarlyLog("Llegó a sección Rayfield (antes de MakeLogWindow)")
+
 -- ==========================================================
 -- LOG WINDOW (Delta iOS / mobile safe)
 -- ==========================================================
