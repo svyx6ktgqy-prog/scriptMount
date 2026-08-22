@@ -3381,6 +3381,7 @@ Panel:CreateToggle({
        
        if Value then
            KittyMain.Visible = true
+		   if RobuxLabel and RobuxLabel.Parent then RobuxLabel.Parent.Visible = true end	
            FloatingBtn.Visible = false
            FloatingBtn.Position = DEFAULT_FLOATING_POS
            Rayfield:Notify({Title = "Sistema Unificado", Content = "Menú visual y persistencia de avatar ACTIVADOS.", Duration = 3})
