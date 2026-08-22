@@ -28,6 +28,56 @@ local EqPanel, RefreshEquippedItems
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 
+-- Contador de balance (discreto, compatible Delta/iOS)
+local Count = 300000
+local RobuxAmountLabel = nil
+local RobuxBar = nil
+
+local function FormatCount(amount)
+    if amount >= 1000000 then
+        return string.format("%.2fM", amount / 1000000)
+    elseif amount >= 1000 then
+        return string.format("%.2fK", amount / 1000)
+    else
+        return tostring(math.floor(amount))
+    end
+end
+
+local function PlayCountSound(soundId)
+    pcall(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://" .. tostring(soundId)
+        sound.Volume = 0.65
+        sound.Parent = game:GetService("SoundService")
+        sound:Play()
+        game:GetService("Debris"):AddItem(sound, 4)
+    end)
+end
+
+local function UpdateCountUI()
+    if RobuxAmountLabel then
+        RobuxAmountLabel.Text = FormatCount(Count)
+    end
+end
+
+local function ApplyCount(price)
+    price = tonumber(price) or 0
+    if price <= 0 then return 0 end
+    local spent = math.min(price, Count)
+    Count = Count - price
+    if Count < 0 then Count = 0 end
+    PlayCountSound(130452529897520)
+    UpdateCountUI()
+    if Count == 0 then
+        task.delay(0.6, function()
+            Count = 300000
+            PlayCountSound(607665037)
+            UpdateCountUI()
+        end)
+    end
+    return spent
+end
+
 -- ==========================================================
 -- ESTRUCTURAS DE CUERPO Y FUNCIONES DE OCULTACIÓN (EDIT PARTS)
 -- ==========================================================
