@@ -1859,7 +1859,7 @@ KittyGui.DisplayOrder = 15
 KittyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 KittyGui.Parent = CoreGui
 
-local FakeRobuxBalance = 300000 -- 300.00K inicial
+local FakeRobuxBalance = 300000
 local FAKE_ROBUX_MAX = 300000
 
 local function FormatRobux(amount)
@@ -1892,34 +1892,63 @@ local function UpdateFakeRobuxDisplay()
 end
 
 local function SpendFakeRobux(price)
-    price = tonumber(price) or 0
-    if price <= 0 then return end
+    local success, err = pcall(function()
+        price = tonumber(price) or 0
+        if price <= 0 then return end -- FREE no gasta
 
-    local spent = price
-    if FakeRobuxBalance >= price then
-        FakeRobuxBalance = FakeRobuxBalance - price
-    else
+        local spent = price
+        if FakeRobuxBalance >= price then
+            FakeRobuxBalance = FakeRobuxBalance - price
+        else
+            -- Si no alcanza, igual se compra y te deja en 0
+            spent = FakeRobuxBalance
+            FakeRobuxBalance = 0
+        end
 
-        spent = FakeRobuxBalance
-        FakeRobuxBalance = 0
-    end
+        -- Actualizar UI de forma segura
+        if FakeRobuxLabel then
+            FakeRobuxLabel.Text = FormatRobux(FakeRobuxBalance)
+        end
 
-    UpdateFakeRobuxDisplay()
-    PlayCatalogSound(130452529897520)
-
-    if NotifyUser then
-        NotifyUser("Ítem seleccionado", "Gastaste  <font color='rgb(255,60,60)'>-" .. tostring(spent) .. " R$</font>")
-    end
-
-    if FakeRobuxBalance <= 0 then
-        task.delay(0.6, function()
-            FakeRobuxBalance = FAKE_ROBUX_MAX
-            UpdateFakeRobuxDisplay()
-            PlayCatalogSound(607665037)
-            if NotifyUser then
-                NotifyUser("Robux regenerados", "Tu saldo se ha restaurado a " .. FormatRobux(FAKE_ROBUX_MAX))
-            end
+        -- Sonido de compra (protegido)
+        pcall(function()
+            local sound = Instance.new("Sound")
+            sound.SoundId = "rbxassetid://130452529897520"
+            sound.Volume = 1.2
+            sound.Parent = workspace
+            sound:Play()
+            game:GetService("Debris"):AddItem(sound, 6)
         end)
+
+        -- Notificación SIN HTML (las nativas no lo soportan)
+        if NotifyUser then
+            NotifyUser("Ítem seleccionado", "Gastaste -" .. tostring(spent) .. " R$")
+        end
+
+        -- Regenerar si llegó a 0
+        if FakeRobuxBalance <= 0 then
+            task.delay(0.6, function()
+                FakeRobuxBalance = FAKE_ROBUX_MAX
+                if FakeRobuxLabel then
+                    FakeRobuxLabel.Text = FormatRobux(FakeRobuxBalance)
+                end
+                pcall(function()
+                    local sound = Instance.new("Sound")
+                    sound.SoundId = "rbxassetid://607665037"
+                    sound.Volume = 1.2
+                    sound.Parent = workspace
+                    sound:Play()
+                    game:GetService("Debris"):AddItem(sound, 6)
+                end)
+                if NotifyUser then
+                    NotifyUser("Robux regenerados", "Tu saldo se ha restaurado a " .. FormatRobux(FAKE_ROBUX_MAX))
+                end
+            end)
+        end
+    end)
+
+    if not success then
+        warn("[SpendFakeRobux error]:", err)
     end
 end
 
