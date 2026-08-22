@@ -3433,30 +3433,93 @@ local AssetTypeNames = {
 
 local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
 
--- resetear flag del source para poder re-ejecutar el script
+-- ==========================================================
+-- BOOTSTRAP RAYFIELD (anti re-ejecución / anti silencioso)
+-- ==========================================================
+warn("[Quirurgico] Llegó a la sección Rayfield")
+
 pcall(function()
     if getgenv then
+        -- cleanup del propio source
+        if type(getgenv().TrasherCleanup) == "function" then
+            pcall(getgenv().TrasherCleanup)
+        end
+        -- flags que bloquean la re-carga
         getgenv().TrasherMenuLoaded = nil
+        getgenv().rayfieldCached = nil
+        getgenv().TrasherFallbackBound = nil
+        if getgenv().TrasherMasterConn then
+            pcall(function() getgenv().TrasherMasterConn:Disconnect() end)
+            getgenv().TrasherMasterConn = nil
+        end
     end
+end)
+
+-- destruir ventanas residuales de Rayfield / Trasher
+pcall(function()
+    local function wipe(parent)
+        if not parent then return end
+        for _, gui in ipairs(parent:GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                local n = string.lower(gui.Name)
+                if string.find(n, "rayfield") or string.find(n, "trasher") or string.find(n, "rf-") then
+                    pcall(function() gui:Destroy() end)
+                end
+            end
+        end
+    end
+    wipe(CoreGui)
+    wipe(game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"))
 end)
 
 local Rayfield
 local okRf, rfErr = pcall(function()
-    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
+    local src = game:HttpGet("https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua")
+    local fn, err = loadstring(src)
+    if not fn then
+        error("loadstring falló: " .. tostring(err))
+    end
+    Rayfield = fn()
 end)
-if not okRf or not Rayfield then
-    warn("[Quirurgico] Rayfield load failed:", rfErr)
+
+if not okRf or type(Rayfield) ~= "table" or type(Rayfield.CreateWindow) ~= "function" then
+    warn("[Quirurgico] Rayfield load failed:", rfErr, "type=", typeof(Rayfield))
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "Error Rayfield",
-            Text = tostring(rfErr or "Rayfield nil / ya estaba cargado"),
-            Duration = 8
+            Text = tostring(rfErr or "Rayfield inválido / nil"),
+            Duration = 10
         })
     end)
     return
 end
 
-local Window = Rayfield:CreateWindow({
+warn("[Quirurgico] Rayfield OK, creando ventana...")
+
+local Window
+local okWin, winErr = pcall(function()
+    Window = Rayfield:CreateWindow({
+        Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6 Ultra-Async",
+        LoadingTitle = "Cargando optimizaciones Anti-Lag...",
+        LoadingSubtitle = "Frame Slicing + Preload Activo",
+        ConfigurationSaving = { Enabled = false },
+        KeySystem = false
+    })
+end)
+
+if not okWin or not Window then
+    warn("[Quirurgico] CreateWindow failed:", winErr)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Error CreateWindow",
+            Text = tostring(winErr or "Window nil"),
+            Duration = 10
+        })
+    end)
+    return
+end
+
+warn("[Quirurgico] Ventana Rayfield creada")
    Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6 Ultra-Async",
    LoadingTitle = "Cargando optimizaciones Anti-Lag...",
    LoadingSubtitle = "Frame Slicing + Preload Activo",
