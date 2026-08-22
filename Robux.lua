@@ -27,6 +27,91 @@ local EqPanel, RefreshEquippedItems
 
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
+-- ==========================================================
+-- FAKE ROBUX COUNTER (locales + funciones)
+-- ==========================================================
+local FakeRobuxAmount = 300000
+local RobuxCounterFrame = nil
+local RobuxAmountLabel = nil
+local RobuxCounterGui = nil
+
+local function FormatRobuxDisplay(amount)
+    if amount >= 1000000 then
+        return string.format("%.1fM", amount / 1000000)
+    elseif amount >= 1000 then
+        return string.format("%.1fK", amount / 1000)
+    else
+        return tostring(math.floor(amount))
+    end
+end
+
+local function PlayRobuxSound(soundId)
+    pcall(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://" .. tostring(soundId)
+        sound.Volume = 0.6
+        sound.Parent = LocalPlayer:FindFirstChild("PlayerGui") or workspace
+        sound:Play()
+        game:GetService("Debris"):AddItem(sound, 3)
+    end)
+end
+
+local function SpendFakeRobux(price)
+    if not price then return end
+
+    local isFree = false
+    if price == 0 or price == "0" or price == "Gratis" or price == "Gratis / Off-Sale" or price == "FREE" or price == "Free" then
+        isFree = true
+    elseif type(price) == "string" then
+        local cleaned = tostring(price):gsub(" R%$", ""):gsub("%s+", "")
+        if cleaned == "0" or cleaned == "" then
+            isFree = true
+        end
+    end
+
+    if isFree then return end
+
+    local cleanedPrice = tostring(price):gsub(" R%$", ""):gsub("%s+", ""):gsub(",", "")
+    local numericPrice = tonumber(cleanedPrice) or 0
+    if numericPrice <= 0 then return end
+
+    FakeRobuxAmount = FakeRobuxAmount - numericPrice
+    if FakeRobuxAmount < 0 then
+        FakeRobuxAmount = 0
+    end
+
+    if RobuxAmountLabel then
+        RobuxAmountLabel.Text = FormatRobuxDisplay(FakeRobuxAmount)
+    end
+
+    -- Notificación en inglés
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "💸 Robux Spent",
+            Text = "- " .. tostring(numericPrice) .. " R$ spent",
+            Duration = 3,
+            Icon = "rbxassetid://11560341824"
+        })
+    end)
+
+    PlayRobuxSound(66666666) -- buy coin
+
+    if FakeRobuxAmount <= 0 then
+        FakeRobuxAmount = 300000
+        if RobuxAmountLabel then
+            RobuxAmountLabel.Text = FormatRobuxDisplay(FakeRobuxAmount)
+        end
+        PlayRobuxSound(8888888) -- receive robux
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "💰 Robux Refilled",
+                Text = "Balance reset to 300.0K R$",
+                Duration = 3,
+                Icon = "rbxassetid://11560341824"
+            })
+        end)
+    end
+end
 
 -- ==========================================================
 -- ESTRUCTURAS DE CUERPO Y FUNCIONES DE OCULTACIÓN (EDIT PARTS)
@@ -3300,6 +3385,10 @@ ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
+    -- ▼▼▼ AGREGA ESTA LÍNEA AQUÍ ▼▼▼
+    SpendFakeRobux(item.price or CurrentData.Price)
+    -- ▲▲▲ ======================== ▲▲▲
+
     -- Cerrar menú de catálogo
     KittyMain.Visible = false
     FloatingBtn.Visible = true
@@ -3760,3 +3849,76 @@ ExtraTab:CreateInput({
 })
 
 Rayfield:LoadConfiguration()
+
+-- ==========================================================
+-- FAKE ROBUX COUNTER UI (se abre/cierra con el MENU CATALOGO)
+-- ==========================================================
+local function CreateFakeRobuxCounter()
+    if RobuxCounterGui and RobuxCounterGui.Parent then
+        RobuxCounterGui:Destroy()
+    end
+
+    RobuxCounterGui = Instance.new("ScreenGui")
+    RobuxCounterGui.Name = "FakeRobuxCounterGui"
+    RobuxCounterGui.DisplayOrder = 25
+    RobuxCounterGui.IgnoreGuiInset = true
+    RobuxCounterGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    RobuxCounterGui.Parent = CoreGui
+
+    RobuxCounterFrame = Instance.new("Frame")
+    RobuxCounterFrame.Name = "RobuxCounterFrame"
+    RobuxCounterFrame.Size = UDim2.new(0, 130, 0, 34)
+    RobuxCounterFrame.Position = UDim2.new(1, -70, 0.5, -70)
+    RobuxCounterFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    RobuxCounterFrame.BackgroundTransparency = 0.25
+    RobuxCounterFrame.BorderSizePixel = 0
+    RobuxCounterFrame.Visible = false
+    RobuxCounterFrame.ZIndex = 50
+    RobuxCounterFrame.Parent = RobuxCounterGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = RobuxCounterFrame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(255, 215, 0)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.3
+    stroke.Parent = RobuxCounterFrame
+
+    local icon = Instance.new("ImageLabel")
+    icon.Name = "RobuxIcon"
+    icon.Size = UDim2.new(0, 22, 0, 22)
+    icon.Position = UDim2.new(0, 8, 0.5, -11)
+    icon.BackgroundTransparency = 1
+    icon.Image = "rbxassetid://11560341824"
+    icon.ZIndex = 51
+    icon.Parent = RobuxCounterFrame
+
+    RobuxAmountLabel = Instance.new("TextLabel")
+    RobuxAmountLabel.Name = "AmountLabel"
+    RobuxAmountLabel.Size = UDim2.new(1, -40, 1, 0)
+    RobuxAmountLabel.Position = UDim2.new(0, 34, 0, 0)
+    RobuxAmountLabel.BackgroundTransparency = 1
+    RobuxAmountLabel.Text = FormatRobuxDisplay(FakeRobuxAmount)
+    RobuxAmountLabel.Font = Enum.Font.GothamBold
+    RobuxAmountLabel.TextSize = 15
+    RobuxAmountLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+    RobuxAmountLabel.TextXAlignment = Enum.TextXAlignment.Left
+    RobuxAmountLabel.ZIndex = 51
+    RobuxAmountLabel.Parent = RobuxCounterFrame
+
+    -- Solo se muestra cuando el menú catálogo está abierto
+    if KittyMain then
+        local function SyncVisibility()
+            if RobuxCounterFrame then
+                RobuxCounterFrame.Visible = KittyMain.Visible
+            end
+        end
+        KittyMain:GetPropertyChangedSignal("Visible"):Connect(SyncVisibility)
+        SyncVisibility()
+    end
+end
+
+task.defer(CreateFakeRobuxCounter)
+
