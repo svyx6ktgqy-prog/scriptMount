@@ -27,7 +27,6 @@ local EqPanel, RefreshEquippedItems
 
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
-
 local FakeRobux = 300000
 local RobuxLabel
 
@@ -1944,6 +1943,11 @@ KittyMain.ScaleType = Enum.ScaleType.Crop
 KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
+local RobuxBar = Instance.new("Frame") RobuxBar.Size = UDim2.new(0, 200, 0, 32) RobuxBar.Position = UDim2.new(0.5, 0, 0.05, -4) RobuxBar.AnchorPoint = Vector2.new(0.5, 1) RobuxBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20) RobuxBar.BackgroundTransparency = 0.3 RobuxBar.Visible = false RobuxBar.Parent = KittyGui
+Instance.new("UICorner", RobuxBar).CornerRadius = UDim.new(0, 8)
+local RobuxIcon = Instance.new("ImageLabel") RobuxIcon.Size = UDim2.new(0, 18, 0, 18) RobuxIcon.Position = UDim2.new(0, 8, 0.5, -9) RobuxIcon.BackgroundTransparency = 1 RobuxIcon.Image = "rbxassetid://11560341824" RobuxIcon.Parent = RobuxBar
+RobuxLabel = Instance.new("TextLabel") RobuxLabel.Size = UDim2.new(1, -32, 1, 0) RobuxLabel.Position = UDim2.new(0, 30, 0, 0) RobuxLabel.BackgroundTransparency = 1 RobuxLabel.Font = Enum.Font.GothamBold RobuxLabel.TextSize = 14 RobuxLabel.TextColor3 = Color3.fromRGB(255, 215, 0) RobuxLabel.TextXAlignment = Enum.TextXAlignment.Left RobuxLabel.Text = "300.00K Robux" RobuxLabel.Parent = RobuxBar
+KittyMain:GetPropertyChangedSignal("Visible"):Connect(function() RobuxBar.Visible = KittyMain.Visible end)
 
 task.spawn(function()
     local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeLuaScript.jpg"
