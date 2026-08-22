@@ -1886,14 +1886,26 @@ PriceTag.Parent = PriceFrame
 local function UpdateVisualizer(id, price)
     ImagePreview.Image = "rbxthumb://type=Asset&id=" .. tostring(id) .. "&w=150&h=150"
     Container.Visible = true
-    if price == 0 or price == "Gratis" or price == "Gratis / Off-Sale" then
+
+    -- Detectar FREE de forma robusta (número 0, "0", "0 R$", "Gratis", etc.)
+    local isFree = false
+    if price == 0 or price == "0" or price == "Gratis" or price == "Gratis / Off-Sale" or price == "FREE" then
+        isFree = true
+    elseif type(price) == "string" then
+        local cleaned = tostring(price):gsub(" R%$", ""):gsub("%s+", "")
+        if cleaned == "0" or cleaned == "" then
+            isFree = true
+        end
+    end
+
+    if isFree then
         RobuxIcon.Visible = false
         PriceTag.Text = "FREE"
-        PriceTag.TextColor3 = Color3.fromRGB(50, 255, 50)
+        PriceTag.TextColor3 = Color3.fromRGB(50, 255, 50)   -- Verde
     else
         RobuxIcon.Visible = true
         PriceTag.Text = tostring(price):gsub(" R%$", "")
-        PriceTag.TextColor3 = Color3.fromRGB(255, 215, 0)
+        PriceTag.TextColor3 = Color3.fromRGB(255, 215, 0)   -- Dorado
     end
 end
 
