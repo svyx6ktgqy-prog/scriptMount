@@ -2452,10 +2452,11 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Parent = Card
                 
                 -- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V30)
--- Fix Lag Inicial + Esfera Nativa + Profundidad + Gravedad Individual + Toque Estricto
 -- ==========================================================
--- Toque corto = preview 3D | Mantener = solo visualizador
+-- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V30 - INVERTIDO)
+-- Toque corto = Visualizador directo | Mantener = Escena 3D completa
+-- + Cierre automático del menú de catálogo en ambas acciones
+-- ==========================================================
 local holding = false
 local holdStart = 0
 local longPress = false
@@ -2476,18 +2477,773 @@ ClickBtn.InputBegan:Connect(function(input)
                 longPress = true
                 holding = false
 
-                -- Mantener: datos + visualizador (sin escena 3D)
+                -- ==================================================
+                -- MANTENER PRESIONADO → ESCENA 3D COMPLETA
+                -- ==================================================
                 CurrentData.Id = tostring(item.id)
                 CurrentData.Name = item.name or "Objeto"
                 CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
                 CurrentData.ItemType = item.itemType or "Asset"
 
-                if UpdateVisualizer then
-                    UpdateVisualizer(CurrentData.Id, CurrentData.Price)
-                end
-                if NotifyUser then
-                    NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar.")
-                end
+                -- Cerrar menú de catálogo
+                KittyMain.Visible = false
+                FloatingBtn.Visible = true
+
+                task.spawn(function()
+                    -- ... AQUÍ SIGUE TODA TU ESCENA 3D SIN CAMBIOS ...
+                    local Workspace = game:GetService("Workspace")
+                    local Players = game:GetService("Players")
+                    local TweenService = game:GetService("TweenService")
+                    local RunService = game:GetService("RunService")
+                    local Debris = game:GetService("Debris")
+                    local StarterGui = game:GetService("StarterGui")
+                    local Lighting = game:GetService("Lighting")
+                    local CoreGui = game:GetService("CoreGui")
+                    local LocalPlayer = Players.LocalPlayer
+
+                    -- ==================================================
+                    -- CONTROL DEL SCREENGUI
+                    -- ==================================================
+                    local function ToggleUIVisibility(state)
+                        pcall(function()
+                            local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                            
+                            if Container then Container.Visible = state end
+                            
+                            local hubNames = {"VisualizadorItemGUI", "Kitty", "KittyHub"} 
+                            for _, name in ipairs(hubNames) do
+                                local ui = (CoreGui and CoreGui:FindFirstChild(name)) or (PlayerGui and PlayerGui:FindFirstChild(name))
+                                if ui then
+                                    if ui:IsA("ScreenGui") then ui.Enabled = state else ui.Visible = state end
+                                end
+                            end
+
+                            if PlayerGui then
+                                for _, gui in ipairs(PlayerGui:GetChildren()) do
+                                    if gui:IsA("ScreenGui") then
+                                        gui.Enabled = state
+                                    elseif gui:IsA("Frame") or gui:IsA("ScrollingFrame") then
+                                        gui.Visible = state
+                                    end
+                                end
+                            end
+                        end)
+                    end
+
+                    -- ==================================================
+                    -- 1. LIMPIEZA SEGURA DE PREVIEWS ANTERIORES
+                    -- ==================================================
+                    for _, child in ipairs(Workspace:GetChildren()) do
+                        if child.Name == "Kitty3DPreview" then child:Destroy() end
+                    end
+                    for _, child in ipairs(Lighting:GetChildren()) do
+                        if child.Name == "KittyPreviewBlur" then child:Destroy() end
+                    end
+                    task.wait() 
+
+                    local PreviewFolder = Instance.new("Folder")
+                    PreviewFolder.Name = "Kitty3DPreview"
+                    PreviewFolder.Parent = Workspace
+
+                    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                    local hrp = char:WaitForChild("HumanoidRootPart")
+                    
+                    local rawPos = hrp.Position + (hrp.CFrame.LookVector * 14)
+                    local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
+
+                    -- ==================================================
+                    -- ESCANEO DE SUELO UNIFICADO (Centro para la mesa)
+                    -- ==================================================
+                    local rayOrigin = spawnPos + Vector3.new(0, 50, 0)
+                    local ignoreList = {char, PreviewFolder}
+                    local raycastParams = RaycastParams.new()
+                    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                    
+                    local trueGroundY = spawnPos.Y 
+                    
+                    for i = 1, 10 do
+                        raycastParams.FilterDescendantsInstances = ignoreList
+                        local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
+                        
+                        if result then
+                            local inst = result.Instance
+                            if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                                table.insert(ignoreList, inst)
+                            else
+                                trueGroundY = result.Position.Y
+                                break
+                            end
+                        else
+                            break
+                        end
+                    end
+
+                    spawnPos = Vector3.new(spawnPos.X, trueGroundY, spawnPos.Z)
+
+                    -- ==================================================
+                    -- FUNCIONES DE FÍSICAS Y CAÍDA
+                    -- ==================================================
+                    local function AnimateDrop(model, targetCFrame, dropHeight)
+                        dropHeight = dropHeight or 25
+                        local cfValue = Instance.new("CFrameValue")
+                        cfValue.Value = targetCFrame + Vector3.new(0, dropHeight, 0)
+                        
+                        if model:IsA("Model") then model:PivotTo(cfValue.Value) else model.CFrame = cfValue.Value end
+                        
+                        local dropTween = TweenService:Create(cfValue, TweenInfo.new(0.65, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Value = targetCFrame})
+                        dropTween:Play()
+                        
+                        local conn
+                        conn = cfValue.Changed:Connect(function(newCf)
+                            if model and model.Parent then
+                                if model:IsA("Model") then model:PivotTo(newCf) else model.CFrame = newCf end
+                            end
+                        end)
+                        
+                        dropTween.Completed:Connect(function()
+                            if conn then conn:Disconnect() end
+                            if cfValue then cfValue:Destroy() end
+                        end)
+                    end
+
+                    local function LockPhysics(obj)
+                        if obj:IsA("BasePart") then obj.Anchored = true; obj.CanCollide = false end
+                        for _, p in ipairs(obj:GetDescendants()) do
+                            if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end
+                        end
+                    end
+
+                    -- ==================================================
+                    -- CARGA MODULAR ESCALONADA CON CAÍDA INDEPENDIENTE (ANTI-FLOTE)
+                    -- ==================================================
+                    local SceneObjects = {}
+                    local currentLoadDelay = 0 
+                    
+                    local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, collideWithFolder, onLoaded)
+                        currentLoadDelay = currentLoadDelay + 0.12 
+                        local thisDelay = currentLoadDelay
+                        
+                        task.spawn(function()
+                            if thisDelay > 0 then task.wait(thisDelay) end
+                            
+                            local success, objs = pcall(function() return game:GetObjects("rbxassetid://" .. id) end)
+                            if success and objs and #objs > 0 then
+                                local model = objs[1]:Clone()
+                                model.Name = name
+                                LockPhysics(model) 
+                                model.Parent = PreviewFolder 
+                                
+                                -- [NUEVO]: Raycast individual para cada elemento decorativo basado en su offset (X, Z)
+                                local rawTargetPos = (CFrame.new(spawnPos) * offsetCFrame).Position
+                                local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
+                                local itemGroundY = rawTargetPos.Y -- Fallback si no encuentra nada
+                                
+                                local raycastParamsIndividual = RaycastParams.new()
+                                raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
+                                                    -- Por defecto ignoramos la carpeta para que la mesa y demás no se pisen entre sí
+                                local individualIgnoreList = {char, PreviewFolder}
+                                
+                                -- Pero si activamos el permiso, el objeto (el maletín) podrá chocar con la mesa
+                                if collideWithFolder then
+                                    individualIgnoreList = {char, model}
+                                end
+                                
+                                for i = 1, 10 do
+                                    raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
+                                    local result = Workspace:Raycast(itemRayOrigin, Vector3.new(0, -100, 0), raycastParamsIndividual)
+                                    
+                                    if result then
+                                        local inst = result.Instance
+                                        if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
+                                            table.insert(individualIgnoreList, inst)
+                                        else
+                                            itemGroundY = result.Position.Y
+                                            break
+                                        end
+                                    else
+                                        break
+                                    end
+                                end
+                                
+                                -- Posicionar basándose en SU suelo real, no en el suelo de la mesa
+                                local baseCFrame = CFrame.new(rawTargetPos.X, itemGroundY, rawTargetPos.Z) * offsetCFrame.Rotation
+                                local finalCFrame
+                                
+                                if manualLift then
+                                    finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + manualLift, baseCFrame.Z) * baseCFrame.Rotation
+                                else
+                                    local boundsCFrame, size = model:GetBoundingBox()
+                                    local pivotY = model:GetPivot().Y
+                                    local bottomY = boundsCFrame.Y - (size.Y / 2)
+                                    local liftOffset = pivotY - bottomY 
+                                    
+                                    if size.Y < 0.1 or liftOffset ~= liftOffset then liftOffset = 0.05 end
+                                    finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
+                                end
+                                
+                                if skipDrop then
+                                    if model:IsA("Model") then model:PivotTo(finalCFrame) else model.CFrame = finalCFrame end
+                                else
+                                    AnimateDrop(model, finalCFrame)
+                                end
+                                
+                                table.insert(SceneObjects, model)
+                                if onLoaded then task.spawn(function() onLoaded(model) end) end
+                            end
+                        end)
+                    end
+
+                    -- ==================================================
+                    -- 2. CARGA DE ESCENOGRAFÍA SECUENCIAL
+                    -- ==================================================
+                    LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
+                    LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
+                    LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
+                    LoadAsset("8504132994", "Briefcase", CFrame.new(8.4, 0, 0) * CFrame.Angles(0, math.rad(-250), 0), nil, false, true)
+                    LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
+                    LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
+                    LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(124), 0))
+                    LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
+                    LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
+                    
+                    -- Reloj
+                    LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(25), 0), nil, nil, false, function(clockModel)
+                        if clockModel:IsA("Model") then clockModel:ScaleTo(20)
+                        elseif clockModel:IsA("BasePart") then clockModel.Size = clockModel.Size * 20 end
+
+                        local bbGui = Instance.new("BillboardGui")
+                        bbGui.Name = "KittyClockGui"
+                        bbGui.Size = UDim2.new(8, 0, 2.5, 0)
+                        bbGui.StudsOffset = Vector3.new(0, 8, 0) 
+                        bbGui.AlwaysOnTop = true
+                        
+                        local txt = Instance.new("TextLabel")
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.TextScaled = true
+                        txt.Font = Enum.Font.GothamBlack 
+                        txt.TextColor3 = Color3.fromRGB(136, 8, 8)
+                        txt.TextStrokeTransparency = 2 
+                        txt.Parent = bbGui
+                        
+                        local parentPart = clockModel:IsA("Model") and (clockModel.PrimaryPart or clockModel:FindFirstChildWhichIsA("BasePart")) or clockModel
+                        bbGui.Adornee = parentPart or clockModel
+                        
+                        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+                        if PlayerGui then bbGui.Parent = PlayerGui else bbGui.Parent = PreviewFolder end
+                        
+                        task.spawn(function()
+                            while clockModel and clockModel.Parent do
+                                local date = os.date("*t")
+                                txt.Text = string.format("%02d:%02d:%02d", date.hour, date.min, date.sec)
+                                task.wait(1)
+                            end
+                            if bbGui then bbGui:Destroy() end
+                        end)
+                    end)
+
+                    -- ==================================================
+                    -- 3. ESFERA VIVA REFLECTANTE Y CONGELADA
+                    -- ==================================================
+                    local SphereModel = Instance.new("Part")
+                    SphereModel.Name = "KittyGlassSphere"
+                    SphereModel.Shape = Enum.PartType.Ball
+                    SphereModel.Size = Vector3.new(3.6, 3.6, 3.6)
+                    SphereModel.Material = Enum.Material.ForceField 
+                    SphereModel.Color = Color3.fromRGB(40, 255, 160) 
+                    SphereModel.Transparency = 0.60
+                    SphereModel.Reflectance = 0.9
+                    SphereModel.Anchored = true
+                    SphereModel.CanCollide = false
+                    SphereModel.Parent = PreviewFolder
+
+                    local SphereHighlight = Instance.new("Highlight")
+                    SphereHighlight.Name = "TechMeshHighlight"
+                    SphereHighlight.Adornee = SphereModel
+                    SphereHighlight.FillTransparency = 1 
+                    SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
+                    SphereHighlight.OutlineTransparency = 0.15
+                    SphereHighlight.Parent = SphereModel
+
+                    local WhiteReflect = Instance.new("Part")
+                    WhiteReflect.Name = "WhiteGlassReflection"
+                    WhiteReflect.Shape = Enum.PartType.Ball
+                    WhiteReflect.Size = Vector3.new(3.62, 3.62, 3.62)
+                    WhiteReflect.Material = Enum.Material.SmoothPlastic 
+                    WhiteReflect.Color = Color3.fromRGB(255, 255, 255)
+                    WhiteReflect.Transparency = 0.88 
+                    WhiteReflect.Reflectance = 0.95 
+                    WhiteReflect.Anchored = true
+                    WhiteReflect.CanCollide = false
+                    WhiteReflect.CFrame = SphereModel.CFrame
+                    WhiteReflect.Parent = SphereModel
+
+                    local GlassSpecGlint = Instance.new("PointLight")
+                    GlassSpecGlint.Name = "GlassSpecGlint"
+                    GlassSpecGlint.Color = Color3.fromRGB(255, 255, 255)
+                    GlassSpecGlint.Brightness = 4.5
+                    GlassSpecGlint.Range = 3.5
+                    GlassSpecGlint.Shadows = false
+                    GlassSpecGlint.Parent = WhiteReflect
+
+                    local WeldWhite = Instance.new("WeldConstraint")
+                    WeldWhite.Part0 = SphereModel
+                    WeldWhite.Part1 = WhiteReflect
+                    WeldWhite.Parent = WhiteReflect
+
+                    local InnerGlass = Instance.new("Part")
+                    InnerGlass.Name = "InnerGlassReflector"
+                    InnerGlass.Shape = Enum.PartType.Ball
+                    InnerGlass.Size = Vector3.new(4.0, 4.0, 4.0)
+                    InnerGlass.Material = Enum.Material.SmoothPlastic 
+                    InnerGlass.Color = Color3.fromRGB(20, 255, 140)
+                    InnerGlass.Transparency = 0.65 
+                    InnerGlass.Reflectance = 0.75 
+                    InnerGlass.Anchored = true
+                    InnerGlass.CanCollide = false
+                    InnerGlass.CFrame = SphereModel.CFrame
+                    InnerGlass.Parent = SphereModel
+
+                    local WeldGlass = Instance.new("WeldConstraint")
+                    WeldGlass.Part0 = SphereModel
+                    WeldGlass.Part1 = InnerGlass
+                    WeldGlass.Parent = InnerGlass
+
+                    local FrostLight = Instance.new("PointLight")
+                    FrostLight.Name = "FrostGlow"
+                    FrostLight.Color = Color3.fromRGB(85, 255, 127)
+                    FrostLight.Brightness = 1.8
+                    FrostLight.Range = 6.5
+                    FrostLight.Shadows = false
+                    FrostLight.Parent = InnerGlass
+
+                    local FrostParticles = Instance.new("ParticleEmitter")
+                    FrostParticles.Name = "IceFrostAura"
+                    FrostParticles.Texture = "rbxassetid://243660364" 
+                    FrostParticles.Color = ColorSequence.new(Color3.fromRGB(120, 255, 180))
+                    FrostParticles.Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.5, 0.75),
+                        NumberSequenceKeypoint.new(1, 1)
+                    })
+                    FrostParticles.Size = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 1.2),
+                        NumberSequenceKeypoint.new(1, 2.5)
+                    })
+                    FrostParticles.Lifetime = NumberRange.new(1.5, 2.5)
+                    FrostParticles.Rate = 8
+                    FrostParticles.Speed = NumberRange.new(0.1, 0.4)
+                    FrostParticles.LightEmission = 0.35
+                    FrostParticles.Parent = InnerGlass
+
+                    for i = 1, 3 do
+                        local PolyPart = Instance.new("Part")
+                        PolyPart.Name = "InternalPoly" .. i
+                        PolyPart.Shape = Enum.PartType.Block
+                        PolyPart.Size = Vector3.new(2.5, 2.5, 2.5)
+                        PolyPart.Material = Enum.Material.Ice 
+                        PolyPart.Color = Color3.fromRGB(85, 255, 127)
+                        PolyPart.Transparency = 0.82 
+                        PolyPart.Anchored = true
+                        PolyPart.CanCollide = false
+                        
+                        local rotX = math.rad(math.random(0, 360))
+                        local rotY = math.rad(math.random(0, 360))
+                        local rotZ = math.rad(math.random(0, 360))
+                        PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
+                        PolyPart.Parent = SphereModel
+
+                        local WeldPoly = Instance.new("WeldConstraint")
+                        WeldPoly.Part0 = SphereModel
+                        WeldPoly.Part1 = PolyPart
+                        WeldPoly.Parent = PolyPart
+                    end
+
+                    local baseRadius = 2.15 
+                    local lineColor = Color3.fromRGB(85, 255, 127) 
+                    local grosorVisual = 0.015 
+                    local grosorProfundidad = 0.015 
+
+                    for i = 1, 4 do
+                        local meridian = Instance.new("CylinderHandleAdornment")
+                        meridian.Name = "MeridianLine" .. i
+                        meridian.Adornee = SphereModel
+                        meridian.Radius = baseRadius
+                        meridian.InnerRadius = baseRadius - grosorProfundidad 
+                        meridian.Height = grosorVisual 
+                        meridian.Color3 = lineColor
+                        meridian.Transparency = 0.45 
+                        meridian.AlwaysOnTop = false 
+                        meridian.ZIndex = 0
+                        
+                        local angle = math.rad((180 / 4) * i)
+                        meridian.CFrame = CFrame.Angles(0, angle, math.rad(90))
+                        meridian.Parent = SphereModel
+                    end
+
+                    local latitudes = {-1.0, 0, 1.0} 
+                    for i, yOffset in ipairs(latitudes) do
+                        local parallel = Instance.new("CylinderHandleAdornment")
+                        parallel.Name = "ParallelLine" .. i
+                        parallel.Adornee = SphereModel
+                        
+                        local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
+                        
+                        parallel.Radius = ringRadius
+                        parallel.InnerRadius = ringRadius - grosorProfundidad
+                        parallel.Height = grosorVisual
+                        
+                        parallel.Color3 = lineColor
+                        parallel.Transparency = 0.45
+                        parallel.AlwaysOnTop = false 
+                        parallel.ZIndex = 0
+                        
+                        parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
+                        parallel.Parent = SphereModel
+                    end
+
+                    task.delay(0.65, function() 
+                        for i = 1, 10 do
+                            local spark = Instance.new("Part")
+                            spark.Size = Vector3.new(0.3, 0.3, 0.3)
+                            spark.Position = spawnPos + Vector3.new(0, 2, 0)
+                            spark.Material = Enum.Material.Neon
+                            spark.Color = Color3.fromRGB(85, 255, 127)
+                            spark.Anchored = false; spark.CanCollide = false
+                            spark.Parent = PreviewFolder
+                            spark.Velocity = Vector3.new(math.random(-25, 25), math.random(20, 45), math.random(-25, 25))
+                            Debris:AddItem(spark, 1.5)
+                        end
+                    end)
+
+                    -- ==================================================
+                    -- 4. EFECTO: LLUVIA DE BILLETES (Método intacto)
+                    -- ==================================================
+                    local RainActive = true
+                    local GroundedBills = {}
+                    local AllRainBills = {}
+
+                    task.spawn(function()
+                        local success, rainObjs = pcall(function() return game:GetObjects("rbxassetid://439712421") end)
+                        local BillTemplate = (success and rainObjs and #rainObjs > 0) and rainObjs[1] or nil
+
+                        if not BillTemplate then
+                            BillTemplate = Instance.new("Part")
+                            BillTemplate.Size = Vector3.new(1.2, 0.1, 0.6)
+                            BillTemplate.Color = Color3.fromRGB(85, 170, 127)
+                            BillTemplate.Material = Enum.Material.SmoothPlastic
+                        end
+
+                        local function GetSeparatedSpawnOffset()
+                            local offset, attempts = nil, 0
+                            repeat
+                                attempts = attempts + 1
+                                offset = Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))
+                                local tooClose = false
+                                local testPos = spawnPos + Vector3.new(offset.X, 0, offset.Z)
+                                for _, b in ipairs(GroundedBills) do
+                                    if b.Parent and (Vector3.new(b.Position.X, 0, b.Position.Z) - Vector3.new(testPos.X, 0, testPos.Z)).Magnitude < 2.5 then
+                                        tooClose = true; break
+                                    end
+                                end
+                            until not tooClose or attempts > 10
+                            return offset
+                        end
+
+                        while RainActive and PreviewFolder and PreviewFolder.Parent do
+                            local bill = BillTemplate:Clone()
+                            bill.Parent = PreviewFolder
+                            table.insert(AllRainBills, bill)
+                            
+                            for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = false; p.CanCollide = false end end
+                            local isModel = bill:IsA("Model")
+                            local mainPart = isModel and bill.PrimaryPart or bill
+
+                            if mainPart then
+                                mainPart.Anchored = false; mainPart.CanCollide = false
+                                mainPart.AssemblyAngularVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
+                            end
+
+                            local startCFrame = CFrame.new(spawnPos + GetSeparatedSpawnOffset()) * CFrame.Angles(math.random(), math.random(), math.random())
+                            if isModel then bill:PivotTo(startCFrame) else bill.CFrame = startCFrame end
+
+                            local fallConn
+                            fallConn = RunService.Heartbeat:Connect(function()
+                                if not bill or not bill.Parent or not RainActive then if fallConn then fallConn:Disconnect() end return end
+
+                                local currentPos = isModel and bill:GetPivot().Position or bill.Position
+                                local rayParams = RaycastParams.new()
+                                rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                                rayParams.FilterDescendantsInstances = AllRainBills 
+                                
+                                local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), rayParams)
+
+                                if result then
+                                    fallConn:Disconnect()
+                                    if isModel then
+                                        for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true end end
+                                        bill:PivotTo(CFrame.new(result.Position + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.random(0, 360), 0))
+                                    else
+                                        bill.Anchored = true
+                                        bill.CFrame = CFrame.new(result.Position + Vector3.new(0, bill.Size.Y/2, 0)) * CFrame.Angles(0, math.random(0, 360), 0)
+                                    end
+                                    table.insert(GroundedBills, bill)
+
+                                    if #GroundedBills > 10 then
+                                        local oldBill = table.remove(GroundedBills, 1)
+                                        if oldBill and oldBill.Parent then
+                                            local tInfo = TweenInfo.new(0.5)
+                                            if oldBill:IsA("Model") then
+                                                for _, p in ipairs(oldBill:GetDescendants()) do if p:IsA("BasePart") then TweenService:Create(p, tInfo, {Transparency = 1}):Play() end end
+                                            else
+                                                TweenService:Create(oldBill, tInfo, {Transparency = 1}):Play()
+                                            end
+                                            Debris:AddItem(oldBill, 0.5)
+                                        end
+                                    end
+                                end
+                            end)
+                            task.wait(0.5)
+                        end
+                    end)
+
+                    -- ==================================================
+                    -- 5. CONSTRUCCIÓN DEL LIBRO Y LA IMAGEN FLOTANTE
+                    -- ==================================================
+                    local function CreateFloatingBook()
+                        local book = Instance.new("Model")
+                        book.Name = "CustomBook"
+
+                        local pages = Instance.new("Part")
+                        pages.Size = Vector3.new(1.8, 0.4, 2.5)
+                        pages.Color = Color3.fromRGB(255, 204, 0) 
+                        pages.Material = Enum.Material.SmoothPlastic
+                        pages.Parent = book
+                        book.PrimaryPart = pages
+
+                        local topCover = Instance.new("Part")
+                        topCover.Size = Vector3.new(1.9, 0.05, 2.6)
+                        topCover.Color = Color3.fromRGB(15, 15, 15)
+                        topCover.CFrame = pages.CFrame * CFrame.new(0, 0.225, 0)
+                        topCover.Parent = book
+
+                        local bottomCover = topCover:Clone()
+                        bottomCover.CFrame = pages.CFrame * CFrame.new(0, -0.225, 0)
+                        bottomCover.Parent = book
+
+                        local spine = Instance.new("Part")
+                        spine.Size = Vector3.new(0.05, 0.5, 2.6)
+                        spine.Color = Color3.fromRGB(15, 15, 15)
+                        spine.CFrame = pages.CFrame * CFrame.new(-0.925, 0, 0)
+                        spine.Parent = book
+
+                        local topSurfaceGui = Instance.new("SurfaceGui", topCover)
+                        topSurfaceGui.Face = Enum.NormalId.Top
+                        topSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; topSurfaceGui.PixelsPerStud = 100
+                        
+                        local topTextLabel = Instance.new("TextLabel", topSurfaceGui)
+                        topTextLabel.Size = UDim2.new(1, 0, 1, 0)
+                        topTextLabel.BackgroundTransparency = 1; topTextLabel.Text = "REAL SCRIPT ON BACK ☠️"
+                        topTextLabel.TextColor3 = Color3.new(1, 1, 1)
+                        topTextLabel.Font = Enum.Font.GothamBlack; topTextLabel.TextScaled = true; topTextLabel.Rotation = -90 
+
+                        local bottomSurfaceGui = Instance.new("SurfaceGui", bottomCover)
+                        bottomSurfaceGui.Face = Enum.NormalId.Bottom
+                        bottomSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; bottomSurfaceGui.PixelsPerStud = 100
+                        
+                        local bottomTextLabel = Instance.new("TextLabel", bottomSurfaceGui)
+                        bottomTextLabel.Size = UDim2.new(1, 0, 1, 0)
+                        bottomTextLabel.BackgroundTransparency = 1; bottomTextLabel.Text = "REAL SCRIPT.. 🖤"
+                        bottomTextLabel.TextColor3 = Color3.new(1, 1, 1)
+                        bottomTextLabel.Font = Enum.Font.GothamBlack; bottomTextLabel.TextScaled = true; bottomTextLabel.Rotation = -90 
+
+                        for _, p in ipairs(book:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end end
+                        book.Parent = PreviewFolder
+                        table.insert(SceneObjects, book) 
+                        return book
+                    end
+
+                    local CustomBook = CreateFloatingBook()
+
+                    local ImagePart = Instance.new("Part")
+                    ImagePart.Name = "KittyItemImage"
+                    ImagePart.Size = Vector3.new(3, 3, 0.05) 
+                    ImagePart.Anchored = true; ImagePart.CanCollide = false
+                    ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
+
+                    local DecalFront = Instance.new("Decal", ImagePart)
+                    DecalFront.Face = Enum.NormalId.Front
+                    DecalFront.Texture = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
+                    DecalFront.Transparency = 0
+
+                    local DecalBack = Instance.new("Decal", ImagePart)
+                    DecalBack.Face = Enum.NormalId.Back
+                    DecalBack.Texture = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
+                    DecalBack.Transparency = 0
+
+                    local rotConnection
+                    local floatTime = 0
+                    rotConnection = RunService.RenderStepped:Connect(function(dt)
+                        if not ImagePart or not ImagePart.Parent then rotConnection:Disconnect() return end
+                        floatTime = floatTime + dt
+                        local basePos = spawnPos + Vector3.new(0, 5.2 + math.sin(floatTime * 1.8) * 0.4, 0)
+                        
+                        local itemCF = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
+                        ImagePart.CFrame = itemCF
+
+                        if SphereModel and SphereModel.Parent then
+                            local sphereCF = CFrame.new(basePos) * CFrame.Angles(floatTime * 0.5, -floatTime * 1.2, floatTime * 0.8)
+                            SphereModel.CFrame = sphereCF
+                        end
+
+                        if CustomBook and CustomBook.Parent then
+                            local bookBasePos = basePos + Vector3.new(0, 4.0, 0) 
+                            local pivotOffset = CFrame.new(0.9, 0, 1.25) 
+                            local spinCFrame = CFrame.Angles(floatTime * 1.4, floatTime * 2.1, floatTime * 1.6) 
+                            CustomBook:PivotTo(CFrame.new(bookBasePos) * spinCFrame * pivotOffset:Inverse())
+                        end
+                    end)
+
+                    -- ==================================================
+                    -- 6. DETECCIÓN POR CONTACTO ESTRICTO Y ANIMACIÓN
+                    -- ==================================================
+                    local promptState = "Waiting" 
+                    local proximityConn
+
+                    proximityConn = RunService.Heartbeat:Connect(function()
+                        if not ImagePart or not ImagePart.Parent then
+                            if proximityConn then proximityConn:Disconnect() end
+                            return
+                        end
+
+                        -- [NUEVO]: Verificación Cilíndrica para asegurar que está "chocando" con la mesa y no flotando/lejos.
+                        local horizontalDist = Vector2.new(hrp.Position.X - spawnPos.X, hrp.Position.Z - spawnPos.Z).Magnitude
+                        local verticalDist = math.abs(hrp.Position.Y - spawnPos.Y)
+                        
+                        -- Horizontal <= 4.5 studs asegura que está tocando los bordes físicos de una mesa promedio.
+                        -- Vertical <= 6.5 asegura que el jugador no esté volando o en un piso superior.
+                        if horizontalDist <= 2.5 and verticalDist <= 6.5 and promptState == "Waiting" then
+                            promptState = "Prompting"
+                            
+                            ToggleUIVisibility(false)
+
+                            local clockGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("KittyClockGui")
+                            if clockGui then clockGui.Enabled = false end
+
+                            local blurEffect = Instance.new("BlurEffect")
+                            blurEffect.Name = "KittyPreviewBlur"
+                            blurEffect.Size = 15
+                            blurEffect.Parent = Lighting
+
+                            local bindable = Instance.new("BindableFunction")
+                            bindable.OnInvoke = function(response)
+                                ToggleUIVisibility(true)
+
+                                if response == "Conseguir" then
+                                    if proximityConn then proximityConn:Disconnect() end
+                                    RainActive = false 
+                                    
+                                    if blurEffect then blurEffect:Destroy() end
+                                    if PreviewFolder and PreviewFolder.Parent then PreviewFolder.Name = "Kitty3DPreview_Sinking" end
+                                    
+                                    task.spawn(function()
+                                        if rotConnection then rotConnection:Disconnect() end
+                                        ImagePart.Anchored = true 
+                                        
+                                        local head = char:FindFirstChild("Head") or hrp
+                                        local startTime = tick()
+                                        local duration = 2.2 
+                                        local startPos = ImagePart.Position
+
+                                        local attractConn
+                                        attractConn = RunService.RenderStepped:Connect(function()
+                                            if not ImagePart or not ImagePart.Parent then attractConn:Disconnect(); return end
+
+                                            local t = math.clamp((tick() - startTime) / duration, 0, 1)
+                                            local ease = t * t * (3 - 2 * t) 
+                                            
+                                            local startDist = (startPos - head.Position).Magnitude
+                                            local currentRadius = startDist * (1 - ease)
+                                            local angle = ease * math.pi * 12 
+                                            local heightOffset = math.sin(ease * math.pi) * 3.5 
+                                            
+                                            local orbitPos = head.Position + Vector3.new(
+                                                math.cos(angle) * currentRadius, 
+                                                heightOffset + (1 - ease) * (startPos.Y - head.Position.Y), 
+                                                math.sin(angle) * currentRadius
+                                            )
+                                            
+                                            local spinSpeed = 15 + (ease * 30)
+                                            local finalCFrame = CFrame.new(orbitPos) * CFrame.Angles(tick() * spinSpeed, tick() * spinSpeed, math.sin(tick() * 10))
+                                            
+                                            ImagePart.CFrame = finalCFrame
+
+                                            if DecalFront then DecalFront.Transparency = ease end
+                                            if DecalBack then DecalBack.Transparency = ease end
+
+                                            if SphereModel and SphereModel.Parent then
+                                                SphereModel.CFrame = finalCFrame * CFrame.Angles(math.rad(45), tick() * spinSpeed * -0.5, 0)
+                                                SphereModel.Transparency = 0.55 + (0.45 * ease)
+                                            end
+
+                                            if t >= 1 then
+                                                attractConn:Disconnect()
+                                                ImagePart:Destroy()
+                                                if SphereModel then SphereModel:Destroy() end
+                                                if clockGui then clockGui:Destroy() end
+
+                                                local function SinkAndDestroy(obj)
+                                                    if not obj then return end
+                                                    task.spawn(function()
+                                                        for i = 1, 20 do 
+                                                            if not obj.Parent then break end
+                                                            if obj:IsA("Model") then obj:PivotTo(obj:GetPivot() * CFrame.new(0, -0.35, 0))
+                                                            elseif obj:IsA("BasePart") then obj.CFrame = obj.CFrame * CFrame.new(0, -0.35, 0) end
+                                                            for _, p in ipairs(obj:GetDescendants()) do
+                                                                if p:IsA("BasePart") then p.Transparency = math.clamp(p.Transparency + 0.06, 0, 1) end
+                                                            end
+                                                            if obj:IsA("BasePart") then obj.Transparency = math.clamp(obj.Transparency + 0.06, 0, 1) end
+                                                            task.wait(0.03)
+                                                        end
+                                                        if obj and obj.Parent then obj:Destroy() end
+                                                    end)
+                                                end
+
+                                                for _, sceneObj in ipairs(SceneObjects) do SinkAndDestroy(sceneObj) end
+                                                for _, b in ipairs(AllRainBills) do SinkAndDestroy(b) end
+
+                                                task.delay(1.5, function() if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end end)
+                                                
+                                                UpdateVisualizer(item.id, item.price or "Gratis")
+                                                NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
+                                            end
+                                        end)
+                                    end)
+                                else
+                                    if blurEffect then blurEffect:Destroy() end
+                                    if clockGui then clockGui.Enabled = true end 
+                                    promptState = "Cooldown"
+                                end
+                            end
+
+                            pcall(function()
+                                StarterGui:SetCore("SendNotification", {
+                                    Title = item.name,
+                                    Text = "¿Quieres conseguir este ítem?",
+                                    Icon = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150",
+                                    Duration = 9999999, 
+                                    Button1 = "Conseguir",
+                                    Button2 = "Rechazar",
+                                    Callback = bindable
+                                })
+                            end)
+                            
+                        -- Reseteo de Cooldown: Si el jugador se aleja (distancia horizontal > 7.5), podrá volver a tocar la mesa después
+                        elseif horizontalDist > 7.5 and promptState == "Cooldown" then
+                            promptState = "Waiting"
+                        end
+                    end)
+                end)
                 break
             end
             task.wait(0.03)
@@ -2504,772 +3260,30 @@ ClickBtn.InputEnded:Connect(function(input)
 end)
 
 ClickBtn.MouseButton1Click:Connect(function()
-    -- Si fue long-press, no abrir la escena 3D
+    -- Si fue long-press, no ejecutar el click corto
     if longPress then
         longPress = false
         return
     end
 
+    -- ==================================================
+    -- CLICK RÁPIDO → VISUALIZADOR DIRECTO
+    -- ==================================================
     CurrentData.Id = tostring(item.id)
     CurrentData.Name = item.name
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
-    task.spawn(function()
-        -- ... AQUÍ SIGUE TODA TU ESCENA 3D SIN CAMBIOS ...
-        local Workspace = game:GetService("Workspace")
-        local Players = game:GetService("Players")
-        local TweenService = game:GetService("TweenService")
-        local RunService = game:GetService("RunService")
-        local Debris = game:GetService("Debris")
-        local StarterGui = game:GetService("StarterGui")
-        local Lighting = game:GetService("Lighting")
-        local CoreGui = game:GetService("CoreGui")
-        local LocalPlayer = Players.LocalPlayer
-
-        -- ==================================================
-        -- CONTROL DEL SCREENGUI
-        -- ==================================================
-        local function ToggleUIVisibility(state)
-            pcall(function()
-                local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
-                
-                if Container then Container.Visible = state end
-                
-                local hubNames = {"VisualizadorItemGUI", "Kitty", "KittyHub"} 
-                for _, name in ipairs(hubNames) do
-                    local ui = (CoreGui and CoreGui:FindFirstChild(name)) or (PlayerGui and PlayerGui:FindFirstChild(name))
-                    if ui then
-                        if ui:IsA("ScreenGui") then ui.Enabled = state else ui.Visible = state end
-                    end
-                end
-
-                if PlayerGui then
-                    for _, gui in ipairs(PlayerGui:GetChildren()) do
-                        if gui:IsA("ScreenGui") then
-                            gui.Enabled = state
-                        elseif gui:IsA("Frame") or gui:IsA("ScrollingFrame") then
-                            gui.Visible = state
-                        end
-                    end
-                end
-            end)
-        end
-
-        -- ==================================================
-        -- 1. LIMPIEZA SEGURA DE PREVIEWS ANTERIORES
-        -- ==================================================
-        for _, child in ipairs(Workspace:GetChildren()) do
-            if child.Name == "Kitty3DPreview" then child:Destroy() end
-        end
-        for _, child in ipairs(Lighting:GetChildren()) do
-            if child.Name == "KittyPreviewBlur" then child:Destroy() end
-        end
-        task.wait() 
-
-        local PreviewFolder = Instance.new("Folder")
-        PreviewFolder.Name = "Kitty3DPreview"
-        PreviewFolder.Parent = Workspace
-
-        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        
-        local rawPos = hrp.Position + (hrp.CFrame.LookVector * 14)
-        local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
-
-        -- ==================================================
-        -- ESCANEO DE SUELO UNIFICADO (Centro para la mesa)
-        -- ==================================================
-        local rayOrigin = spawnPos + Vector3.new(0, 50, 0)
-        local ignoreList = {char, PreviewFolder}
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-        
-        local trueGroundY = spawnPos.Y 
-        
-        for i = 1, 10 do
-            raycastParams.FilterDescendantsInstances = ignoreList
-            local result = Workspace:Raycast(rayOrigin, Vector3.new(0, -100, 0), raycastParams)
-            
-            if result then
-                local inst = result.Instance
-                if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
-                    table.insert(ignoreList, inst)
-                else
-                    trueGroundY = result.Position.Y
-                    break
-                end
-            else
-                break
-            end
-        end
-
-        spawnPos = Vector3.new(spawnPos.X, trueGroundY, spawnPos.Z)
-
-        -- ==================================================
-        -- FUNCIONES DE FÍSICAS Y CAÍDA
-        -- ==================================================
-        local function AnimateDrop(model, targetCFrame, dropHeight)
-            dropHeight = dropHeight or 25
-            local cfValue = Instance.new("CFrameValue")
-            cfValue.Value = targetCFrame + Vector3.new(0, dropHeight, 0)
-            
-            if model:IsA("Model") then model:PivotTo(cfValue.Value) else model.CFrame = cfValue.Value end
-            
-            local dropTween = TweenService:Create(cfValue, TweenInfo.new(0.65, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {Value = targetCFrame})
-            dropTween:Play()
-            
-            local conn
-            conn = cfValue.Changed:Connect(function(newCf)
-                if model and model.Parent then
-                    if model:IsA("Model") then model:PivotTo(newCf) else model.CFrame = newCf end
-                end
-            end)
-            
-            dropTween.Completed:Connect(function()
-                if conn then conn:Disconnect() end
-                if cfValue then cfValue:Destroy() end
-            end)
-        end
-
-        local function LockPhysics(obj)
-            if obj:IsA("BasePart") then obj.Anchored = true; obj.CanCollide = false end
-            for _, p in ipairs(obj:GetDescendants()) do
-                if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end
-            end
-        end
-
-        -- ==================================================
-        -- CARGA MODULAR ESCALONADA CON CAÍDA INDEPENDIENTE (ANTI-FLOTE)
-        -- ==================================================
-        local SceneObjects = {}
-        local currentLoadDelay = 0 
-        
-        local function LoadAsset(id, name, offsetCFrame, manualLift, skipDrop, collideWithFolder, onLoaded)
-            currentLoadDelay = currentLoadDelay + 0.12 
-            local thisDelay = currentLoadDelay
-            
-            task.spawn(function()
-                if thisDelay > 0 then task.wait(thisDelay) end
-                
-                local success, objs = pcall(function() return game:GetObjects("rbxassetid://" .. id) end)
-                if success and objs and #objs > 0 then
-                    local model = objs[1]:Clone()
-                    model.Name = name
-                    LockPhysics(model) 
-                    model.Parent = PreviewFolder 
-                    
-                    -- [NUEVO]: Raycast individual para cada elemento decorativo basado en su offset (X, Z)
-                    local rawTargetPos = (CFrame.new(spawnPos) * offsetCFrame).Position
-                    local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
-                    local itemGroundY = rawTargetPos.Y -- Fallback si no encuentra nada
-                    
-                    local raycastParamsIndividual = RaycastParams.new()
-                    raycastParamsIndividual.FilterType = Enum.RaycastFilterType.Exclude
-                                        -- Por defecto ignoramos la carpeta para que la mesa y demás no se pisen entre sí
-                    local individualIgnoreList = {char, PreviewFolder}
-                    
-                    -- Pero si activamos el permiso, el objeto (el maletín) podrá chocar con la mesa
-                    if collideWithFolder then
-                        individualIgnoreList = {char, model}
-                    end
-                    
-                    for i = 1, 10 do
-                        raycastParamsIndividual.FilterDescendantsInstances = individualIgnoreList
-                        local result = Workspace:Raycast(itemRayOrigin, Vector3.new(0, -100, 0), raycastParamsIndividual)
-                        
-                        if result then
-                            local inst = result.Instance
-                            if inst ~= Workspace.Terrain and (inst.Transparency >= 0.8 and not inst.CanCollide) then
-                                table.insert(individualIgnoreList, inst)
-                            else
-                                itemGroundY = result.Position.Y
-                                break
-                            end
-                        else
-                            break
-                        end
-                    end
-                    
-                    -- Posicionar basándose en SU suelo real, no en el suelo de la mesa
-                    local baseCFrame = CFrame.new(rawTargetPos.X, itemGroundY, rawTargetPos.Z) * offsetCFrame.Rotation
-                    local finalCFrame
-                    
-                    if manualLift then
-                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + manualLift, baseCFrame.Z) * baseCFrame.Rotation
-                    else
-                        local boundsCFrame, size = model:GetBoundingBox()
-                        local pivotY = model:GetPivot().Y
-                        local bottomY = boundsCFrame.Y - (size.Y / 2)
-                        local liftOffset = pivotY - bottomY 
-                        
-                        if size.Y < 0.1 or liftOffset ~= liftOffset then liftOffset = 0.05 end
-                        finalCFrame = CFrame.new(baseCFrame.X, baseCFrame.Y + liftOffset, baseCFrame.Z) * baseCFrame.Rotation
-                    end
-                    
-                    if skipDrop then
-                        if model:IsA("Model") then model:PivotTo(finalCFrame) else model.CFrame = finalCFrame end
-                    else
-                        AnimateDrop(model, finalCFrame)
-                    end
-                    
-                    table.insert(SceneObjects, model)
-                    if onLoaded then task.spawn(function() onLoaded(model) end) end
-                end
-            end)
-        end
-
-        -- ==================================================
-        -- 2. CARGA DE ESCENOGRAFÍA SECUENCIAL
-        -- ==================================================
-        LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
-        LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
-        LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
-        LoadAsset("8504132994", "Briefcase", CFrame.new(8.4, 0, 0) * CFrame.Angles(0, math.rad(-250), 0), nil, false, true)
-        LoadAsset("18303013374", "MoneyBag", CFrame.new(-3.5, 0, 0) * CFrame.Angles(0, math.rad(-15), 0))
-        LoadAsset("6554303222", "FloorMoney", CFrame.new(0, 0, 3.5) * CFrame.Angles(0, math.rad(10), 0))
-        LoadAsset("8808108873", "Cofre", CFrame.new(6.5, 0, -8.5) * CFrame.Angles(0, math.rad(124), 0))
-        LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
-        LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
-        
-        -- Reloj
-        LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(25), 0), nil, nil, false, function(clockModel)
-            if clockModel:IsA("Model") then clockModel:ScaleTo(20)
-            elseif clockModel:IsA("BasePart") then clockModel.Size = clockModel.Size * 20 end
-
-            local bbGui = Instance.new("BillboardGui")
-            bbGui.Name = "KittyClockGui"
-            bbGui.Size = UDim2.new(8, 0, 2.5, 0)
-            bbGui.StudsOffset = Vector3.new(0, 8, 0) 
-            bbGui.AlwaysOnTop = true
-            
-            local txt = Instance.new("TextLabel")
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.BackgroundTransparency = 1
-            txt.TextScaled = true
-            txt.Font = Enum.Font.GothamBlack 
-            txt.TextColor3 = Color3.fromRGB(136, 8, 8)
-            txt.TextStrokeTransparency = 2 
-            txt.Parent = bbGui
-            
-            local parentPart = clockModel:IsA("Model") and (clockModel.PrimaryPart or clockModel:FindFirstChildWhichIsA("BasePart")) or clockModel
-            bbGui.Adornee = parentPart or clockModel
-            
-            local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
-            if PlayerGui then bbGui.Parent = PlayerGui else bbGui.Parent = PreviewFolder end
-            
-            task.spawn(function()
-                while clockModel and clockModel.Parent do
-                    local date = os.date("*t")
-                    txt.Text = string.format("%02d:%02d:%02d", date.hour, date.min, date.sec)
-                    task.wait(1)
-                end
-                if bbGui then bbGui:Destroy() end
-            end)
-        end)
-
-        -- ==================================================
-        -- 3. ESFERA VIVA REFLECTANTE Y CONGELADA
-        -- ==================================================
-        local SphereModel = Instance.new("Part")
-        SphereModel.Name = "KittyGlassSphere"
-        SphereModel.Shape = Enum.PartType.Ball
-        SphereModel.Size = Vector3.new(3.6, 3.6, 3.6)
-        SphereModel.Material = Enum.Material.ForceField 
-        SphereModel.Color = Color3.fromRGB(40, 255, 160) 
-        SphereModel.Transparency = 0.60
-        SphereModel.Reflectance = 0.9
-        SphereModel.Anchored = true
-        SphereModel.CanCollide = false
-        SphereModel.Parent = PreviewFolder
-
-        local SphereHighlight = Instance.new("Highlight")
-        SphereHighlight.Name = "TechMeshHighlight"
-        SphereHighlight.Adornee = SphereModel
-        SphereHighlight.FillTransparency = 1 
-        SphereHighlight.OutlineColor = Color3.fromRGB(85, 255, 127)
-        SphereHighlight.OutlineTransparency = 0.15
-        SphereHighlight.Parent = SphereModel
-
-        local WhiteReflect = Instance.new("Part")
-        WhiteReflect.Name = "WhiteGlassReflection"
-        WhiteReflect.Shape = Enum.PartType.Ball
-        WhiteReflect.Size = Vector3.new(3.62, 3.62, 3.62)
-        WhiteReflect.Material = Enum.Material.SmoothPlastic 
-        WhiteReflect.Color = Color3.fromRGB(255, 255, 255)
-        WhiteReflect.Transparency = 0.88 
-        WhiteReflect.Reflectance = 0.95 
-        WhiteReflect.Anchored = true
-        WhiteReflect.CanCollide = false
-        WhiteReflect.CFrame = SphereModel.CFrame
-        WhiteReflect.Parent = SphereModel
-
-        local GlassSpecGlint = Instance.new("PointLight")
-        GlassSpecGlint.Name = "GlassSpecGlint"
-        GlassSpecGlint.Color = Color3.fromRGB(255, 255, 255)
-        GlassSpecGlint.Brightness = 4.5
-        GlassSpecGlint.Range = 3.5
-        GlassSpecGlint.Shadows = false
-        GlassSpecGlint.Parent = WhiteReflect
-
-        local WeldWhite = Instance.new("WeldConstraint")
-        WeldWhite.Part0 = SphereModel
-        WeldWhite.Part1 = WhiteReflect
-        WeldWhite.Parent = WhiteReflect
-
-        local InnerGlass = Instance.new("Part")
-        InnerGlass.Name = "InnerGlassReflector"
-        InnerGlass.Shape = Enum.PartType.Ball
-        InnerGlass.Size = Vector3.new(4.0, 4.0, 4.0)
-        InnerGlass.Material = Enum.Material.SmoothPlastic 
-        InnerGlass.Color = Color3.fromRGB(20, 255, 140)
-        InnerGlass.Transparency = 0.65 
-        InnerGlass.Reflectance = 0.75 
-        InnerGlass.Anchored = true
-        InnerGlass.CanCollide = false
-        InnerGlass.CFrame = SphereModel.CFrame
-        InnerGlass.Parent = SphereModel
-
-        local WeldGlass = Instance.new("WeldConstraint")
-        WeldGlass.Part0 = SphereModel
-        WeldGlass.Part1 = InnerGlass
-        WeldGlass.Parent = InnerGlass
-
-        local FrostLight = Instance.new("PointLight")
-        FrostLight.Name = "FrostGlow"
-        FrostLight.Color = Color3.fromRGB(85, 255, 127)
-        FrostLight.Brightness = 1.8
-        FrostLight.Range = 6.5
-        FrostLight.Shadows = false
-        FrostLight.Parent = InnerGlass
-
-        local FrostParticles = Instance.new("ParticleEmitter")
-        FrostParticles.Name = "IceFrostAura"
-        FrostParticles.Texture = "rbxassetid://243660364" 
-        FrostParticles.Color = ColorSequence.new(Color3.fromRGB(120, 255, 180))
-        FrostParticles.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.5, 0.75),
-            NumberSequenceKeypoint.new(1, 1)
-        })
-        FrostParticles.Size = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1.2),
-            NumberSequenceKeypoint.new(1, 2.5)
-        })
-        FrostParticles.Lifetime = NumberRange.new(1.5, 2.5)
-        FrostParticles.Rate = 8
-        FrostParticles.Speed = NumberRange.new(0.1, 0.4)
-        FrostParticles.LightEmission = 0.35
-        FrostParticles.Parent = InnerGlass
-
-        for i = 1, 3 do
-            local PolyPart = Instance.new("Part")
-            PolyPart.Name = "InternalPoly" .. i
-            PolyPart.Shape = Enum.PartType.Block
-            PolyPart.Size = Vector3.new(2.5, 2.5, 2.5)
-            PolyPart.Material = Enum.Material.Ice 
-            PolyPart.Color = Color3.fromRGB(85, 255, 127)
-            PolyPart.Transparency = 0.82 
-            PolyPart.Anchored = true
-            PolyPart.CanCollide = false
-            
-            local rotX = math.rad(math.random(0, 360))
-            local rotY = math.rad(math.random(0, 360))
-            local rotZ = math.rad(math.random(0, 360))
-            PolyPart.CFrame = SphereModel.CFrame * CFrame.Angles(rotX, rotY, rotZ)
-            PolyPart.Parent = SphereModel
-
-            local WeldPoly = Instance.new("WeldConstraint")
-            WeldPoly.Part0 = SphereModel
-            WeldPoly.Part1 = PolyPart
-            WeldPoly.Parent = PolyPart
-        end
-
-        local baseRadius = 2.15 
-        local lineColor = Color3.fromRGB(85, 255, 127) 
-        local grosorVisual = 0.015 
-        local grosorProfundidad = 0.015 
-
-        for i = 1, 4 do
-            local meridian = Instance.new("CylinderHandleAdornment")
-            meridian.Name = "MeridianLine" .. i
-            meridian.Adornee = SphereModel
-            meridian.Radius = baseRadius
-            meridian.InnerRadius = baseRadius - grosorProfundidad 
-            meridian.Height = grosorVisual 
-            meridian.Color3 = lineColor
-            meridian.Transparency = 0.45 
-            meridian.AlwaysOnTop = false 
-            meridian.ZIndex = 0
-            
-            local angle = math.rad((180 / 4) * i)
-            meridian.CFrame = CFrame.Angles(0, angle, math.rad(90))
-            meridian.Parent = SphereModel
-        end
-
-        local latitudes = {-1.0, 0, 1.0} 
-        for i, yOffset in ipairs(latitudes) do
-            local parallel = Instance.new("CylinderHandleAdornment")
-            parallel.Name = "ParallelLine" .. i
-            parallel.Adornee = SphereModel
-            
-            local ringRadius = math.sqrt(baseRadius^2 - yOffset^2)
-            
-            parallel.Radius = ringRadius
-            parallel.InnerRadius = ringRadius - grosorProfundidad
-            parallel.Height = grosorVisual
-            
-            parallel.Color3 = lineColor
-            parallel.Transparency = 0.45
-            parallel.AlwaysOnTop = false 
-            parallel.ZIndex = 0
-            
-            parallel.CFrame = CFrame.new(0, yOffset, 0) * CFrame.Angles(math.rad(90), 0, 0)
-            parallel.Parent = SphereModel
-        end
-
-        task.delay(0.65, function() 
-            for i = 1, 10 do
-                local spark = Instance.new("Part")
-                spark.Size = Vector3.new(0.3, 0.3, 0.3)
-                spark.Position = spawnPos + Vector3.new(0, 2, 0)
-                spark.Material = Enum.Material.Neon
-                spark.Color = Color3.fromRGB(85, 255, 127)
-                spark.Anchored = false; spark.CanCollide = false
-                spark.Parent = PreviewFolder
-                spark.Velocity = Vector3.new(math.random(-25, 25), math.random(20, 45), math.random(-25, 25))
-                Debris:AddItem(spark, 1.5)
-            end
-        end)
-
-        -- ==================================================
-        -- 4. EFECTO: LLUVIA DE BILLETES (Método intacto)
-        -- ==================================================
-        local RainActive = true
-        local GroundedBills = {}
-        local AllRainBills = {}
-
-        task.spawn(function()
-            local success, rainObjs = pcall(function() return game:GetObjects("rbxassetid://439712421") end)
-            local BillTemplate = (success and rainObjs and #rainObjs > 0) and rainObjs[1] or nil
-
-            if not BillTemplate then
-                BillTemplate = Instance.new("Part")
-                BillTemplate.Size = Vector3.new(1.2, 0.1, 0.6)
-                BillTemplate.Color = Color3.fromRGB(85, 170, 127)
-                BillTemplate.Material = Enum.Material.SmoothPlastic
-            end
-
-            local function GetSeparatedSpawnOffset()
-                local offset, attempts = nil, 0
-                repeat
-                    attempts = attempts + 1
-                    offset = Vector3.new(math.random(-6, 6), 25, math.random(-6, 6))
-                    local tooClose = false
-                    local testPos = spawnPos + Vector3.new(offset.X, 0, offset.Z)
-                    for _, b in ipairs(GroundedBills) do
-                        if b.Parent and (Vector3.new(b.Position.X, 0, b.Position.Z) - Vector3.new(testPos.X, 0, testPos.Z)).Magnitude < 2.5 then
-                            tooClose = true; break
-                        end
-                    end
-                until not tooClose or attempts > 10
-                return offset
-            end
-
-            while RainActive and PreviewFolder and PreviewFolder.Parent do
-                local bill = BillTemplate:Clone()
-                bill.Parent = PreviewFolder
-                table.insert(AllRainBills, bill)
-                
-                for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = false; p.CanCollide = false end end
-                local isModel = bill:IsA("Model")
-                local mainPart = isModel and bill.PrimaryPart or bill
-
-                if mainPart then
-                    mainPart.Anchored = false; mainPart.CanCollide = false
-                    mainPart.AssemblyAngularVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
-                end
-
-                local startCFrame = CFrame.new(spawnPos + GetSeparatedSpawnOffset()) * CFrame.Angles(math.random(), math.random(), math.random())
-                if isModel then bill:PivotTo(startCFrame) else bill.CFrame = startCFrame end
-
-                local fallConn
-                fallConn = RunService.Heartbeat:Connect(function()
-                    if not bill or not bill.Parent or not RainActive then if fallConn then fallConn:Disconnect() end return end
-
-                    local currentPos = isModel and bill:GetPivot().Position or bill.Position
-                    local rayParams = RaycastParams.new()
-                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
-                    rayParams.FilterDescendantsInstances = AllRainBills 
-                    
-                    local result = Workspace:Raycast(currentPos, Vector3.new(0, -1.5, 0), rayParams)
-
-                    if result then
-                        fallConn:Disconnect()
-                        if isModel then
-                            for _, p in ipairs(bill:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true end end
-                            bill:PivotTo(CFrame.new(result.Position + Vector3.new(0, 0.05, 0)) * CFrame.Angles(0, math.random(0, 360), 0))
-                        else
-                            bill.Anchored = true
-                            bill.CFrame = CFrame.new(result.Position + Vector3.new(0, bill.Size.Y/2, 0)) * CFrame.Angles(0, math.random(0, 360), 0)
-                        end
-                        table.insert(GroundedBills, bill)
-
-                        if #GroundedBills > 10 then
-                            local oldBill = table.remove(GroundedBills, 1)
-                            if oldBill and oldBill.Parent then
-                                local tInfo = TweenInfo.new(0.5)
-                                if oldBill:IsA("Model") then
-                                    for _, p in ipairs(oldBill:GetDescendants()) do if p:IsA("BasePart") then TweenService:Create(p, tInfo, {Transparency = 1}):Play() end end
-                                else
-                                    TweenService:Create(oldBill, tInfo, {Transparency = 1}):Play()
-                                end
-                                Debris:AddItem(oldBill, 0.5)
-                            end
-                        end
-                    end
-                end)
-                task.wait(0.5)
-            end
-        end)
-
-        -- ==================================================
-        -- 5. CONSTRUCCIÓN DEL LIBRO Y LA IMAGEN FLOTANTE
-        -- ==================================================
-        local function CreateFloatingBook()
-            local book = Instance.new("Model")
-            book.Name = "CustomBook"
-
-            local pages = Instance.new("Part")
-            pages.Size = Vector3.new(1.8, 0.4, 2.5)
-            pages.Color = Color3.fromRGB(255, 204, 0) 
-            pages.Material = Enum.Material.SmoothPlastic
-            pages.Parent = book
-            book.PrimaryPart = pages
-
-            local topCover = Instance.new("Part")
-            topCover.Size = Vector3.new(1.9, 0.05, 2.6)
-            topCover.Color = Color3.fromRGB(15, 15, 15)
-            topCover.CFrame = pages.CFrame * CFrame.new(0, 0.225, 0)
-            topCover.Parent = book
-
-            local bottomCover = topCover:Clone()
-            bottomCover.CFrame = pages.CFrame * CFrame.new(0, -0.225, 0)
-            bottomCover.Parent = book
-
-            local spine = Instance.new("Part")
-            spine.Size = Vector3.new(0.05, 0.5, 2.6)
-            spine.Color = Color3.fromRGB(15, 15, 15)
-            spine.CFrame = pages.CFrame * CFrame.new(-0.925, 0, 0)
-            spine.Parent = book
-
-            local topSurfaceGui = Instance.new("SurfaceGui", topCover)
-            topSurfaceGui.Face = Enum.NormalId.Top
-            topSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; topSurfaceGui.PixelsPerStud = 100
-            
-            local topTextLabel = Instance.new("TextLabel", topSurfaceGui)
-            topTextLabel.Size = UDim2.new(1, 0, 1, 0)
-            topTextLabel.BackgroundTransparency = 1; topTextLabel.Text = "REAL SCRIPT ON BACK ☠️"
-            topTextLabel.TextColor3 = Color3.new(1, 1, 1)
-            topTextLabel.Font = Enum.Font.GothamBlack; topTextLabel.TextScaled = true; topTextLabel.Rotation = -90 
-
-            local bottomSurfaceGui = Instance.new("SurfaceGui", bottomCover)
-            bottomSurfaceGui.Face = Enum.NormalId.Bottom
-            bottomSurfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud; bottomSurfaceGui.PixelsPerStud = 100
-            
-            local bottomTextLabel = Instance.new("TextLabel", bottomSurfaceGui)
-            bottomTextLabel.Size = UDim2.new(1, 0, 1, 0)
-            bottomTextLabel.BackgroundTransparency = 1; bottomTextLabel.Text = "REAL SCRIPT.. 🖤"
-            bottomTextLabel.TextColor3 = Color3.new(1, 1, 1)
-            bottomTextLabel.Font = Enum.Font.GothamBlack; bottomTextLabel.TextScaled = true; bottomTextLabel.Rotation = -90 
-
-            for _, p in ipairs(book:GetDescendants()) do if p:IsA("BasePart") then p.Anchored = true; p.CanCollide = false end end
-            book.Parent = PreviewFolder
-            table.insert(SceneObjects, book) 
-            return book
-        end
-
-        local CustomBook = CreateFloatingBook()
-
-        local ImagePart = Instance.new("Part")
-        ImagePart.Name = "KittyItemImage"
-        ImagePart.Size = Vector3.new(3, 3, 0.05) 
-        ImagePart.Anchored = true; ImagePart.CanCollide = false
-        ImagePart.Transparency = 1; ImagePart.Parent = PreviewFolder
-
-        local DecalFront = Instance.new("Decal", ImagePart)
-        DecalFront.Face = Enum.NormalId.Front
-        DecalFront.Texture = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
-        DecalFront.Transparency = 0
-
-        local DecalBack = Instance.new("Decal", ImagePart)
-        DecalBack.Face = Enum.NormalId.Back
-        DecalBack.Texture = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=420&h=420"
-        DecalBack.Transparency = 0
-
-        local rotConnection
-        local floatTime = 0
-        rotConnection = RunService.RenderStepped:Connect(function(dt)
-            if not ImagePart or not ImagePart.Parent then rotConnection:Disconnect() return end
-            floatTime = floatTime + dt
-            local basePos = spawnPos + Vector3.new(0, 5.2 + math.sin(floatTime * 1.8) * 0.4, 0)
-            
-            local itemCF = CFrame.new(basePos) * CFrame.Angles(0, floatTime * 1.6, 0)
-            ImagePart.CFrame = itemCF
-
-            if SphereModel and SphereModel.Parent then
-                local sphereCF = CFrame.new(basePos) * CFrame.Angles(floatTime * 0.5, -floatTime * 1.2, floatTime * 0.8)
-                SphereModel.CFrame = sphereCF
-            end
-
-            if CustomBook and CustomBook.Parent then
-                local bookBasePos = basePos + Vector3.new(0, 4.0, 0) 
-                local pivotOffset = CFrame.new(0.9, 0, 1.25) 
-                local spinCFrame = CFrame.Angles(floatTime * 1.4, floatTime * 2.1, floatTime * 1.6) 
-                CustomBook:PivotTo(CFrame.new(bookBasePos) * spinCFrame * pivotOffset:Inverse())
-            end
-        end)
-
-        -- ==================================================
-        -- 6. DETECCIÓN POR CONTACTO ESTRICTO Y ANIMACIÓN
-        -- ==================================================
-        local promptState = "Waiting" 
-        local proximityConn
-
-        proximityConn = RunService.Heartbeat:Connect(function()
-            if not ImagePart or not ImagePart.Parent then
-                if proximityConn then proximityConn:Disconnect() end
-                return
-            end
-
-            -- [NUEVO]: Verificación Cilíndrica para asegurar que está "chocando" con la mesa y no flotando/lejos.
-            local horizontalDist = Vector2.new(hrp.Position.X - spawnPos.X, hrp.Position.Z - spawnPos.Z).Magnitude
-            local verticalDist = math.abs(hrp.Position.Y - spawnPos.Y)
-            
-            -- Horizontal <= 4.5 studs asegura que está tocando los bordes físicos de una mesa promedio.
-            -- Vertical <= 6.5 asegura que el jugador no esté volando o en un piso superior.
-            if horizontalDist <= 2.5 and verticalDist <= 6.5 and promptState == "Waiting" then
-                promptState = "Prompting"
-                
-                ToggleUIVisibility(false)
-
-                local clockGui = LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("KittyClockGui")
-                if clockGui then clockGui.Enabled = false end
-
-                local blurEffect = Instance.new("BlurEffect")
-                blurEffect.Name = "KittyPreviewBlur"
-                blurEffect.Size = 15
-                blurEffect.Parent = Lighting
-
-                local bindable = Instance.new("BindableFunction")
-                bindable.OnInvoke = function(response)
-                    ToggleUIVisibility(true)
-
-                    if response == "Conseguir" then
-                        if proximityConn then proximityConn:Disconnect() end
-                        RainActive = false 
-                        
-                        if blurEffect then blurEffect:Destroy() end
-                        if PreviewFolder and PreviewFolder.Parent then PreviewFolder.Name = "Kitty3DPreview_Sinking" end
-                        
-                        task.spawn(function()
-                            if rotConnection then rotConnection:Disconnect() end
-                            ImagePart.Anchored = true 
-                            
-                            local head = char:FindFirstChild("Head") or hrp
-                            local startTime = tick()
-                            local duration = 2.2 
-                            local startPos = ImagePart.Position
-
-                            local attractConn
-                            attractConn = RunService.RenderStepped:Connect(function()
-                                if not ImagePart or not ImagePart.Parent then attractConn:Disconnect(); return end
-
-                                local t = math.clamp((tick() - startTime) / duration, 0, 1)
-                                local ease = t * t * (3 - 2 * t) 
-                                
-                                local startDist = (startPos - head.Position).Magnitude
-                                local currentRadius = startDist * (1 - ease)
-                                local angle = ease * math.pi * 12 
-                                local heightOffset = math.sin(ease * math.pi) * 3.5 
-                                
-                                local orbitPos = head.Position + Vector3.new(
-                                    math.cos(angle) * currentRadius, 
-                                    heightOffset + (1 - ease) * (startPos.Y - head.Position.Y), 
-                                    math.sin(angle) * currentRadius
-                                )
-                                
-                                local spinSpeed = 15 + (ease * 30)
-                                local finalCFrame = CFrame.new(orbitPos) * CFrame.Angles(tick() * spinSpeed, tick() * spinSpeed, math.sin(tick() * 10))
-                                
-                                ImagePart.CFrame = finalCFrame
-
-                                if DecalFront then DecalFront.Transparency = ease end
-                                if DecalBack then DecalBack.Transparency = ease end
-
-                                if SphereModel and SphereModel.Parent then
-                                    SphereModel.CFrame = finalCFrame * CFrame.Angles(math.rad(45), tick() * spinSpeed * -0.5, 0)
-                                    SphereModel.Transparency = 0.55 + (0.45 * ease)
-                                end
-
-                                if t >= 1 then
-                                    attractConn:Disconnect()
-                                    ImagePart:Destroy()
-                                    if SphereModel then SphereModel:Destroy() end
-                                    if clockGui then clockGui:Destroy() end
-
-                                    local function SinkAndDestroy(obj)
-                                        if not obj then return end
-                                        task.spawn(function()
-                                            for i = 1, 20 do 
-                                                if not obj.Parent then break end
-                                                if obj:IsA("Model") then obj:PivotTo(obj:GetPivot() * CFrame.new(0, -0.35, 0))
-                                                elseif obj:IsA("BasePart") then obj.CFrame = obj.CFrame * CFrame.new(0, -0.35, 0) end
-                                                for _, p in ipairs(obj:GetDescendants()) do
-                                                    if p:IsA("BasePart") then p.Transparency = math.clamp(p.Transparency + 0.06, 0, 1) end
-                                                end
-                                                if obj:IsA("BasePart") then obj.Transparency = math.clamp(obj.Transparency + 0.06, 0, 1) end
-                                                task.wait(0.03)
-                                            end
-                                            if obj and obj.Parent then obj:Destroy() end
-                                        end)
-                                    end
-
-                                    for _, sceneObj in ipairs(SceneObjects) do SinkAndDestroy(sceneObj) end
-                                    for _, b in ipairs(AllRainBills) do SinkAndDestroy(b) end
-
-                                    task.delay(1.5, function() if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end end)
-                                    
-                                    UpdateVisualizer(item.id, item.price or "Gratis")
-                                    NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
-                                end
-                            end)
-                        end)
-                    else
-                        if blurEffect then blurEffect:Destroy() end
-                        if clockGui then clockGui.Enabled = true end 
-                        promptState = "Cooldown"
-                    end
-                end
-
-                pcall(function()
-                    StarterGui:SetCore("SendNotification", {
-                        Title = item.name,
-                        Text = "¿Quieres conseguir este ítem?",
-                        Icon = "rbxthumb://type=Asset&id=" .. tostring(item.id) .. "&w=150&h=150",
-                        Duration = 9999999, 
-                        Button1 = "Conseguir",
-                        Button2 = "Rechazar",
-                        Callback = bindable
-                    })
-                end)
-                
-            -- Reseteo de Cooldown: Si el jugador se aleja (distancia horizontal > 7.5), podrá volver a tocar la mesa después
-            elseif horizontalDist > 7.5 and promptState == "Cooldown" then
-                promptState = "Waiting"
-            end
-        end)
-    end)
+    -- Cerrar menú de catálogo
+    KittyMain.Visible = false
+    FloatingBtn.Visible = true
+
+    if UpdateVisualizer then
+        UpdateVisualizer(CurrentData.Id, CurrentData.Price)
+    end
+    if NotifyUser then
+        NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar.")
+    end
 end)
 
                 ---
