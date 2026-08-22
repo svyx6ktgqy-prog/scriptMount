@@ -2011,6 +2011,44 @@ KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
 
+-- ========== BARRA DE ROBUX FALSO (arriba del catálogo) ==========
+local FakeRobuxBar = Instance.new("Frame")
+FakeRobuxBar.Name = "FakeRobuxBar"
+FakeRobuxBar.Size = UDim2.new(0, 170, 0, 34)
+FakeRobuxBar.Position = UDim2.new(0.5, 0, 0, -42) -- arriba del menú
+FakeRobuxBar.AnchorPoint = Vector2.new(0.5, 1)
+FakeRobuxBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+FakeRobuxBar.BackgroundTransparency = 0.15
+FakeRobuxBar.BorderSizePixel = 0
+FakeRobuxBar.Parent = KittyMain
+
+local FakeRobuxCorner = Instance.new("UICorner")
+FakeRobuxCorner.CornerRadius = UDim.new(0, 10)
+FakeRobuxCorner.Parent = FakeRobuxBar
+
+local FakeRobuxStroke = Instance.new("UIStroke")
+FakeRobuxStroke.Color = Color3.fromRGB(255, 215, 0)
+FakeRobuxStroke.Thickness = 1.5
+FakeRobuxStroke.Parent = FakeRobuxBar
+
+local FakeRobuxIcon = Instance.new("ImageLabel")
+FakeRobuxIcon.Size = UDim2.new(0, 22, 0, 22)
+FakeRobuxIcon.Position = UDim2.new(0, 10, 0.5, -11)
+FakeRobuxIcon.BackgroundTransparency = 1
+FakeRobuxIcon.Image = "rbxassetid://11560341824" -- logo Robux oficial
+FakeRobuxIcon.Parent = FakeRobuxBar
+
+FakeRobuxLabel = Instance.new("TextLabel")
+FakeRobuxLabel.Size = UDim2.new(1, -40, 1, 0)
+FakeRobuxLabel.Position = UDim2.new(0, 36, 0, 0)
+FakeRobuxLabel.BackgroundTransparency = 1
+FakeRobuxLabel.Font = Enum.Font.GothamBold
+FakeRobuxLabel.TextSize = 16
+FakeRobuxLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+FakeRobuxLabel.TextXAlignment = Enum.TextXAlignment.Left
+FakeRobuxLabel.Text = FormatRobux(FakeRobuxBalance)
+FakeRobuxLabel.Parent = FakeRobuxBar
+
 task.spawn(function()
     local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeLuaScript.jpg"
     if getcustomasset and writefile then
