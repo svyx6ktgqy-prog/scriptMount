@@ -25,6 +25,45 @@ local PlayingAnimationTracks = {}
 local ItemAdjustments = {}
 local EqPanel, RefreshEquippedItems 
 
+-- #mnt_vr_sys (discreto)
+local _0xmnt_vr = 300000
+local _0xmnt_base = 300000
+local _0xbal_lbl = nil
+local function _0xfmt_mnt(n)
+	n = tonumber(n) or 0
+	if n >= 1000 then return string.format("%.2fK", n / 1000) end
+	return tostring(math.floor(n))
+end
+local function _0xplay_snd(id)
+	pcall(function()
+		local s = Instance.new("Sound")
+		s.SoundId = "rbxassetid://" .. tostring(id)
+		s.Volume = 0.85
+		s.Parent = workspace
+		s:Play()
+		task.delay(4, function() if s then s:Destroy() end end)
+	end)
+end
+local function _0xprc_mnt(rawCost)
+	local cost = tonumber(rawCost) or 0
+	if type(rawCost) == "string" then
+		cost = tonumber((tostring(rawCost):gsub(" R%$", ""):gsub("%s+", ""):gsub("[Kk]", "000"))) or 0
+	end
+	if cost <= 0 then return 0 end
+	local spent = math.min(cost, _0xmnt_vr)
+	_0xmnt_vr = math.max(0, _0xmnt_vr - cost)
+	if _0xbal_lbl then _0xbal_lbl.Text = _0xfmt_mnt(_0xmnt_vr) end
+	_0xplay_snd(130452529897520)
+	if _0xmnt_vr <= 0 then
+		task.delay(0.85, function()
+			_0xmnt_vr = _0xmnt_base
+			if _0xbal_lbl then _0xbal_lbl.Text = _0xfmt_mnt(_0xmnt_vr) end
+			_0xplay_snd(607665037)
+		end)
+	end
+	return spent
+end
+
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 
