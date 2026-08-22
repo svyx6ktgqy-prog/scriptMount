@@ -2009,7 +2009,13 @@ KittyGui.Name = "KittyCatalogGui"
 KittyGui.Enabled = false 
 KittyGui.DisplayOrder = 15
 KittyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-KittyGui.Parent = CoreGui
+do
+    local ok = pcall(function() KittyGui.Parent = CoreGui end)
+    if not ok then
+        pcall(function() KittyGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end)
+    end
+    EarlyLog("KittyGui parent=" .. tostring(KittyGui.Parent and KittyGui.Parent.Name))
+end
 
 local FloatingBtn = Instance.new("ImageButton")
 FloatingBtn.Name = "KittyFloatingBtn"
