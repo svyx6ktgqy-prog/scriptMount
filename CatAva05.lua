@@ -3374,7 +3374,7 @@ Panel:CreateToggle({
    Name = "🎀 Activar Menú Kitty & Persistencia",
    CurrentValue = false,
    Flag = "KittyMenuToggle", 
-   Callback = function(Value)
+      Callback = function(Value)
        KittyGui.Enabled = Value
        KeepEquippedOnDeath = Value
        
@@ -3382,6 +3382,40 @@ Panel:CreateToggle({
            KittyMain.Visible = true
            FloatingBtn.Visible = false
            FloatingBtn.Position = DEFAULT_FLOATING_POS
+
+           -- Contador (se crea solo la primera vez, después de que Rayfield ya cargó)
+           if not RobuxLabel then
+               local RobuxBar = Instance.new("Frame")
+               RobuxBar.Size = UDim2.new(0, 200, 0, 32)
+               RobuxBar.Position = UDim2.new(0.5, 0, 0.05, -4)
+               RobuxBar.AnchorPoint = Vector2.new(0.5, 1)
+               RobuxBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+               RobuxBar.BackgroundTransparency = 0.3
+               RobuxBar.Parent = KittyGui
+               local c = Instance.new("UICorner")
+               c.CornerRadius = UDim.new(0, 8)
+               c.Parent = RobuxBar
+               local ico = Instance.new("ImageLabel")
+               ico.Size = UDim2.new(0, 18, 0, 18)
+               ico.Position = UDim2.new(0, 8, 0.5, -9)
+               ico.BackgroundTransparency = 1
+               ico.Image = "rbxassetid://11560341824"
+               ico.Parent = RobuxBar
+               RobuxLabel = Instance.new("TextLabel")
+               RobuxLabel.Size = UDim2.new(1, -32, 1, 0)
+               RobuxLabel.Position = UDim2.new(0, 30, 0, 0)
+               RobuxLabel.BackgroundTransparency = 1
+               RobuxLabel.Font = Enum.Font.GothamBold
+               RobuxLabel.TextSize = 14
+               RobuxLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+               RobuxLabel.TextXAlignment = Enum.TextXAlignment.Left
+               RobuxLabel.Text = "300.00K Robux"
+               RobuxLabel.Parent = RobuxBar
+           end
+           if RobuxLabel and RobuxLabel.Parent then
+               RobuxLabel.Parent.Visible = true
+           end
+
            Rayfield:Notify({Title = "Sistema Unificado", Content = "Menú visual y persistencia de avatar ACTIVADOS.", Duration = 3})
        else
            ResetToDefaultAvatar()
@@ -3392,6 +3426,9 @@ Panel:CreateToggle({
            EditPanel.Visible = false
            PartsPanel.Visible = false
            CharMenu.Visible = false
+           if RobuxLabel and RobuxLabel.Parent then
+               RobuxLabel.Parent.Visible = false
+           end
            Rayfield:Notify({Title = "Restaurado", Content = "Avatar desequipado y reseteado al estado original (Muerte Real).", Duration = 3.5})
        end
    end,
