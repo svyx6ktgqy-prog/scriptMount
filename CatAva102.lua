@@ -3764,9 +3764,6 @@ ExtraTab:CreateInput({
 
 Rayfield:LoadConfiguration()
 
-local RobuxLabel
-local RobuxBar
-
 -- 1. Búsqueda de contenedor con validación estricta de Instancia
 local uiContainer
 local successHui, hui = pcall(function() return gethui() end)
