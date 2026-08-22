@@ -1921,6 +1921,75 @@ KittyGui.DisplayOrder = 15
 KittyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 KittyGui.Parent = CoreGui
 
+-- ==========================================================
+-- SISTEMA DE ROBUX FALSO (CATÁLOGO)
+-- ==========================================================
+local FakeRobuxBalance = 300000 -- 300.00K inicial
+local FAKE_ROBUX_MAX = 300000
+
+local function FormatRobux(amount)
+    if amount >= 1000000 then
+        return string.format("%.2fM", amount / 1000000)
+    elseif amount >= 1000 then
+        return string.format("%.2fK", amount / 1000)
+    else
+        return tostring(math.floor(amount))
+    end
+end
+
+local function PlayCatalogSound(soundId)
+    pcall(function()
+        local sound = Instance.new("Sound")
+        sound.SoundId = "rbxassetid://" .. tostring(soundId)
+        sound.Volume = 1.2
+        sound.Parent = workspace
+        sound:Play()
+        game:GetService("Debris"):AddItem(sound, 6)
+    end)
+end
+
+local FakeRobuxLabel -- se asigna más abajo
+
+local function UpdateFakeRobuxDisplay()
+    if FakeRobuxLabel then
+        FakeRobuxLabel.Text = FormatRobux(FakeRobuxBalance)
+    end
+end
+
+local function SpendFakeRobux(price)
+    price = tonumber(price) or 0
+    if price <= 0 then return end -- ítems FREE no gastan
+
+    local spent = price
+    if FakeRobuxBalance >= price then
+        FakeRobuxBalance = FakeRobuxBalance - price
+    else
+        -- Si no alcanza, igual se compra y te deja en 0
+        spent = FakeRobuxBalance
+        FakeRobuxBalance = 0
+    end
+
+    UpdateFakeRobuxDisplay()
+    PlayCatalogSound(130452529897520) -- sonido de compra
+
+    -- Notificación con el gasto en rojo
+    if NotifyUser then
+        NotifyUser("Ítem seleccionado", "Gastaste  <font color='rgb(255,60,60)'>-" .. tostring(spent) .. " R$</font>")
+    end
+
+    -- Si llegamos a 0 → regenerar + sonido
+    if FakeRobuxBalance <= 0 then
+        task.delay(0.6, function()
+            FakeRobuxBalance = FAKE_ROBUX_MAX
+            UpdateFakeRobuxDisplay()
+            PlayCatalogSound(607665037) -- sonido de regeneración
+            if NotifyUser then
+                NotifyUser("Robux regenerados", "Tu saldo se ha restaurado a " .. FormatRobux(FAKE_ROBUX_MAX))
+            end
+        end)
+    end
+end
+
 local FloatingBtn = Instance.new("ImageButton")
 FloatingBtn.Name = "KittyFloatingBtn"
 FloatingBtn.Size = UDim2.new(0, 60, 0, 60)
