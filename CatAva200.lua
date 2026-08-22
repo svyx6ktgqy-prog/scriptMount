@@ -3378,26 +3378,47 @@ Panel:CreateToggle({
    Name = "🎀 Activar Menú Kitty & Persistencia",
    CurrentValue = false,
    Flag = "KittyMenuToggle", 
+   Panel:CreateToggle({
+   Name = "🎀 Activar Menú Kitty & Persistencia",
+   CurrentValue = false,
+   Flag = "KittyMenuToggle", 
    Callback = function(Value)
-       KittyGui.Enabled = Value
+       if KittyGui and typeof(KittyGui) == "Instance" then
+           KittyGui.Enabled = Value
+       end
        KeepEquippedOnDeath = Value
-       
+
+       if RobuxBar and typeof(RobuxBar) == "Instance" then
+           RobuxBar.Visible = Value
+       end
+
+       if KittyMain and typeof(KittyMain) == "Instance" then
+           KittyMain.Visible = Value
+       end
+
        if Value then
-           KittyMain.Visible = true
-		   if RobuxLabel and RobuxLabel.Parent then RobuxLabel.Parent.Visible = true end	
-           FloatingBtn.Visible = false
-           FloatingBtn.Position = DEFAULT_FLOATING_POS
+           if FloatingBtn and typeof(FloatingBtn) == "Instance" then
+               FloatingBtn.Visible = false
+               FloatingBtn.Position = DEFAULT_FLOATING_POS
+           end
            Rayfield:Notify({Title = "Sistema Unificado", Content = "Menú visual y persistencia de avatar ACTIVADOS.", Duration = 3})
        else
-           ResetToDefaultAvatar()
-           KittyMain.Visible = false
-		   if RobuxLabel and RobuxLabel.Parent then RobuxLabel.Parent.Visible = false end	
-           FloatingBtn.Visible = false
-           FloatingBtn.Position = DEFAULT_FLOATING_POS
-           EqPanel.Visible = false
-           EditPanel.Visible = false
-           PartsPanel.Visible = false
-           CharMenu.Visible = false
+           if typeof(ResetToDefaultAvatar) == "function" then
+               pcall(ResetToDefaultAvatar)
+           end
+
+           if FloatingBtn and typeof(FloatingBtn) == "Instance" then
+               FloatingBtn.Visible = false
+               FloatingBtn.Position = DEFAULT_FLOATING_POS
+           end
+
+           local panelsToHide = {EqPanel, EditPanel, PartsPanel, CharMenu}
+           for _, panel in ipairs(panelsToHide) do
+               if panel and typeof(panel) == "Instance" then
+                   panel.Visible = false
+               end
+           end
+
            Rayfield:Notify({Title = "Restaurado", Content = "Avatar desequipado y reseteado al estado original (Muerte Real).", Duration = 3.5})
        end
    end,
