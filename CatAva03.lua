@@ -17,6 +17,49 @@ local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
+-- ==========================================================
+-- EARLY LOG (si esto no sale, el script no arranca en Delta)
+-- ==========================================================
+local function EarlyLog(msg)
+    print("[EARLY]", msg)
+    pcall(function()
+        local pg = LocalPlayer:FindFirstChild("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+        if not pg then return end
+        local g = pg:FindFirstChild("QEarlyLog")
+        if not g then
+            g = Instance.new("ScreenGui")
+            g.Name = "QEarlyLog"
+            g.ResetOnSpawn = false
+            g.DisplayOrder = 100000
+            g.Parent = pg
+            local f = Instance.new("TextLabel")
+            f.Name = "Box"
+            f.Size = UDim2.new(0.95, 0, 0.22, 0)
+            f.Position = UDim2.new(0.025, 0, 0.01, 0)
+            f.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+            f.BackgroundTransparency = 0.2
+            f.TextColor3 = Color3.fromRGB(80, 255, 120)
+            f.TextXAlignment = Enum.TextXAlignment.Left
+            f.TextYAlignment = Enum.TextYAlignment.Top
+            f.TextWrapped = true
+            f.Font = Enum.Font.Code
+            f.TextSize = 13
+            f.Text = ""
+            f.Parent = g
+            Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
+        end
+        local box = g:FindFirstChild("Box")
+        if box then
+            box.Text = box.Text .. os.date("%H:%M:%S") .. " | " .. tostring(msg) .. "\n"
+        end
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {Title="EARLY", Text=tostring(msg):sub(1,70), Duration=4})
+        end)
+    end)
+end
+
+EarlyLog("Script INICIO OK")
+
 local CurrentData = { Name = "Ninguno", Id = "0", Price = "0 R$", Category = "Desconocido", ItemType = "Asset" }
 local KeepEquippedOnDeath = false 
 local SavedEquippedIDs = {}
