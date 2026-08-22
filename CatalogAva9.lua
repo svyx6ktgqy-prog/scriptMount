@@ -1900,17 +1900,16 @@ local function SpendFakeRobux(price)
         if FakeRobuxBalance >= price then
             FakeRobuxBalance = FakeRobuxBalance - price
         else
-            -- Si no alcanza, igual se compra y te deja en 0
             spent = FakeRobuxBalance
             FakeRobuxBalance = 0
         end
 
-        -- Actualizar UI de forma segura
+        -- Actualizar texto del saldo
         if FakeRobuxLabel then
             FakeRobuxLabel.Text = FormatRobux(FakeRobuxBalance)
         end
 
-        -- Sonido de compra (protegido)
+        -- Sonido de compra
         pcall(function()
             local sound = Instance.new("Sound")
             sound.SoundId = "rbxassetid://130452529897520"
@@ -1920,18 +1919,20 @@ local function SpendFakeRobux(price)
             game:GetService("Debris"):AddItem(sound, 6)
         end)
 
-        -- Notificación SIN HTML (las nativas no lo soportan)
+        -- Notificación con el método que SÍ funciona
         if NotifyUser then
             NotifyUser("Ítem seleccionado", "Gastaste -" .. tostring(spent) .. " R$")
         end
 
-        -- Regenerar si llegó a 0
+        -- Si llega a 0 → regenerar
         if FakeRobuxBalance <= 0 then
             task.delay(0.6, function()
                 FakeRobuxBalance = FAKE_ROBUX_MAX
+
                 if FakeRobuxLabel then
                     FakeRobuxLabel.Text = FormatRobux(FakeRobuxBalance)
                 end
+
                 pcall(function()
                     local sound = Instance.new("Sound")
                     sound.SoundId = "rbxassetid://607665037"
@@ -1940,15 +1941,16 @@ local function SpendFakeRobux(price)
                     sound:Play()
                     game:GetService("Debris"):AddItem(sound, 6)
                 end)
+
                 if NotifyUser then
-                    NotifyUser("Robux regenerados", "Tu saldo se ha restaurado a " .. FormatRobux(FAKE_ROBUX_MAX))
+                    NotifyUser("Robux regenerados", "Tu saldo se restauró a " .. FormatRobux(FAKE_ROBUX_MAX))
                 end
             end)
         end
     end)
 
     if not success then
-        warn("[SpendFakeRobux error]:", err)
+        warn("[SpendFakeRobux]:", err)
     end
 end
 
