@@ -2094,6 +2094,7 @@ UserInputService.InputEnded:Connect(function(input)
         if not isDraggingBtn and not longPressTriggered and wasHolding then
             FloatingBtn.Visible = false
             KittyMain.Visible = true
+            if RobuxBar then RobuxBar.Visible = true end
         end
     end
 end)
