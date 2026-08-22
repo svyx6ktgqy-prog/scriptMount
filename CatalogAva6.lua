@@ -3409,6 +3409,9 @@ ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
+    -- Gastar Robux falso
+    SpendFakeRobux(item.price)
+                        
     -- Cerrar menú de catálogo
     KittyMain.Visible = false
     FloatingBtn.Visible = true
