@@ -3762,67 +3762,69 @@ ExtraTab:CreateInput({
     end
 })
 
-Rayfield:LoadConfiguration()
+-- Declaración explícita de variables para evitar errores de ámbito global
+local RobuxLabel = nil
+local RobuxBar = nil
 
--- 1. Búsqueda de contenedor con validación estricta de Instancia
-local uiContainer
+-- 1. Búsqueda segura del contenedor de interfaz
+local uiContainer = nil
 local successHui, hui = pcall(function() return gethui() end)
 
 if successHui and typeof(hui) == "Instance" then
-	uiContainer = hui
+    uiContainer = hui
 else
-	local successCore, core = pcall(function() return game:GetService("CoreGui") end)
-	if successCore and typeof(core) == "Instance" then
-		uiContainer = core
-	else
-		uiContainer = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-	end
+    local successCore, core = pcall(function() return game:GetService("CoreGui") end)
+    if successCore and typeof(core) == "Instance" then
+        uiContainer = core
+    else
+        uiContainer = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    end
 end
 
--- 2. Función aislada para crear la interfaz (sin hilos paralelos)
+-- 2. Función aislada para crear la barra de Robux
 local function createRobuxCounter()
-	local bar = Instance.new("Frame")
-	bar.Name = "RobuxCountBar"
-	bar.Size = UDim2.new(0, 200, 0, 32)
-	bar.Position = UDim2.new(0.5, 0, 0, 12) 
-	bar.AnchorPoint = Vector2.new(0.5, 0)
-	bar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-	bar.BackgroundTransparency = 0.3
-	bar.ZIndex = 100 -- ZIndex masivo para superar a Rayfield
-	
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = bar
-	
-	local ico = Instance.new("ImageLabel")
-	ico.Size = UDim2.new(0, 18, 0, 18)
-	ico.Position = UDim2.new(0, 8, 0.5, -9)
-	ico.BackgroundTransparency = 1
-	ico.Image = "rbxassetid://11560341824"
-	ico.ZIndex = 101
-	ico.Parent = bar
-	
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, -32, 1, 0)
-	label.Position = UDim2.new(0, 30, 0, 0)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 14
-	label.TextColor3 = Color3.fromRGB(255, 215, 0)
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Text = "300.00K Robux"
-	label.ZIndex = 101
-	label.Parent = bar
-	
-	RobuxLabel = label
-	RobuxBar = bar
-	
-	-- 3. Asignación final
-	bar.Parent = uiContainer
+    local bar = Instance.new("Frame")
+    bar.Name = "RobuxCountBar"
+    bar.Size = UDim2.new(0, 200, 0, 32)
+    bar.Position = UDim2.new(0.5, 0, 0, 12) 
+    bar.AnchorPoint = Vector2.new(0.5, 0)
+    bar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    bar.BackgroundTransparency = 0.3
+    bar.ZIndex = 100
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = bar
+    
+    local ico = Instance.new("ImageLabel")
+    ico.Size = UDim2.new(0, 18, 0, 18)
+    ico.Position = UDim2.new(0, 8, 0.5, -9)
+    ico.BackgroundTransparency = 1
+    ico.Image = "rbxassetid://11560341824"
+    ico.ZIndex = 101
+    ico.Parent = bar
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -32, 1, 0)
+    label.Position = UDim2.new(0, 30, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+    label.TextColor3 = Color3.fromRGB(255, 215, 0)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = "300.00K Robux"
+    label.ZIndex = 101
+    label.Parent = bar
+    
+    RobuxLabel = label
+    RobuxBar = bar
+    
+    bar.Parent = uiContainer
 end
 
--- 4. Ejecución protegida
-local success, err = pcall(createRobuxCounter)
-if not success then
-	warn("⚠️ Error al cargar el contador: " .. tostring(err))
-end
+-- 3. Ejecución protegida
+pcall(createRobuxCounter)
+
+-- 4. Carga e inicialización final de Rayfield
+Rayfield:LoadConfiguration()
+
