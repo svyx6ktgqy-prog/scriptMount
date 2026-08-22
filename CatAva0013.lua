@@ -2314,7 +2314,11 @@ CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.Parent = KittyTop
 local CloseCorner = Instance.new("UICorner"); CloseCorner.CornerRadius = UDim.new(1, 0); CloseCorner.Parent = CloseBtn
 
-CloseBtn.MouseButton1Click:Connect(function() KittyMain.Visible = false; FloatingBtn.Visible = true end)
+CloseBtn.MouseButton1Click:Connect(function() 
+    KittyMain.Visible = false
+    FloatingBtn.Visible = true
+    if RobuxBar then RobuxBar.Visible = false end
+end)
 
 local SidebarContainer = Instance.new("Frame")
 SidebarContainer.Size = UDim2.new(0.25, 0, 1, 0)
