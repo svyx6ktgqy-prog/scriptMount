@@ -3313,7 +3313,9 @@ ClickBtn.InputBegan:Connect(function(input)
                                                 task.delay(1.5, function() if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end end)
                                                 
                                                 UpdateVisualizer(item.id, item.price or "Gratis")
-                                                NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
+                                                local _pc = tonumber(item.price) or 0
+                                                local extra = (_pc > 0) and ("  -" .. tostring(_pc) .. " R$") or ""
+                                                NotifyUser("Ítem Obtenido", (item.name or "Ítem") .. " ahora está en el Visualizador" .. extra)
                                             end
                                         end)
                                     end)
