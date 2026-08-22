@@ -28,6 +28,9 @@ local EqPanel, RefreshEquippedItems
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 
+local FakeRobux = 300000
+local RobuxLabel
+
 -- ==========================================================
 -- ESTRUCTURAS DE CUERPO Y FUNCIONES DE OCULTACIÓN (EDIT PARTS)
 -- ==========================================================
