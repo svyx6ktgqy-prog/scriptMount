@@ -3387,6 +3387,7 @@ Panel:CreateToggle({
        else
            ResetToDefaultAvatar()
            KittyMain.Visible = false
+		   if RobuxLabel and RobuxLabel.Parent then RobuxLabel.Parent.Visible = false end	
            FloatingBtn.Visible = false
            FloatingBtn.Position = DEFAULT_FLOATING_POS
            EqPanel.Visible = false
