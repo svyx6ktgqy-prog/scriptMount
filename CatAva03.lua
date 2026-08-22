@@ -723,7 +723,13 @@ local VisualizerGui = Instance.new("ScreenGui")
 VisualizerGui.Name = "QuirurgicoVisualizer"
 VisualizerGui.DisplayOrder = 10
 VisualizerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- FUNDAMENTAL PARA EXECUTORS
-VisualizerGui.Parent = CoreGui
+do
+    local ok = pcall(function() VisualizerGui.Parent = CoreGui end)
+    if not ok then
+        pcall(function() VisualizerGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end)
+    end
+    EarlyLog("VisualizerGui parent=" .. tostring(VisualizerGui.Parent and VisualizerGui.Parent.Name))
+end
 
 -- ==========================================================
 -- PANEL "EDIT PARTS" (RECONSTRUIDO CON ZINDEX FIJOS Y AUTOSCROLL)
