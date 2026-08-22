@@ -2063,17 +2063,18 @@ KittyConstraint.Parent = KittyMain
 local KittyCorner = Instance.new("UICorner"); KittyCorner.CornerRadius = UDim.new(0, 16); KittyCorner.Parent = KittyMain
 local KittyStroke = Instance.new("UIStroke"); KittyStroke.Color = Color3.fromRGB(255, 105, 180); KittyStroke.Thickness = 3; KittyStroke.Parent = KittyMain
 
--- #mnt_ui (arriba centrado, parte del menú)
+-- #mnt_ui (arriba centrado, fuera del clip de KittyMain)
 local _0xbal_fr = Instance.new("Frame")
 _0xbal_fr.Name = "mnt_dsp"
 _0xbal_fr.Size = UDim2.new(0, 168, 0, 34)
-_0xbal_fr.Position = UDim2.new(0.5, 0, 0, -42)
+_0xbal_fr.Position = UDim2.new(0.5, 0, 0.5, -280)
 _0xbal_fr.AnchorPoint = Vector2.new(0.5, 1)
 _0xbal_fr.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 _0xbal_fr.BackgroundTransparency = 0.25
 _0xbal_fr.BorderSizePixel = 0
-_0xbal_fr.ZIndex = 40
-_0xbal_fr.Parent = KittyMain
+_0xbal_fr.ZIndex = 50
+_0xbal_fr.Visible = false
+_0xbal_fr.Parent = KittyGui
 local _0xbal_cr = Instance.new("UICorner"); _0xbal_cr.CornerRadius = UDim.new(0, 8); _0xbal_cr.Parent = _0xbal_fr
 local _0xbal_st = Instance.new("UIStroke"); _0xbal_st.Color = Color3.fromRGB(255, 215, 0); _0xbal_st.Thickness = 1.5; _0xbal_st.Parent = _0xbal_fr
 local _0xbal_ic = Instance.new("ImageLabel")
@@ -2081,7 +2082,7 @@ _0xbal_ic.Size = UDim2.new(0, 20, 0, 20)
 _0xbal_ic.Position = UDim2.new(0, 10, 0.5, -10)
 _0xbal_ic.BackgroundTransparency = 1
 _0xbal_ic.Image = "rbxassetid://11560341824"
-_0xbal_ic.ZIndex = 41
+_0xbal_ic.ZIndex = 51
 _0xbal_ic.Parent = _0xbal_fr
 _0xbal_lbl = Instance.new("TextLabel")
 _0xbal_lbl.Size = UDim2.new(1, -40, 1, 0)
@@ -2092,8 +2093,12 @@ _0xbal_lbl.Font = Enum.Font.GothamBold
 _0xbal_lbl.TextSize = 16
 _0xbal_lbl.TextColor3 = Color3.fromRGB(255, 215, 0)
 _0xbal_lbl.TextXAlignment = Enum.TextXAlignment.Left
-_0xbal_lbl.ZIndex = 41
+_0xbal_lbl.ZIndex = 51
 _0xbal_lbl.Parent = _0xbal_fr
+
+KittyMain:GetPropertyChangedSignal("Visible"):Connect(function()
+    _0xbal_fr.Visible = KittyMain.Visible
+end)
 
 -- ==========================================================
 -- KITTY TOP BAR Y SUS ELEMENTOS (CON FILTRO DE PRECIOS INTEGRADO)
