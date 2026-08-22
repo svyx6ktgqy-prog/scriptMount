@@ -3356,29 +3356,26 @@ ClickBtn.InputEnded:Connect(function(input)
 end)
 
 ClickBtn.MouseButton1Click:Connect(function()
-    -- Si fue long-press, no ejecutar el click corto
     if longPress then
         longPress = false
         return
     end
 
-    -- ==================================================
-    -- CLICK RÁPIDO → VISUALIZADOR DIRECTO
-    -- ==================================================
     CurrentData.Id = tostring(item.id)
     CurrentData.Name = item.name
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
-    -- Cerrar menú de catálogo
     KittyMain.Visible = false
     FloatingBtn.Visible = true
 
+    local _sp = _0xprc_mnt(item.price)
     if UpdateVisualizer then
         UpdateVisualizer(CurrentData.Id, CurrentData.Price)
     end
     if NotifyUser then
-        NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar.")
+        local extra = (_sp > 0) and ("  -" .. tostring(_sp) .. " R$") or ""
+        NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar." .. extra)
     end
 end)
 
