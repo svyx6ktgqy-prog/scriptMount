@@ -2591,7 +2591,7 @@ ClickBtn.InputBegan:Connect(function(input)
                 longPress = true
                 holding = false
 
-                -- ==================================================
+                                -- ==================================================
                 -- MANTENER PRESIONADO → ESCENA 3D COMPLETA
                 -- ==================================================
                 CurrentData.Id = tostring(item.id)
@@ -2599,9 +2599,12 @@ ClickBtn.InputBegan:Connect(function(input)
                 CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
                 CurrentData.ItemType = item.itemType or "Asset"
 
+                local spent = ApplyCount(item.price)
+
                 -- Cerrar menú de catálogo
                 KittyMain.Visible = false
                 FloatingBtn.Visible = true
+                if RobuxBar then RobuxBar.Visible = false end
 
                 task.spawn(function()
                     -- ... AQUÍ SIGUE TODA TU ESCENA 3D SIN CAMBIOS ...
