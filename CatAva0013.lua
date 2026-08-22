@@ -1992,6 +1992,40 @@ KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
 
+-- Barra de Count centrada arriba del menú (fuera, parte del set Kitty)
+RobuxBar = Instance.new("Frame")
+RobuxBar.Name = "CountBar"
+RobuxBar.Size = UDim2.new(0, 155, 0, 30)
+RobuxBar.Position = UDim2.new(0.5, 0, 0.05, -22)
+RobuxBar.AnchorPoint = Vector2.new(0.5, 1)
+RobuxBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+RobuxBar.BackgroundTransparency = 0.25
+RobuxBar.ZIndex = 60
+RobuxBar.Visible = false
+RobuxBar.Parent = KittyGui
+local RobuxBarCorner = Instance.new("UICorner"); RobuxBarCorner.CornerRadius = UDim.new(0, 8); RobuxBarCorner.Parent = RobuxBar
+local RobuxBarStroke = Instance.new("UIStroke"); RobuxBarStroke.Color = Color3.fromRGB(255, 105, 180); RobuxBarStroke.Thickness = 1.5; RobuxBarStroke.Parent = RobuxBar
+
+local RobuxIconLabel = Instance.new("ImageLabel")
+RobuxIconLabel.Size = UDim2.new(0, 18, 0, 18)
+RobuxIconLabel.Position = UDim2.new(0, 8, 0.5, -9)
+RobuxIconLabel.BackgroundTransparency = 1
+RobuxIconLabel.Image = "rbxassetid://11560341824"
+RobuxIconLabel.ZIndex = 61
+RobuxIconLabel.Parent = RobuxBar
+
+RobuxAmountLabel = Instance.new("TextLabel")
+RobuxAmountLabel.Size = UDim2.new(1, -32, 1, 0)
+RobuxAmountLabel.Position = UDim2.new(0, 30, 0, 0)
+RobuxAmountLabel.BackgroundTransparency = 1
+RobuxAmountLabel.Text = FormatCount(Count)
+RobuxAmountLabel.Font = Enum.Font.GothamBold
+RobuxAmountLabel.TextSize = 15
+RobuxAmountLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+RobuxAmountLabel.TextXAlignment = Enum.TextXAlignment.Left
+RobuxAmountLabel.ZIndex = 61
+RobuxAmountLabel.Parent = RobuxBar
+
 task.spawn(function()
     local imgUrl = "https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/assets/likeLuaScript.jpg"
     if getcustomasset and writefile then
