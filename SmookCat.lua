@@ -874,11 +874,13 @@ BtnAlertYes.MouseButton1Click:Connect(function()
     PurchaseAlertMenu.Visible = false
     local assetId = tonumber(CurrentData.Id)
     if assetId and assetId > 0 then
+        local _sp = _0xprc_mnt(CurrentData.Price)
         pcall(function()
             MarketplaceService:PromptPurchase(LocalPlayer, assetId)
         end)
         if NotifyUser then
-            NotifyUser("Obtención", "Abriendo menú de compra nativo...")
+            local extra = (_sp > 0) and ("  -" .. tostring(_sp) .. " R$") or ""
+            NotifyUser("Obtención", "Abriendo menú de compra nativo..." .. extra)
         end
     end
 end)
