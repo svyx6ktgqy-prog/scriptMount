@@ -2442,7 +2442,7 @@ PerformKittySearch = function(isPagination)
                 CardPrice.Size = UDim2.new(1, -25, 0, 20)
                 CardPrice.Position = UDim2.new(0, 25, 0, 155)
                 CardPrice.BackgroundTransparency = 1
-                CardPrice.Text = item.price and tostring(item.price) or "Gratis"
+                CardPrice.Text = (type(item.price) == "number" and item.price > 0) and tostring(item.price) or "Gratis"
                 CardPrice.Font = Enum.Font.GothamBold
                 CardPrice.TextSize = 13
                 CardPrice.TextColor3 = Color3.fromRGB(50, 50, 50)
