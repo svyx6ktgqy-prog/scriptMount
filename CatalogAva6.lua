@@ -2453,6 +2453,7 @@ PerformKittySearch = function(isPagination)
                 if isFree then
                     CardPrice.Text = "FREE"
                     CardPrice.TextColor3 = Color3.fromRGB(50, 255, 50) -- Solo aquí se cambia a verde
+                    CardPrice.TextXAlignment = Enum.TextXAlignment.Center
                 else
                     CardPrice.Text = tostring(item.price)
                     -- Color no se toca
