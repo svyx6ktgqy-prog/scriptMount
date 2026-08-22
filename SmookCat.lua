@@ -256,7 +256,7 @@ local CachedDefaultDescription = nil
 
 task.spawn(function()
     pcall(function() CachedDefaultDescription = Players:GetHumanoidDescriptionFromUserId(LocalPlayer.UserId) end)
-    local assetsToPreload = {"rbxassetid://13307406982", "rbxassetid://15538455161", "rbxassetid://11560341824"}
+    local assetsToPreload = {"rbxassetid://13307406982", "rbxassetid://15538455161", "rbxassetid://11560341824", "rbxassetid://130452529897520", "rbxassetid://607665037"}
     pcall(function() ContentProvider:PreloadAsync(assetsToPreload) end)
 end)
 
