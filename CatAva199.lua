@@ -25,10 +25,14 @@ local PlayingAnimationTracks = {}
 local ItemAdjustments = {}
 local EqPanel, RefreshEquippedItems 
 
+-- Constantes y Variables Globales de UI
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 local RobuxCount = 300000
-local RobuxLabel
+
+-- Referencias de la Barra de Robux (Aseguradas como local)
+local RobuxLabel = nil
+local RobuxBar = nil
 
 -- ==========================================================
 -- ESTRUCTURAS DE CUERPO Y FUNCIONES DE OCULTACIÓN (EDIT PARTS)
