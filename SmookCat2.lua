@@ -3507,25 +3507,31 @@ local SpinnerDropdown = Panel:CreateDropdown({
    MultipleOptions = false,
    Callback = function(Option)
        local selectedText = type(Option) == "table" and Option[1] or Option
-       if SearchResultsCache[selectedText] then
-           local item = SearchResultsCache[selectedText]
-           CurrentData.Id = tostring(item.Id)
-           CurrentData.Name = item.Name
-           CurrentData.Price = item.Price
-           CurrentData.Category = item.Category
-           CurrentData.ItemType = item.ItemType
+       if not SearchResultsCache or not SearchResultsCache[selectedText] then return end
+       local item = SearchResultsCache[selectedText]
+       if not item then return end
 
-           local _sp = _0xprc_mnt(item.Price)
+       CurrentData.Id = tostring(item.Id)
+       CurrentData.Name = item.Name
+       CurrentData.Price = item.Price
+       CurrentData.Category = item.Category
+       CurrentData.ItemType = item.ItemType
 
+       local _sp = 0
+       pcall(function()
+           if _0xprc_mnt then _sp = _0xprc_mnt(item.Price) or 0 end
+       end)
+
+       if UpdateVisualizer then
            UpdateVisualizer(item.Id, item.Price)
-
-           local extra = (_sp > 0) and ("  -" .. tostring(_sp) .. " R$") or ""
-           Rayfield:Notify({
-               Title = "Seleccionado",
-               Content = item.Name .. extra,
-               Duration = 2
-           })
        end
+
+       local extra = (_sp > 0) and ("  -" .. tostring(_sp) .. " R$") or ""
+       Rayfield:Notify({
+           Title = "Seleccionado",
+           Content = (item.Name or "Ítem") .. extra,
+           Duration = 2
+       })
    end,
 })
 
