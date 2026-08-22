@@ -3369,7 +3369,8 @@ ClickBtn.MouseButton1Click:Connect(function()
     KittyMain.Visible = false
     FloatingBtn.Visible = true
 
-    local _sp = _0xprc_mnt(item.price)
+    local _sp = _0xprc_mnt(item.price)   -- solo una vez
+
     if UpdateVisualizer then
         UpdateVisualizer(CurrentData.Id, CurrentData.Price)
     end
