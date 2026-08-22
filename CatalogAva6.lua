@@ -2442,19 +2442,28 @@ PerformKittySearch = function(isPagination)
                 CardPrice.Size = UDim2.new(1, -25, 0, 20)
                 CardPrice.Position = UDim2.new(0, 25, 0, 155)
                 CardPrice.BackgroundTransparency = 1
-                CardPrice.Text = (type(item.price) == "number" and item.price > 0) and tostring(item.price) or "Gratis"
                 CardPrice.Font = Enum.Font.GothamBold
                 CardPrice.TextSize = 13
-                CardPrice.TextColor3 = Color3.fromRGB(50, 50, 50)
+                CardPrice.TextColor3 = Color3.fromRGB(50, 50, 50) -- Color original (no se toca en ítems de pago)
                 CardPrice.TextXAlignment = Enum.TextXAlignment.Left
                 CardPrice.Parent = Card
+
+                -- FREE en verde o precio normal
+                local isFree = not (type(item.price) == "number" and item.price > 0)
+                if isFree then
+                    CardPrice.Text = "FREE"
+                    CardPrice.TextColor3 = Color3.fromRGB(50, 255, 50) -- Solo aquí se cambia a verde
+                else
+                    CardPrice.Text = tostring(item.price)
+                    -- Color no se toca
+                end
                 
                 local CardRobux = Instance.new("ImageLabel")
                 CardRobux.Size = UDim2.new(0, 14, 0, 14)
                 CardRobux.Position = UDim2.new(0, 6, 0, 158)
                 CardRobux.BackgroundTransparency = 1
                 CardRobux.Image = "rbxassetid://11560341824"
-                CardRobux.Visible = (item.price ~= nil and type(item.price)=="number" and item.price > 0)
+                CardRobux.Visible = (item.price ~= nil and type(item.price) == "number" and item.price > 0)
                 CardRobux.Parent = Card
 
                 local ClickBtn = Instance.new("TextButton")
