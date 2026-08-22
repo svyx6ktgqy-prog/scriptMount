@@ -3764,34 +3764,58 @@ ExtraTab:CreateInput({
 
 Rayfield:LoadConfiguration()
 
+-- 1. Definir la variable en un scope local ANTES del defer, 
+-- para que el resto del script pueda acceder a ella sin recibir "nil".
+local RobuxLabel
+
+-- 2. Encontrar un contenedor seguro para la UI. 
+-- gethui() es el estándar de los ejecutores para evitar detección.
+-- Si falla, usa CoreGui, y si falla, usa el PlayerGui del jugador.
+local uiContainer = (typeof(gethui) == "function" and gethui()) 
+    or game:GetService("CoreGui") 
+    or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+
 -- Contador Robux (se crea al final, cuando todo ya cargó)
 task.defer(function()
-	local bar = Instance.new("Frame")
-	bar.Name = "RobuxCountBar"
-	bar.Size = UDim2.new(0, 200, 0, 32)
-	bar.Position = UDim2.new(0.5, 0, 0, 12)
-	bar.AnchorPoint = Vector2.new(0.5, 0)
-	bar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-	bar.BackgroundTransparency = 0.3
-	bar.Visible = false
-	bar.Parent = CoreGui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = bar
-	local ico = Instance.new("ImageLabel")
-	ico.Size = UDim2.new(0, 18, 0, 18)
-	ico.Position = UDim2.new(0, 8, 0.5, -9)
-	ico.BackgroundTransparency = 1
-	ico.Image = "rbxassetid://11560341824"
-	ico.Parent = bar
-	RobuxLabel = Instance.new("TextLabel")
-	RobuxLabel.Size = UDim2.new(1, -32, 1, 0)
-	RobuxLabel.Position = UDim2.new(0, 30, 0, 0)
-	RobuxLabel.BackgroundTransparency = 1
-	RobuxLabel.Font = Enum.Font.GothamBold
-	RobuxLabel.TextSize = 14
-	RobuxLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-	RobuxLabel.TextXAlignment = Enum.TextXAlignment.Left
-	RobuxLabel.Text = "300.00K Robux"
-	RobuxLabel.Parent = bar
+    -- 3. Envolver en un pcall para capturar cualquier error silencioso.
+    local success, err = pcall(function()
+        local bar = Instance.new("Frame")
+        bar.Name = "RobuxCountBar"
+        bar.Size = UDim2.new(0, 200, 0, 32)
+        bar.Position = UDim2.new(0.5, 0, 0, 12)
+        bar.AnchorPoint = Vector2.new(0.5, 0)
+        bar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        bar.BackgroundTransparency = 0.3
+        bar.Visible = false
+        bar.Parent = uiContainer -- Se usa el contenedor seguro
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = bar
+        
+        local ico = Instance.new("ImageLabel")
+        ico.Size = UDim2.new(0, 18, 0, 18)
+        ico.Position = UDim2.new(0, 8, 0.5, -9)
+        ico.BackgroundTransparency = 1
+        ico.Image = "rbxassetid://11560341824"
+        ico.Parent = bar
+        
+        -- Ahora se asigna a la variable local previamente declarada
+        RobuxLabel = Instance.new("TextLabel")
+        RobuxLabel.Size = UDim2.new(1, -32, 1, 0)
+        RobuxLabel.Position = UDim2.new(0, 30, 0, 0)
+        RobuxLabel.BackgroundTransparency = 1
+        RobuxLabel.Font = Enum.Font.GothamBold
+        RobuxLabel.TextSize = 14
+        RobuxLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+        RobuxLabel.TextXAlignment = Enum.TextXAlignment.Left
+        RobuxLabel.Text = "300.00K Robux"
+        RobuxLabel.Parent = bar
+    end)
+
+    -- Si hubo un error en la creación, te lo dirá explícitamente en la consola (F9)
+    if not success then
+        warn("⚠️ [Rayfield UI] Error crítico al crear la barra de Robux: " .. tostring(err))
+    end
 end)
+
