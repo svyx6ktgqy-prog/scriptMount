@@ -3515,8 +3515,10 @@ local SpinnerDropdown = Panel:CreateDropdown({
            local item = SearchResultsCache[selectedText]
            CurrentData.Id = tostring(item.Id); CurrentData.Name = item.Name; CurrentData.Price = item.Price
            CurrentData.Category = item.Category; CurrentData.ItemType = item.ItemType
+           local spent = ApplyCount(item.Price)
            UpdateVisualizer(item.Id, item.Price)
-           Rayfield:Notify({Title = "Seleccionado", Content = item.Name, Duration = 2})
+           local extra = (spent > 0) and ("\n- " .. tostring(spent) .. " R$") or ""
+           Rayfield:Notify({Title = "Seleccionado", Content = item.Name .. extra, Duration = 2})
        end
    end,
 })
