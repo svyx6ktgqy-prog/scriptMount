@@ -3433,6 +3433,13 @@ local AssetTypeNames = {
 
 local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
 
+-- resetear flag del source para poder re-ejecutar el script
+pcall(function()
+    if getgenv then
+        getgenv().TrasherMenuLoaded = nil
+    end
+end)
+
 local Rayfield
 local okRf, rfErr = pcall(function()
     Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
@@ -3442,7 +3449,7 @@ if not okRf or not Rayfield then
     pcall(function()
         StarterGui:SetCore("SendNotification", {
             Title = "Error Rayfield",
-            Text = "No se pudo cargar la UI. Revisa HttpGet / source.lua",
+            Text = tostring(rfErr or "Rayfield nil / ya estaba cargado"),
             Duration = 8
         })
     end)
