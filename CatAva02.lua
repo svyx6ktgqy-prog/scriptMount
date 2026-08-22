@@ -3473,7 +3473,7 @@ local function MakeLogWindow()
     close.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
     close.Text = "X"
     close.Font = Enum.Font.GothamBold
-    close.TextColor3 = Color3.new(1,1,1)
+    close.TextColor3 = Color3.new(1, 1, 1)
     close.Parent = frame
     Instance.new("UICorner", close).CornerRadius = UDim.new(0, 6)
     close.MouseButton1Click:Connect(function() gui:Destroy() end)
@@ -3523,17 +3523,15 @@ local QLog = MakeLogWindow()
 QLog("Script arrancó sección Rayfield", Color3.fromRGB(80, 255, 120))
 
 -- ==========================================================
--- BOOTSTRAP RAYFIELD (anti re-ejecución / anti silencioso)
+-- BOOTSTRAP RAYFIELD
 -- ==========================================================
-warn("[Quirurgico] Llegó a la sección Rayfield")
+QLog("Limpiando flags Trasher/Rayfield...")
 
 pcall(function()
     if getgenv then
-        -- cleanup del propio source
         if type(getgenv().TrasherCleanup) == "function" then
             pcall(getgenv().TrasherCleanup)
         end
-        -- flags que bloquean la re-carga
         getgenv().TrasherMenuLoaded = nil
         getgenv().rayfieldCached = nil
         getgenv().TrasherFallbackBound = nil
@@ -3544,7 +3542,6 @@ pcall(function()
     end
 end)
 
--- destruir ventanas residuales de Rayfield / Trasher
 pcall(function()
     local function wipe(parent)
         if not parent then return end
@@ -3558,7 +3555,7 @@ pcall(function()
         end
     end
     wipe(CoreGui)
-    wipe(game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"))
+    wipe(LocalPlayer:FindFirstChild("PlayerGui"))
 end)
 
 QLog("Residuos Rayfield/Trasher limpiados")
@@ -3614,25 +3611,18 @@ end
 
 QLog("VENTANA CREADA OK", Color3.fromRGB(80, 255, 120))
 
-warn("[Quirurgico] Ventana Rayfield creada")
-   Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6 Ultra-Async",
-   LoadingTitle = "Cargando optimizaciones Anti-Lag...",
-   LoadingSubtitle = "Frame Slicing + Preload Activo",
-   ConfigurationSaving = { Enabled = false },
-   KeySystem = false
-})
-
+-- A partir de aquí SOLO tabs (nada de Name/LoadingTitle sueltos)
 local SearchResultsCache = {}
 local Panel = Window:CreateTab("🏥 Catálogo Real", 4483362458)
 
 Panel:CreateToggle({
    Name = "🎀 Activar Menú Kitty & Persistencia",
    CurrentValue = false,
-   Flag = "KittyMenuToggle", 
+   Flag = "KittyMenuToggle",
    Callback = function(Value)
        KittyGui.Enabled = Value
        KeepEquippedOnDeath = Value
-       
+
        if Value then
            KittyMain.Visible = true
            FloatingBtn.Visible = false
@@ -3662,7 +3652,9 @@ Panel:CreateDropdown({
    Options = {"All", "Accessories", "Clothing", "Characters", "Gear", "Animations"},
    CurrentOption = {"All"},
    MultipleOptions = false,
-   Callback = function(Option) SearchCategory = type(Option) == "table" and Option[1] or Option end,
+   Callback = function(Option)
+       SearchCategory = type(Option) == "table" and Option[1] or Option
+   end,
 })
 
 local SpinnerDropdown = Panel:CreateDropdown({
