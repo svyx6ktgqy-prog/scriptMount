@@ -3819,24 +3819,47 @@ ExtraTab:CreateInput({
             if ItemCache[itemID] then
                 itemInfo = ItemCache[itemID]
             else
-                local success, data = pcall(function() return MarketplaceService:GetProductInfo(itemID) end)
+                local success, data = pcall(function()
+                    return MarketplaceService:GetProductInfo(itemID)
+                end)
                 if success and data then
                     itemInfo = data
-                    ItemCache[itemID] = data 
+                    ItemCache[itemID] = data
                 end
             end
 
             if itemInfo then
+                local _sp = _0xprc_mnt(itemInfo.PriceInRobux or 0)
+
                 pcall(function()
-                    if CurrentData then CurrentData.Id = tostring(itemID); CurrentData.Price = tostring(itemInfo.PriceInRobux or 0); if itemInfo.Name then CurrentData.Name = itemInfo.Name end end
-                    if UpdateVisualizer then UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Free") end
+                    if CurrentData then
+                        CurrentData.Id = tostring(itemID)
+                        CurrentData.Price = tostring(itemInfo.PriceInRobux or 0)
+                        if itemInfo.Name then
+                            CurrentData.Name = itemInfo.Name
+                        end
+                    end
+                    if UpdateVisualizer then
+                        UpdateVisualizer(itemID, itemInfo.PriceInRobux and (itemInfo.PriceInRobux .. " R$") or "Free")
+                    end
                 end)
-                UniversalAlert({Text = "Showing: " .. (itemInfo.Name or "Unknown Item"), Duration = 3})
+
+                local extra = (_sp > 0) and ("  -" .. tostring(_sp) .. " R$") or ""
+                UniversalAlert({
+                    Text = "Showing: " .. (itemInfo.Name or "Unknown Item") .. extra,
+                    Duration = 3
+                })
             else
-                UniversalAlert({Text = "The entered ID does not exist or network failed.", Duration = 4})
+                UniversalAlert({
+                    Text = "The entered ID does not exist or network failed.",
+                    Duration = 4
+                })
             end
         else
-            UniversalAlert({Text = "Please enter valid numbers only.", Duration = 3})
+            UniversalAlert({
+                Text = "Please enter valid numbers only.",
+                Duration = 3
+            })
         end
     end
 })
