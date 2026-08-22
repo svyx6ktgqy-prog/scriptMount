@@ -1917,7 +1917,7 @@ local function UpdateVisualizer(id, price)
 
     -- Detectar FREE de forma robusta (número 0, "0", "0 R$", "Gratis", etc.)
     local isFree = false
-    if price == 0 or price == "0" or price == "Gratis" or price == "Gratis / Off-Sale" or price == "FREE" then
+    if price == 0 or price == "0" or price == "Gratis" or price == "Gratis / Off-Sale" or price == "FREE" or price == "Free" then
         isFree = true
     elseif type(price) == "string" then
         local cleaned = tostring(price):gsub(" R%$", ""):gsub("%s+", "")
@@ -1934,6 +1934,48 @@ local function UpdateVisualizer(id, price)
         RobuxIcon.Visible = true
         PriceTag.Text = tostring(price):gsub(" R%$", "")
         PriceTag.TextColor3 = Color3.fromRGB(255, 215, 0)   -- Dorado
+
+        -- Fake Robux Counter: deduct on paid item select
+        local cleanedPrice = tostring(price):gsub(" R%$", ""):gsub("%s+", ""):gsub(",", "")
+        local numericPrice = tonumber(cleanedPrice) or 0
+        if numericPrice > 0 then
+            FakeRobuxAmount = FakeRobuxAmount - numericPrice
+            if FakeRobuxAmount < 0 then
+                FakeRobuxAmount = 0
+            end
+
+            if RobuxAmountLabel then
+                RobuxAmountLabel.Text = FormatRobuxDisplay(FakeRobuxAmount)
+            end
+
+            -- Notification in English
+            pcall(function()
+                StarterGui:SetCore("SendNotification", {
+                    Title = "💸 Robux Spent",
+                    Text = "- " .. tostring(numericPrice) .. " R$ spent",
+                    Duration = 3,
+                    Icon = "rbxassetid://11560341824"
+                })
+            end)
+
+            PlayRobuxSound(66666666) -- buy coin sound
+
+            if FakeRobuxAmount <= 0 then
+                FakeRobuxAmount = 300000
+                if RobuxAmountLabel then
+                    RobuxAmountLabel.Text = FormatRobuxDisplay(FakeRobuxAmount)
+                end
+                PlayRobuxSound(8888888) -- receive robux sound
+                pcall(function()
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "💰 Robux Refilled",
+                        Text = "Balance reset to 300.0K R$",
+                        Duration = 3,
+                        Icon = "rbxassetid://11560341824"
+                    })
+                end)
+            end
+        end
     end
 end
 
