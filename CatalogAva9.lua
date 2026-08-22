@@ -1,10 +1,3 @@
--- ==========================================================
--- MENU DE AVATARES QUIRÚRGICO Y PRO (v25.6 ANTI-FREEZE & ULTRA-ASYNC)
--- Gestión Eficiente de Memoria + Frame-Slicing + Carga Asíncrona de I/O
--- + Filtro de Precios + Copiado de ID a Portapapeles (iOS Delta)
--- + EDIT PARTS (Eliminar partes del cuerpo guardables) [FIX ZINDEX UI]
--- ==========================================================
-
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local CoreGui = game:GetService("CoreGui")
@@ -28,9 +21,6 @@ local EqPanel, RefreshEquippedItems
 local CHARS_FILE = "CHARACTERS.json"
 local DEFAULT_FLOATING_POS = UDim2.new(1, -80, 0.5, -30)
 
--- ==========================================================
--- ESTRUCTURAS DE CUERPO Y FUNCIONES DE OCULTACIÓN (EDIT PARTS)
--- ==========================================================
 local BodyPartGroups = {
     Head = {"Head"},
     Torso = {"Torso", "UpperTorso", "LowerTorso"},
@@ -65,16 +55,12 @@ local function SetBodyPartHidden(targetChar, groupName, isHidden)
     end
 end
 
--- Escuchar finalización de compra
 MarketplaceService.PromptPurchaseFinished:Connect(function(player, assetId, isPurchased)
     if isPurchased then
         print("Compró el asset:", assetId)
     end
 end)
 
--- ==========================================================
--- SISTEMA DE BANNERS / CACHÉ & FRAME SLICING (ANTI-FREEZE)
--- ==========================================================
 local BannerSystem = {
     Cache = {},
     LoadingQueue = {},
@@ -210,9 +196,6 @@ function BannerSystem.ClearCache()
     BannerSystem.IsProcessing = false
 end
 
--- ==========================================================
--- PRECARGA DE ASSETS EN SEGUNDO PLANO
--- ==========================================================
 local CachedDefaultDescription = nil
 
 task.spawn(function()
@@ -225,9 +208,6 @@ local function NotifyUser(title, text)
     pcall(function() StarterGui:SetCore("SendNotification", { Title = title; Text = text; Duration = 4; }) end)
 end
 
--- ==========================================================
--- FUNCIONES AUXILIARES DE TRANSFORMACIÓN
--- ==========================================================
 local function ApplyAdjustmentToInstance(itemInstance, adj)
     if not itemInstance or not adj or not itemInstance:IsA("Accessory") then return end
     local handle = itemInstance:FindFirstChild("Handle")
@@ -274,9 +254,6 @@ local function ApplyAdjustmentToDummy(dummyItem, adj)
     if mesh then mesh.Scale = mesh.Scale * (adj.Scale or 1) end
 end
 
--- ==========================================================
--- SISTEMA DE ARCHIVOS Y METADATOS JSON EN SEGUNDO PLANO
--- ==========================================================
 local CachedCharactersData = nil
 
 local function LoadSavedCharactersDataAsync(callback)
@@ -317,9 +294,6 @@ local function IsAlreadyEquipped(assetId)
     return false
 end
 
--- ==========================================================
--- RESTAURACIÓN DE AVATAR Y MANEJO DE HILOS
--- ==========================================================
 local function ResetToDefaultAvatar()
     SavedEquippedIDs = {}
     ItemAdjustments = {}
@@ -327,7 +301,6 @@ local function ResetToDefaultAvatar()
     local Char = LocalPlayer.Character
     if not Char then return end
 
-    -- Resetear Body Modifiers (Partes ocultas)
     SavedBodyModifiers = {}
     for groupName, _ in pairs(BodyPartGroups) do
         if Char:GetAttribute("Hide_" .. groupName) then
@@ -379,9 +352,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==========================================================
--- CARGA UNIVERSAL ASÍNCRONA
--- ==========================================================
 local function UniversalEquip(assetId, isReequipping)
     task.spawn(function()
         local numericId = tonumber(assetId)
@@ -615,14 +585,13 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     task.wait(1.0)
     
     task.spawn(function()
-        -- Restaurar Edit Parts (Body Modifiers)
+
         for group, isHidden in pairs(SavedBodyModifiers) do
             if isHidden then
                 SetBodyPartHidden(newChar, group, true)
             end
         end
 
-        -- Restaurar Equipamiento
         for id, active in pairs(SavedEquippedIDs) do
             if active and KeepEquippedOnDeath then
                 UniversalEquip(id, true)
@@ -632,9 +601,6 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     end)
 end)
 
--- ==========================================================
--- UI DE VISUALIZACIÓN Y MENÚS (FORZANDO SIBLING Y ZINDEX ALTO)
--- ==========================================================
 if CoreGui:FindFirstChild("QuirurgicoVisualizer") then CoreGui.QuirurgicoVisualizer:Destroy() end
 
 local VisualizerGui = Instance.new("ScreenGui")
@@ -643,9 +609,6 @@ VisualizerGui.DisplayOrder = 10
 VisualizerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- FUNDAMENTAL PARA EXECUTORS
 VisualizerGui.Parent = CoreGui
 
--- ==========================================================
--- PANEL "EDIT PARTS" (RECONSTRUIDO CON ZINDEX FIJOS Y AUTOSCROLL)
--- ==========================================================
 local PartsPanel = Instance.new("Frame")
 PartsPanel.Size = UDim2.new(0, 320, 0, 340)
 PartsPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -738,7 +701,6 @@ local function CreatePartToggle(devName, groupName)
         Checkbox.BackgroundColor3 = isChecked and Color3.fromRGB(180, 50, 255) or Color3.fromRGB(30, 30, 30)
     end
 
-    -- Inicializar visuales inmediatamente para evitar que aparezcan en blanco
     local initChar = LocalPlayer.Character
     local initialCheck = initChar and initChar:GetAttribute("Hide_" .. groupName) or false
     UpdateVisuals(initialCheck)
@@ -768,9 +730,6 @@ CreatePartToggle("Remove Right Arm", "RightArm")
 CreatePartToggle("Remove Left Leg", "LeftLeg")
 CreatePartToggle("Remove Right Leg", "RightLeg")
 
--- ==========================================================
--- MENÚ DE ALERTA DE OBTENCIÓN (CUSTOM + NATIVO DEFAULT)
--- ==========================================================
 local PurchaseAlertMenu = Instance.new("Frame")
 PurchaseAlertMenu.Size = UDim2.new(0, 260, 0, 140)
 PurchaseAlertMenu.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -918,9 +877,6 @@ EqGrid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     EqScroll.CanvasSize = UDim2.new(0, 0, 0, EqGrid.AbsoluteContentSize.Y + 20)
 end)
 
--- ==========================================================
--- MENÚ DE PERSONAJES (CON CABLEADO FRAME-SLICING ASÍNCRONO)
--- ==========================================================
 local CharMenu = Instance.new("Frame")
 CharMenu.Size = UDim2.new(0, 450, 0.82, 0)
 CharMenu.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -1351,7 +1307,6 @@ SaveCharBtn.MouseButton1Click:Connect(function()
         end
     end
     
-    -- Agregar configuraciones de Edit Parts (Body Modifiers)
     local hiddenGroups = {}
     local hasHiddenParts = false
     for group, _ in pairs(BodyPartGroups) do
@@ -1375,9 +1330,6 @@ SaveCharBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ==========================================================
--- EDIT PANEL (AJUSTE ESPECIAL DE ACCESORIOS)
--- ==========================================================
 local EditPanel = Instance.new("Frame")
 EditPanel.Size = UDim2.new(0, 340, 0, 280)
 EditPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -1633,9 +1585,6 @@ local function OpenEditMenuFor(item)
     EqPanel.Visible = false; EditPanel.Visible = true
 end
 
--- ==========================================================
--- REFRESCO DE ELEMENTOS EQUIPADOS
--- ==========================================================
 RefreshEquippedItems = function()
     for _, v in ipairs(EqScroll:GetChildren()) do
         if v:IsA("Frame") then v:Destroy() end
@@ -1751,7 +1700,6 @@ RefreshEquippedItems = function()
     end
 end
 
--- LOGO EYES BUTTON
 local EyeButton = Instance.new("ImageButton")
 EyeButton.Size = UDim2.new(0, 40, 0, 40)
 EyeButton.Position = UDim2.new(0.5, 0, 0, -45)
@@ -1767,9 +1715,6 @@ EyeButton.MouseButton1Click:Connect(function()
     if EqPanel.Visible then RefreshEquippedItems() end
 end)
 
--- ==========================================================
--- VISUALIZADOR PREVIEW CORREGIDO (Menú Alert Implementado + COPY ID iOS)
--- ==========================================================
 local ImagePreview = Instance.new("ImageButton")
 ImagePreview.Size = UDim2.new(1, 0, 0, 160)
 ImagePreview.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -1797,9 +1742,7 @@ ImagePreview.InputBegan:Connect(function(input)
                     
                     local assetId = tonumber(CurrentData.Id)
                     if assetId and assetId > 0 then
-                        -- ==============================================
-                        -- SISTEMA DE COPIADO AL PORTAPAPELES (SOPORTE DELTA iOS)
-                        -- ==============================================
+
                         pcall(function()
                             if setclipboard then
                                 setclipboard(tostring(assetId))
@@ -1812,7 +1755,6 @@ ImagePreview.InputBegan:Connect(function(input)
                             NotifyUser("Éxito", "ID Copiado: " .. tostring(assetId) .. "\nAbriendo Menú Nativo...")
                         end
                         
-                        -- Llama directamente al menú de compra de Roblox, ignorando el menú UI personalizado
                         pcall(function()
                             MarketplaceService:PromptPurchase(LocalPlayer, assetId)
                         end)
@@ -1887,7 +1829,6 @@ local function UpdateVisualizer(id, price)
     ImagePreview.Image = "rbxthumb://type=Asset&id=" .. tostring(id) .. "&w=150&h=150"
     Container.Visible = true
 
-    -- Detectar FREE de forma robusta (número 0, "0", "0 R$", "Gratis", etc.)
     local isFree = false
     if price == 0 or price == "0" or price == "Gratis" or price == "Gratis / Off-Sale" or price == "FREE" then
         isFree = true
@@ -1909,9 +1850,6 @@ local function UpdateVisualizer(id, price)
     end
 end
 
--- ==========================================================
--- SISTEMA KITTY CATALOG UI (INTEGRACIONES SOLICITADAS)
--- ==========================================================
 if CoreGui:FindFirstChild("KittyCatalogGui") then CoreGui.KittyCatalogGui:Destroy() end
 
 local KittyGui = Instance.new("ScreenGui")
@@ -1921,9 +1859,6 @@ KittyGui.DisplayOrder = 15
 KittyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 KittyGui.Parent = CoreGui
 
--- ==========================================================
--- SISTEMA DE ROBUX FALSO (CATÁLOGO)
--- ==========================================================
 local FakeRobuxBalance = 300000 -- 300.00K inicial
 local FAKE_ROBUX_MAX = 300000
 
@@ -1948,7 +1883,7 @@ local function PlayCatalogSound(soundId)
     end)
 end
 
-local FakeRobuxLabel -- se asigna más abajo
+local FakeRobuxLabel
 
 local function UpdateFakeRobuxDisplay()
     if FakeRobuxLabel then
@@ -1958,31 +1893,29 @@ end
 
 local function SpendFakeRobux(price)
     price = tonumber(price) or 0
-    if price <= 0 then return end -- ítems FREE no gastan
+    if price <= 0 then return end
 
     local spent = price
     if FakeRobuxBalance >= price then
         FakeRobuxBalance = FakeRobuxBalance - price
     else
-        -- Si no alcanza, igual se compra y te deja en 0
+
         spent = FakeRobuxBalance
         FakeRobuxBalance = 0
     end
 
     UpdateFakeRobuxDisplay()
-    PlayCatalogSound(130452529897520) -- sonido de compra
+    PlayCatalogSound(130452529897520)
 
-    -- Notificación con el gasto en rojo
     if NotifyUser then
         NotifyUser("Ítem seleccionado", "Gastaste  <font color='rgb(255,60,60)'>-" .. tostring(spent) .. " R$</font>")
     end
 
-    -- Si llegamos a 0 → regenerar + sonido
     if FakeRobuxBalance <= 0 then
         task.delay(0.6, function()
             FakeRobuxBalance = FAKE_ROBUX_MAX
             UpdateFakeRobuxDisplay()
-            PlayCatalogSound(607665037) -- sonido de regeneración
+            PlayCatalogSound(607665037)
             if NotifyUser then
                 NotifyUser("Robux regenerados", "Tu saldo se ha restaurado a " .. FormatRobux(FAKE_ROBUX_MAX))
             end
@@ -2011,11 +1944,10 @@ KittyMain.BorderSizePixel = 0
 KittyMain.ClipsDescendants = true
 KittyMain.Parent = KittyGui
 
--- ========== BARRA DE ROBUX FALSO (arriba del catálogo) ==========
 local FakeRobuxBar = Instance.new("Frame")
 FakeRobuxBar.Name = "FakeRobuxBar"
 FakeRobuxBar.Size = UDim2.new(0, 170, 0, 34)
-FakeRobuxBar.Position = UDim2.new(0.5, 0, 0, -42) -- arriba del menú
+FakeRobuxBar.Position = UDim2.new(0.5, 0, 0, -42)
 FakeRobuxBar.AnchorPoint = Vector2.new(0.5, 1)
 FakeRobuxBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 FakeRobuxBar.BackgroundTransparency = 0.15
@@ -2129,9 +2061,6 @@ KittyConstraint.Parent = KittyMain
 local KittyCorner = Instance.new("UICorner"); KittyCorner.CornerRadius = UDim.new(0, 16); KittyCorner.Parent = KittyMain
 local KittyStroke = Instance.new("UIStroke"); KittyStroke.Color = Color3.fromRGB(255, 105, 180); KittyStroke.Thickness = 3; KittyStroke.Parent = KittyMain
 
--- ==========================================================
--- KITTY TOP BAR Y SUS ELEMENTOS (CON FILTRO DE PRECIOS INTEGRADO)
--- ==========================================================
 local KittyTop = Instance.new("Frame")
 KittyTop.Size = UDim2.new(0.75, 0, 0, 60)
 KittyTop.Position = UDim2.new(0.25, 0, 0, 0)
@@ -2162,7 +2091,6 @@ KittyResults.Parent = KittyMain
 
 local PagiLabel = Instance.new("TextLabel")
 
--- Botón Home (Aislado)
 local HomeBtn = Instance.new("ImageButton")
 HomeBtn.Size = UDim2.new(0, 40, 0, 40)
 HomeBtn.Position = UDim2.new(0.02, 0, 0.5, -20)
@@ -2182,7 +2110,6 @@ local function PerformHomeSearch()
 end
 HomeBtn.MouseButton1Click:Connect(PerformHomeSearch)
 
--- Contenedor de Límite
 local MaxItemsFrame = Instance.new("Frame")
 MaxItemsFrame.Size = UDim2.new(0.24, 0, 0, 40)
 MaxItemsFrame.Position = UDim2.new(0.10, 0, 0.5, -20)
@@ -2283,9 +2210,6 @@ KittySearch.TextColor3 = Color3.fromRGB(50, 50, 50)
 KittySearch.TextXAlignment = Enum.TextXAlignment.Left
 KittySearch.Parent = SearchContainer
 
--- ==========================================================
--- BOTÓN DE FILTRO DE PRECIO 
--- ==========================================================
 local PriceFilterMode = 0 -- 0: Todos, 1: Gratis(0), 2: +1M
 local PriceFilterBtn = Instance.new("TextButton")
 PriceFilterBtn.Size = UDim2.new(0.10, 0, 0, 40)
@@ -2312,7 +2236,6 @@ PriceFilterBtn.MouseButton1Click:Connect(function()
     end
     if KittySearch.Text ~= "" then PerformKittySearch(false) end
 end)
--- ==========================================================
 
 local KittySearchBtn = Instance.new("TextButton")
 KittySearchBtn.Size = UDim2.new(0.14, 0, 0, 40)
@@ -2380,7 +2303,6 @@ ResultsPadding.PaddingLeft = UDim.new(0, 10)
 ResultsPadding.PaddingBottom = UDim.new(0, 20)
 ResultsPadding.Parent = KittyResults
 
--- Paginación y Categorías
 local PagiContainer = Instance.new("Frame")
 PagiContainer.Size = UDim2.new(0.75, 0, 0, 40)
 PagiContainer.Position = UDim2.new(0.25, 0, 1, -40)
@@ -2480,7 +2402,6 @@ PerformKittySearch = function(isPagination)
 
     local cursor = KittyPageHistory[KittyCurrentPage] or ""
     
-    -- INYECCIÓN DEL FILTRO DE PRECIOS
     local url = "https://catalog.roblox.com/v1/search/items/details?category="..tostring(KittyCurrentCategory).."&limit="..tostring(KittySearchLimit).."&keyword=" .. HttpService:UrlEncode(KittySearch.Text)
     if PriceFilterMode == 1 then
         url = url .. "&maxPrice=0"
@@ -2555,7 +2476,6 @@ PerformKittySearch = function(isPagination)
                 CardPrice.TextXAlignment = Enum.TextXAlignment.Left
                 CardPrice.Parent = Card
 
-                -- FREE en verde o precio normal
                 local isFree = not (type(item.price) == "number" and item.price > 0)
                 if isFree then
                     CardPrice.Text = "FREE"
@@ -2583,11 +2503,6 @@ PerformKittySearch = function(isPagination)
                 ClickBtn.Text = ""
                 ClickBtn.Parent = Card
                 
-                -- ==========================================================
--- ==========================================================
--- MÉTODO NUEVO DE CLICK EN ITEM DEL CATÁLOGO KITTY (FIXED V30 - INVERTIDO)
--- Toque corto = Visualizador directo | Mantener = Escena 3D completa
--- + Cierre automático del menú de catálogo en ambas acciones
 -- ==========================================================
 local holding = false
 local holdStart = 0
@@ -2609,23 +2524,17 @@ ClickBtn.InputBegan:Connect(function(input)
                 longPress = true
                 holding = false
 
-                -- ==================================================
-                -- MANTENER PRESIONADO → ESCENA 3D COMPLETA
-                -- ==================================================
                 CurrentData.Id = tostring(item.id)
                 CurrentData.Name = item.name or "Objeto"
                 CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
                 CurrentData.ItemType = item.itemType or "Asset"
 
-                -- Gastar Robux falso
                 SpendFakeRobux(item.price)                        
 
-                -- Cerrar menú de catálogo
                 KittyMain.Visible = false
                 FloatingBtn.Visible = true
 
                 task.spawn(function()
-                    -- ... AQUÍ SIGUE TODA TU ESCENA 3D SIN CAMBIOS ...
                     local Workspace = game:GetService("Workspace")
                     local Players = game:GetService("Players")
                     local TweenService = game:GetService("TweenService")
@@ -2636,9 +2545,6 @@ ClickBtn.InputBegan:Connect(function(input)
                     local CoreGui = game:GetService("CoreGui")
                     local LocalPlayer = Players.LocalPlayer
 
-                    -- ==================================================
-                    -- CONTROL DEL SCREENGUI
-                    -- ==================================================
                     local function ToggleUIVisibility(state)
                         pcall(function()
                             local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
@@ -2665,9 +2571,6 @@ ClickBtn.InputBegan:Connect(function(input)
                         end)
                     end
 
-                    -- ==================================================
-                    -- 1. LIMPIEZA SEGURA DE PREVIEWS ANTERIORES
-                    -- ==================================================
                     for _, child in ipairs(Workspace:GetChildren()) do
                         if child.Name == "Kitty3DPreview" then child:Destroy() end
                     end
@@ -2686,9 +2589,6 @@ ClickBtn.InputBegan:Connect(function(input)
                     local rawPos = hrp.Position + (hrp.CFrame.LookVector * 14)
                     local spawnPos = Vector3.new(rawPos.X, hrp.Position.Y - 3, rawPos.Z)
 
-                    -- ==================================================
-                    -- ESCANEO DE SUELO UNIFICADO (Centro para la mesa)
-                    -- ==================================================
                     local rayOrigin = spawnPos + Vector3.new(0, 50, 0)
                     local ignoreList = {char, PreviewFolder}
                     local raycastParams = RaycastParams.new()
@@ -2715,9 +2615,6 @@ ClickBtn.InputBegan:Connect(function(input)
 
                     spawnPos = Vector3.new(spawnPos.X, trueGroundY, spawnPos.Z)
 
-                    -- ==================================================
-                    -- FUNCIONES DE FÍSICAS Y CAÍDA
-                    -- ==================================================
                     local function AnimateDrop(model, targetCFrame, dropHeight)
                         dropHeight = dropHeight or 25
                         local cfValue = Instance.new("CFrameValue")
@@ -2748,9 +2645,6 @@ ClickBtn.InputBegan:Connect(function(input)
                         end
                     end
 
-                    -- ==================================================
-                    -- CARGA MODULAR ESCALONADA CON CAÍDA INDEPENDIENTE (ANTI-FLOTE)
-                    -- ==================================================
                     local SceneObjects = {}
                     local currentLoadDelay = 0 
                     
@@ -2768,7 +2662,6 @@ ClickBtn.InputBegan:Connect(function(input)
                                 LockPhysics(model) 
                                 model.Parent = PreviewFolder 
                                 
-                                -- [NUEVO]: Raycast individual para cada elemento decorativo basado en su offset (X, Z)
                                 local rawTargetPos = (CFrame.new(spawnPos) * offsetCFrame).Position
                                 local itemRayOrigin = rawTargetPos + Vector3.new(0, 50, 0)
                                 local itemGroundY = rawTargetPos.Y -- Fallback si no encuentra nada
@@ -2778,7 +2671,6 @@ ClickBtn.InputBegan:Connect(function(input)
                                                     -- Por defecto ignoramos la carpeta para que la mesa y demás no se pisen entre sí
                                 local individualIgnoreList = {char, PreviewFolder}
                                 
-                                -- Pero si activamos el permiso, el objeto (el maletín) podrá chocar con la mesa
                                 if collideWithFolder then
                                     individualIgnoreList = {char, model}
                                 end
@@ -2800,7 +2692,6 @@ ClickBtn.InputBegan:Connect(function(input)
                                     end
                                 end
                                 
-                                -- Posicionar basándose en SU suelo real, no en el suelo de la mesa
                                 local baseCFrame = CFrame.new(rawTargetPos.X, itemGroundY, rawTargetPos.Z) * offsetCFrame.Rotation
                                 local finalCFrame
                                 
@@ -2828,9 +2719,6 @@ ClickBtn.InputBegan:Connect(function(input)
                         end)
                     end
 
-                    -- ==================================================
-                    -- 2. CARGA DE ESCENOGRAFÍA SECUENCIAL
-                    -- ==================================================
                     LoadAsset("114068096511672", "MoneyBase", CFrame.new(0, 0, 0))
                     LoadAsset("9124849026", "Table", CFrame.new(0, 0, 0))
                     LoadAsset("121348416036836", "KittySignTable", CFrame.new(5.0, 0.35, -2.0) * CFrame.Angles(0, math.rad(-25), 0), 0, true)
@@ -2841,7 +2729,6 @@ ClickBtn.InputBegan:Connect(function(input)
                     LoadAsset("103693408325569", "WeaponBox", CFrame.new(12.5, 0, -10.5) * CFrame.Angles(0, math.rad(-75), 0))
                     LoadAsset("140487868173670", "Iphone", CFrame.new(-5.0, 0, 4.0) * CFrame.Angles(0, math.rad(-20), 0))
                     
-                    -- Reloj
                     LoadAsset("86136491298166", "ClockTime", CFrame.new(9.5, 0, 8.5) * CFrame.Angles(0, math.rad(25), 0), nil, nil, false, function(clockModel)
                         if clockModel:IsA("Model") then clockModel:ScaleTo(20)
                         elseif clockModel:IsA("BasePart") then clockModel.Size = clockModel.Size * 20 end
@@ -2877,9 +2764,6 @@ ClickBtn.InputBegan:Connect(function(input)
                         end)
                     end)
 
-                    -- ==================================================
-                    -- 3. ESFERA VIVA REFLECTANTE Y CONGELADA
-                    -- ==================================================
                     local SphereModel = Instance.new("Part")
                     SphereModel.Name = "KittyGlassSphere"
                     SphereModel.Shape = Enum.PartType.Ball
@@ -3051,9 +2935,6 @@ ClickBtn.InputBegan:Connect(function(input)
                         end
                     end)
 
-                    -- ==================================================
-                    -- 4. EFECTO: LLUVIA DE BILLETES (Método intacto)
-                    -- ==================================================
                     local RainActive = true
                     local GroundedBills = {}
                     local AllRainBills = {}
@@ -3142,9 +3023,6 @@ ClickBtn.InputBegan:Connect(function(input)
                         end
                     end)
 
-                    -- ==================================================
-                    -- 5. CONSTRUCCIÓN DEL LIBRO Y LA IMAGEN FLOTANTE
-                    -- ==================================================
                     local function CreateFloatingBook()
                         local book = Instance.new("Model")
                         book.Name = "CustomBook"
@@ -3239,9 +3117,6 @@ ClickBtn.InputBegan:Connect(function(input)
                         end
                     end)
 
-                    -- ==================================================
-                    -- 6. DETECCIÓN POR CONTACTO ESTRICTO Y ANIMACIÓN
-                    -- ==================================================
                     local promptState = "Waiting" 
                     local proximityConn
 
@@ -3251,12 +3126,9 @@ ClickBtn.InputBegan:Connect(function(input)
                             return
                         end
 
-                        -- [NUEVO]: Verificación Cilíndrica para asegurar que está "chocando" con la mesa y no flotando/lejos.
                         local horizontalDist = Vector2.new(hrp.Position.X - spawnPos.X, hrp.Position.Z - spawnPos.Z).Magnitude
                         local verticalDist = math.abs(hrp.Position.Y - spawnPos.Y)
                         
-                        -- Horizontal <= 4.5 studs asegura que está tocando los bordes físicos de una mesa promedio.
-                        -- Vertical <= 6.5 asegura que el jugador no esté volando o en un piso superior.
                         if horizontalDist <= 2.5 and verticalDist <= 6.5 and promptState == "Waiting" then
                             promptState = "Prompting"
                             
@@ -3373,7 +3245,6 @@ ClickBtn.InputBegan:Connect(function(input)
                                 })
                             end)
                             
-                        -- Reseteo de Cooldown: Si el jugador se aleja (distancia horizontal > 7.5), podrá volver a tocar la mesa después
                         elseif horizontalDist > 7.5 and promptState == "Cooldown" then
                             promptState = "Waiting"
                         end
@@ -3395,24 +3266,19 @@ ClickBtn.InputEnded:Connect(function(input)
 end)
 
 ClickBtn.MouseButton1Click:Connect(function()
-    -- Si fue long-press, no ejecutar el click corto
+
     if longPress then
         longPress = false
         return
     end
 
-    -- ==================================================
-    -- CLICK RÁPIDO → VISUALIZADOR DIRECTO
-    -- ==================================================
     CurrentData.Id = tostring(item.id)
     CurrentData.Name = item.name
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
-    -- Gastar Robux falso
     SpendFakeRobux(item.price)
                         
-    -- Cerrar menú de catálogo
     KittyMain.Visible = false
     FloatingBtn.Visible = true
 
@@ -3453,9 +3319,6 @@ PagiPrevBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ==========================================================
--- INTEGRACIÓN RAYFIELD & INTERFAZ
--- ==========================================================
 local AssetTypeNames = {
     [2] = "T-Shirt", [5] = "Script LUA", [8] = "Sombrero", [9] = "Place", [10] = "Modelo", 
     [11] = "Camisa", [12] = "Pantalón", [13] = "Decal", [17] = "Cabeza", [18] = "Cara", [19] = "Gear", 
@@ -3582,8 +3445,6 @@ Panel:CreateInput({
    end,
 })
 
---#EXTRA: RAYFIELD TAB (ECLIPSE VERSION: GRAPHICS BLACKOUT + HASH DICTIONARY O(1) + 0 LAG)
-
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
@@ -3592,16 +3453,11 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui") 
 local TweenService = game:GetService("TweenService")
 
--- ==========================================================
--- 🔔 NATIVE ALERT SYSTEM (100% SAFE FOR DELTA / MOBILE OPTIMIZED)
--- ==========================================================
 local function UniversalAlert(config)
     task.spawn(function()
         pcall(function()
             local rawText = config.Text or config.Content or ""
             
-            -- EL COMPROMISO NATIVO:
-            -- Ponemos el nombre del jugador y un emoji de verificado a la derecha.
             local alertData = {
                 Title = Players.LocalPlayer.DisplayName .. " 💬",
                 Text = rawText,
@@ -3620,9 +3476,6 @@ local function UniversalAlert(config)
     end)
 end
 
--- ==========================================================
--- 🧠 ULTRA-FAST CACHE & MEMORY SYSTEMS
--- ==========================================================
 local ItemCache = {}
 local ZeroPhysics = PhysicalProperties.new(0, 0, 0, 0, 0)
 
@@ -3632,9 +3485,6 @@ local TrashClasses = {
     Fire = true, Smoke = true, Sparkles = true, Decal = true, Texture = true
 }
 
--- ==========================================================
--- 🌑 "ECLIPSE" SYSTEM
--- ==========================================================
 local function ToggleEclipse(state)
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     local eclipseUI = playerGui:FindFirstChild("OptiEclipseBlackout")
@@ -3666,9 +3516,6 @@ local function ToggleEclipse(state)
     end
 end
 
--- ==========================================================
--- 🛡️ ECLIPSE ENGINE (INTERCEPTOR WITH HASH DICTIONARY)
--- ==========================================================
 if not getgenv().EclipseRenderHook then
     getgenv().EclipseRenderHook = true
     
@@ -3718,7 +3565,6 @@ if not getgenv().EclipseRenderHook then
         return oldNewindex(self, index, value)
     end)
 end
--- ==========================================================
 
 local ExtraTab = Window:CreateTab("EXTRA", 4483362458)
 
@@ -3741,7 +3587,7 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        -- Botones actualizados a Dev English
+
         UniversalAlert({Text = "The map will lose textures. Continue?", Duration = 10, Button1 = "Accept", Button2 = "Cancel", Callback = bindable})
     end
 })
@@ -3760,7 +3606,7 @@ ExtraTab:CreateButton({
                 end)
             end
         end
-        -- Botones actualizados a Dev English
+
         UniversalAlert({Text = "Do you want to restore original graphics?", Duration = 10, Button1 = "Accept", Button2 = "Cancel", Callback = bindable})
     end
 })
