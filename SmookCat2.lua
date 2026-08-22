@@ -3428,7 +3428,21 @@ local AssetTypeNames = {
 
 local CategoryToNumber = { ["All"] = 1, ["Accessories"] = 11, ["Clothing"] = 3, ["Characters"] = 4, ["Gear"] = 5, ["Animations"] = 12 }
 
-local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
+local Rayfield
+local okRf, rfErr = pcall(function()
+    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/svyx6ktgqy-prog/AvatarCatalog/refs/heads/main/source.lua'))()
+end)
+if not okRf or not Rayfield then
+    warn("[Quirurgico] Rayfield load failed:", rfErr)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Error Rayfield",
+            Text = "No se pudo cargar la UI. Revisa HttpGet / source.lua",
+            Duration = 8
+        })
+    end)
+    return
+end
 
 local Window = Rayfield:CreateWindow({
    Name = "🏥 Avatar Catalog Quirúrgico Pro v25.6 Ultra-Async",
