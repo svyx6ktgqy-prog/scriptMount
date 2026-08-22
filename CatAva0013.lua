@@ -3380,7 +3380,7 @@ ClickBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    -- ==================================================
+        -- ==================================================
     -- CLICK RÁPIDO → VISUALIZADOR DIRECTO
     -- ==================================================
     CurrentData.Id = tostring(item.id)
@@ -3388,15 +3388,19 @@ ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
 
+    local spent = ApplyCount(item.price)
+
     -- Cerrar menú de catálogo
     KittyMain.Visible = false
     FloatingBtn.Visible = true
+    if RobuxBar then RobuxBar.Visible = false end
 
     if UpdateVisualizer then
         UpdateVisualizer(CurrentData.Id, CurrentData.Price)
     end
     if NotifyUser then
-        NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar.")
+        local extra = (spent > 0) and ("\n- " .. tostring(spent) .. " R$") or ""
+        NotifyUser("Visualizador", (item.name or "Ítem") .. " listo. Toca la preview para equipar." .. extra)
     end
 end)
 
