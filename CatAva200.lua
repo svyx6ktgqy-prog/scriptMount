@@ -3787,9 +3787,9 @@ ExtraTab:CreateInput({
     end
 })
 
--- Declaración explícita de variables para evitar errores de ámbito global
-local RobuxLabel = nil
-local RobuxBar = nil
+-- ==========================================================
+-- INICIALIZACIÓN FINAL SEGURA (EVITA ERRORES SILENCIOSOS)
+-- ==========================================================
 
 -- 1. Búsqueda segura del contenedor de interfaz
 local uiContainer = nil
@@ -3806,8 +3806,10 @@ else
     end
 end
 
--- 2. Función aislada para crear la barra de Robux
+-- 2. Función aislada y protegida para crear la barra de Robux
 local function createRobuxCounter()
+    if not uiContainer then return end
+    
     local bar = Instance.new("Frame")
     bar.Name = "RobuxCountBar"
     bar.Size = UDim2.new(0, 200, 0, 32)
@@ -3816,6 +3818,7 @@ local function createRobuxCounter()
     bar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     bar.BackgroundTransparency = 0.3
     bar.ZIndex = 100
+    bar.Visible = false -- Oculto por defecto hasta que se active el menú
     
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 8)
@@ -3841,15 +3844,19 @@ local function createRobuxCounter()
     label.ZIndex = 101
     label.Parent = bar
     
+    -- Asignación a variables globales de control
     RobuxLabel = label
     RobuxBar = bar
     
     bar.Parent = uiContainer
 end
 
--- 3. Ejecución protegida
+-- 3. Ejecución protegida de la barra de Robux (si falla, no tumba el script)
 pcall(createRobuxCounter)
 
--- 4. Carga e inicialización final de Rayfield
-Rayfield:LoadConfiguration()
-
+-- 4. CARGA ABSOLUTA DE RAYFIELD (Debe ir siempre al final de todo)
+task.spawn(function()
+    pcall(function()
+        Rayfield:LoadConfiguration()
+    end)
+end)
