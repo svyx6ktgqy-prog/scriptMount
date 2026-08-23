@@ -639,7 +639,7 @@ if CoreGui:FindFirstChild("QuirurgicoVisualizer") then CoreGui.QuirurgicoVisuali
 
 local VisualizerGui = Instance.new("ScreenGui")
 VisualizerGui.Name = "QuirurgicoVisualizer"
-VisualizerGui.DisplayOrder = -1
+VisualizerGui.DisplayOrder = 0
 VisualizerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- FUNDAMENTAL PARA EXECUTORS
 VisualizerGui.Parent = CoreGui
 
