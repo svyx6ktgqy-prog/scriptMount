@@ -3240,6 +3240,9 @@ ClickBtn.InputBegan:Connect(function(input)
                                                 task.delay(1.5, function() if PreviewFolder and PreviewFolder.Parent then PreviewFolder:Destroy() end end)
                                                 
                                                 UpdateVisualizer(item.id, item.price or "Gratis")
+                                                if getgenv().DeductFakeRobux then
+                                                    getgenv().DeductFakeRobux(tonumber(item.price) or 0)
+                                                end                                        
                                                 NotifyUser("Ítem Obtenido", item.name .. " ahora está en el Visualizador")
                                             end
                                         end)
