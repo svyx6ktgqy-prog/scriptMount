@@ -639,42 +639,8 @@ if CoreGui:FindFirstChild("QuirurgicoVisualizer") then CoreGui.QuirurgicoVisuali
 
 local VisualizerGui = Instance.new("ScreenGui")
 VisualizerGui.Name = "QuirurgicoVisualizer"
--- Forzar el visualizador detrás de notificaciones (compatible con todos los executors)
-local function SetVisualizerBehind()
-	local minOrder = 0
-	local function check(container)
-		if not container then return end
-		for _, gui in ipairs(container:GetChildren()) do
-			if gui:IsA("ScreenGui") and gui ~= VisualizerGui then
-				if typeof(gui.DisplayOrder) == "number" and gui.DisplayOrder < minOrder then
-					minOrder = gui.DisplayOrder
-				end
-			end
-		end
-	end
-
-	check(CoreGui)
-	local pg = Players.LocalPlayer:FindFirstChild("PlayerGui")
-	check(pg)
-	if gethui then check(gethui()) end
-
-	-- Intenta ponerse 1 por debajo del más bajo
-	local target = minOrder - 1
-	VisualizerGui.DisplayOrder = target
-
-	-- Fallback si el executor no acepta negativos
-	if VisualizerGui.DisplayOrder ~= target then
-		VisualizerGui.DisplayOrder = 0
-	end
-end
-
-SetVisualizerBehind()
-
--- Re-aplicar por si se crean nuevos ScreenGuis después
-task.spawn(function()
-	task.wait(1)
-	SetVisualizerBehind()
-end)
+VisualizerGui.DisplayOrder = -1
+if VisualizerGui.DisplayOrder ~= -1 then VisualizerGui.DisplayOrder = 0 end
 VisualizerGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- FUNDAMENTAL PARA EXECUTORS
 VisualizerGui.Parent = CoreGui
 
