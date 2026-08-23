@@ -3298,6 +3298,9 @@ ClickBtn.MouseButton1Click:Connect(function()
     CurrentData.Name = item.name
     CurrentData.Price = item.price and (tostring(item.price) .. " R$") or "Gratis"
     CurrentData.ItemType = item.itemType or "Asset"
+    if getgenv().DeductFakeRobux then
+        getgenv().DeductFakeRobux(tonumber(item.price) or 0)
+    end                    
 
     -- Cerrar menú de catálogo
     KittyMain.Visible = false
