@@ -20,6 +20,13 @@
 
 
 
+
+
+
+
+
+
+
     Catalog Native Buyer v14 (Delta optimized)
     - Al tocar la miniatura → guarda imagen HD en Delta
     - Siempre copia el link del catálogo
