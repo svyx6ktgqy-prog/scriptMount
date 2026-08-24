@@ -530,7 +530,7 @@ local function createMenu()
     Main.Position = isMobile and UDim2.new(0.025, 0, 0.09, 0) or UDim2.new(0.5, -230, 0.5, -280)
     Main.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
     Main.BorderSizePixel = 0
-    Main.Visible = true
+    Main.Visible = false
     Main.ZIndex = 20
     Main.ClipsDescendants = true
     Main.Parent = ScreenGui
