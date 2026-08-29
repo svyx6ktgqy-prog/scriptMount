@@ -23,7 +23,11 @@ local texturePresets = {
     ["Panic-Attack"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8071.jpeg",
     ["3-Ladys"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8101.jpeg",
     ["GirlGENTAI"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8104.jpeg",
-    ["BobJHOD"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8105.jpeg"
+    ["BobJHOD"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8105.jpeg",
+    ["BanderaAnimada"] = { -- EXTRA FLAG ANIMADA
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/FlagMov1.JPG",
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/FlagMov2.jpg"
+    }
 }
 
 local presetColors = {
@@ -36,7 +40,8 @@ local presetColors = {
     ["Panic-Attack"] = Color3.fromRGB(178, 34, 34),
     ["3-Ladys"] = Color3.fromRGB(255, 105, 180),      
     ["GirlGENTAI"] = Color3.fromRGB(138, 43, 226),    
-    ["BobJHOD"] = Color3.fromRGB(70, 130, 180)        
+    ["BobJHOD"] = Color3.fromRGB(70, 130, 180),
+    ["BanderaAnimada"] = Color3.fromRGB(255, 255, 255) 
 }
 
 local currentTextureUrl = texturePresets["NEGRON"]
@@ -47,15 +52,62 @@ local cachedTextures = {}
 local customPoleColor = Color3.fromRGB(150, 150, 150) 
 local fileCounter = 0
 
+-- Variables para el sistema de animación
+local isAnimated = false
+local animFrames = {}
+local currentAnimIndex = 1
+local lastUrlChecked = nil
+
 local function getTextureId()
+    local getAsset = getcustomasset or getsynasset
+    if not getAsset then return "" end
+
+    -- Si el preset cambió, reiniciar la caché de ID
+    if lastUrlChecked ~= currentTextureUrl then
+        lastUrlChecked = currentTextureUrl
+        animFrames = {}
+        customAssetId = ""
+    end
+
+    -- LÓGICA PARA BANDERA ANIMADA (Array de URLs)
+    if type(currentTextureUrl) == "table" then
+        isAnimated = true
+        
+        -- Descargar y cachear los fotogramas solo la primera vez que se selecciona
+        if #animFrames == 0 then
+            for i, url in ipairs(currentTextureUrl) do
+                if cachedTextures[url] then
+                    table.insert(animFrames, cachedTextures[url])
+                else
+                    local fetchSuccess, imageData = pcall(function() return game:HttpGet(url) end)
+                    if fetchSuccess and imageData then
+                        fileCounter = fileCounter + 1
+                        local fileName = "delta_tex_anim_" .. tostring(fileCounter) .. ".jpeg"
+                        pcall(function() writefile(fileName, imageData) end)
+                        local assetSuccess, id = pcall(function() return getAsset(fileName) end)
+                        if assetSuccess and id then
+                            cachedTextures[url] = id
+                            table.insert(animFrames, id)
+                        end
+                    end
+                end
+            end
+        end
+        
+        if #animFrames > 0 then
+            customAssetId = animFrames[currentAnimIndex]
+            return customAssetId
+        end
+        return ""
+    end
+
+    -- LÓGICA PARA BANDERA ESTÁTICA ORIGINAL
+    isAnimated = false
     if customAssetId ~= "" then return customAssetId end
     if cachedTextures[currentTextureUrl] then
         customAssetId = cachedTextures[currentTextureUrl]
         return customAssetId
     end
-    
-    local getAsset = getcustomasset or getsynasset
-    if not getAsset then return "" end
     
     local fetchSuccess, imageData = pcall(function() return game:HttpGet(currentTextureUrl) end)
     if not fetchSuccess or not imageData then return "" end
@@ -74,6 +126,20 @@ local function getTextureId()
     end
     return ""
 end
+
+-- Bucle paralelo para iterar los frames si está activa la animación (0.5s de delay)
+task.spawn(function()
+    while task.wait(0.5) do
+        if isAnimated and #animFrames > 1 then
+            currentAnimIndex = currentAnimIndex + 1
+            if currentAnimIndex > #animFrames then
+                currentAnimIndex = 1
+            end
+            customAssetId = animFrames[currentAnimIndex]
+        end
+    end
+end)
+
 
 -- =========================================================
 -- INYECCIÓN: EFECTOS DE FLAMA 
