@@ -124,24 +124,36 @@ local function getTextureId()
 end
 
 -- =========================================================
--- FUNCIÓN LIGERA PARA CAMBIAR SOLO LA IMAGEN SIN LAG
+-- FUNCIÓN LIGERA PARA CAMBIAR SOLO LA IMAGEN SIN LAG (CORREGIDA)
 -- =========================================================
+local function esFrameDeBandera(texturaActual)
+    if type(texturaActual) ~= "string" then return false end
+    -- Comprueba si la textura del objeto contiene la ID de alguno de nuestros fotogramas
+    for _, frameId in ipairs(animFrames) do
+        if texturaActual == frameId or string.find(texturaActual, frameId, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
 local function actualizarTexturaRapido(nuevoId)
     local player = game:GetService("Players").LocalPlayer
-    if not player.Character then return end
+    local char = player.Character
+    if not char then return end
     
-    -- Busca en el personaje el objeto que tenga la textura actual de la bandera y la reemplaza
-    for _, obj in pairs(player.Character:GetDescendants()) do
+    -- Busca la bandera en el personaje para reemplazar su textura al instante
+    for _, obj in pairs(char:GetDescendants()) do
         if obj:IsA("Decal") or obj:IsA("Texture") then
-            if table.find(animFrames, obj.Texture) then
+            if esFrameDeBandera(obj.Texture) then
                 obj.Texture = nuevoId
             end
         elseif obj:IsA("MeshPart") then
-            if table.find(animFrames, obj.TextureID) then
+            if esFrameDeBandera(obj.TextureID) then
                 obj.TextureID = nuevoId
             end
         elseif obj:IsA("SpecialMesh") then
-            if table.find(animFrames, obj.TextureId) then
+            if esFrameDeBandera(obj.TextureId) then
                 obj.TextureId = nuevoId
             end
         end
@@ -152,7 +164,7 @@ end
 -- BUCLE DE ANIMACIÓN OPTIMIZADO
 -- =========================================================
 task.spawn(function()
-    while task.wait(0.5) do -- Puedes cambiar 0.5 por 0.3 o 0.1 si quieres que vaya más rápido
+    while task.wait(0.5) do
         if isAnimated and isSystemActive and #animFrames > 1 then
             currentAnimIndex = currentAnimIndex + 1
             if currentAnimIndex > #animFrames then
@@ -162,13 +174,14 @@ task.spawn(function()
             -- Actualizamos la variable global
             customAssetId = animFrames[currentAnimIndex]
             
-            -- Aplicamos el cambio de textura directo al modelo
+            -- Aplicamos el cambio de textura directo usando la función corregida
             pcall(function()
                 actualizarTexturaRapido(customAssetId)
             end)
         end
     end
 end)
+
 
 
 -- =========================================================
