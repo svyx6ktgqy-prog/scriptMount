@@ -135,7 +135,16 @@ task.spawn(function()
             if currentAnimIndex > #animFrames then
                 currentAnimIndex = 1
             end
+            
+            -- Actualizamos el ID de la textura
             customAssetId = animFrames[currentAnimIndex]
+            
+            -- FORZAMOS AL JUEGO A ACTUALIZAR LA BANDERA VISUALMENTE
+            if isSystemActive then 
+                pcall(function()
+                    aplicarOutfitYBandera(true) 
+                end)
+            end
         end
     end
 end)
