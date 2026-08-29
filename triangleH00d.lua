@@ -124,64 +124,96 @@ local function getTextureId()
 end
 
 -- =========================================================
--- FUNCIÓN LIGERA PARA CAMBIAR SOLO LA IMAGEN SIN LAG (CORREGIDA)
+-- FUNCIÓN LIGERA Y AGRESIVA PARA ANIMAR (VERSIÓN DEFINITIVA)
 -- =========================================================
-local function esFrameDeBandera(texturaActual)
-    if type(texturaActual) ~= "string" then return false end
-    -- Comprueba si la textura del objeto contiene la ID de alguno de nuestros fotogramas
-    for _, frameId in ipairs(animFrames) do
-        if texturaActual == frameId or string.find(texturaActual, frameId, 1, true) then
-            return true
-        end
-    end
-    return false
-end
+local flagObjectsCache = {}
+local lastChar = nil
 
 local function actualizarTexturaRapido(nuevoId)
     local player = game:GetService("Players").LocalPlayer
     local char = player.Character
     if not char then return end
     
-    -- Busca la bandera en el personaje para reemplazar su textura al instante
+    -- Si el personaje muere o cambia, limpiamos la memoria
+    if char ~= lastChar then
+        flagObjectsCache = {}
+        lastChar = char
+    end
+
+    -- Si YA encontramos la bandera antes, la actualizamos directamente y terminamos
+    if #flagObjectsCache > 0 then
+        for _, obj in ipairs(flagObjectsCache) do
+            pcall(function()
+                if obj:IsA("Decal") or obj:IsA("Texture") then obj.Texture = nuevoId
+                elseif obj:IsA("MeshPart") then obj.TextureID = nuevoId
+                elseif obj:IsA("SpecialMesh") then obj.TextureId = nuevoId
+                end
+            end)
+        end
+        return
+    end
+
+    -- Si es la primera vez, escaneamos todo el personaje buscando la bandera
     for _, obj in pairs(char:GetDescendants()) do
-        if obj:IsA("Decal") or obj:IsA("Texture") then
-            if esFrameDeBandera(obj.Texture) then
-                obj.Texture = nuevoId
+        local isFlag = false
+        
+        -- MÉTODO 1: Buscar por nombre típico de la pieza
+        local nameLower = string.lower(obj.Name)
+        if string.find(nameLower, "bandera") or string.find(nameLower, "flag") then
+            isFlag = true
+        end
+
+        -- MÉTODO 2: Buscar coincidencia parcial de la ID de textura
+        if not isFlag then
+            local currentTex = ""
+            if obj:IsA("Decal") or obj:IsA("Texture") then currentTex = obj.Texture
+            elseif obj:IsA("MeshPart") then currentTex = obj.TextureID
+            elseif obj:IsA("SpecialMesh") then currentTex = obj.TextureId
             end
-        elseif obj:IsA("MeshPart") then
-            if esFrameDeBandera(obj.TextureID) then
-                obj.TextureID = nuevoId
+            
+            if currentTex ~= "" and type(currentTex) == "string" then
+                for _, frameId in ipairs(animFrames) do
+                    if currentTex == frameId or string.find(currentTex, frameId, 1, true) then
+                        isFlag = true
+                        break
+                    end
+                end
             end
-        elseif obj:IsA("SpecialMesh") then
-            if esFrameDeBandera(obj.TextureId) then
-                obj.TextureId = nuevoId
+        end
+
+        -- Si determinamos que este objeto es la bandera, lo guardamos en caché y lo actualizamos
+        if isFlag then
+            if obj:IsA("Decal") or obj:IsA("Texture") or obj:IsA("MeshPart") or obj:IsA("SpecialMesh") then
+                table.insert(flagObjectsCache, obj)
+                if obj:IsA("Decal") or obj:IsA("Texture") then obj.Texture = nuevoId
+                elseif obj:IsA("MeshPart") then obj.TextureID = nuevoId
+                elseif obj:IsA("SpecialMesh") then obj.TextureId = nuevoId
+                end
             end
         end
     end
 end
 
 -- =========================================================
--- BUCLE DE ANIMACIÓN OPTIMIZADO
+-- BUCLE DE ANIMACIÓN (SIN RESTRICCIONES)
 -- =========================================================
 task.spawn(function()
     while task.wait(0.5) do
-        if isAnimated and isSystemActive and #animFrames > 1 then
+        -- Quitamos 'isSystemActive' de aquí para evitar que bloquee el bucle si no es global
+        if isAnimated and #animFrames > 1 then
             currentAnimIndex = currentAnimIndex + 1
             if currentAnimIndex > #animFrames then
                 currentAnimIndex = 1
             end
             
-            -- Actualizamos la variable global
             customAssetId = animFrames[currentAnimIndex]
             
-            -- Aplicamos el cambio de textura directo usando la función corregida
             pcall(function()
                 actualizarTexturaRapido(customAssetId)
             end)
         end
     end
 end)
-
 
 
 -- =========================================================
