@@ -4518,7 +4518,7 @@ end
 -- =========================================================
 Tab:CreateDropdown({
    Name = "Texturas Predeterminadas",
-   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla", "CatOnge", "Panic-Attack", "3-Ladys", "GirlGENTAI", "BobJHOD"},
+   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla", "CatOnge", "Panic-Attack", "3-Ladys", "GirlGENTAI", "BobJHOD", "BanderaAnimada"},
    CurrentOption = {"NEGRON"},
    MultipleOptions = false,
    Flag = "DropdownTexturas",
