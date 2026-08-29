@@ -27,6 +27,14 @@ local texturePresets = {
     ["BanderaAnimada"] = { -- EXTRA FLAG ANIMADA
         "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/FlagMov1.JPG",
         "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/FlagMov2.jpg"
+    },
+    ["Drak"] = { -- NUEVA BANDERA ANIMADA DRAK
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/roblox1.jpg",
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/roblox2.jpg",
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/roblox3.jpg",
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/roblox4.jpg",
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/roblox5.jpg",
+        "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/roblox6.jpg"
     }
 }
 
@@ -41,7 +49,8 @@ local presetColors = {
     ["3-Ladys"] = Color3.fromRGB(255, 105, 180),      
     ["GirlGENTAI"] = Color3.fromRGB(138, 43, 226),    
     ["BobJHOD"] = Color3.fromRGB(70, 130, 180),
-    ["BanderaAnimada"] = Color3.fromRGB(255, 255, 255) 
+    ["BanderaAnimada"] = Color3.fromRGB(255, 255, 255),
+    ["Drak"] = Color3.fromRGB(255, 255, 255) 
 }
 
 local currentTextureUrl = texturePresets["NEGRON"]
@@ -4585,7 +4594,7 @@ end
 -- =========================================================
 Tab:CreateDropdown({
    Name = "Texturas Predeterminadas",
-   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla", "CatOnge", "Panic-Attack", "3-Ladys", "GirlGENTAI", "BobJHOD", "BanderaAnimada"},
+   Options = {"NEGRON", "Spyder550", "Glade", "Darkwole", "Camufla", "CatOnge", "Panic-Attack", "3-Ladys", "GirlGENTAI", "BobJHOD", "BanderaAnimada", "Drak"},
    CurrentOption = {"NEGRON"},
    MultipleOptions = false,
    Flag = "DropdownTexturas",
