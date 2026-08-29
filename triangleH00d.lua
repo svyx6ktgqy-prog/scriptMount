@@ -131,23 +131,19 @@ end
 task.spawn(function()
     while task.wait(0.5) do
         if isAnimated and #animFrames > 1 then
-            -- 1. Avanzamos el índice de la animación
             currentAnimIndex = currentAnimIndex + 1
             if currentAnimIndex > #animFrames then
                 currentAnimIndex = 1
             end
             customAssetId = animFrames[currentAnimIndex]
             
-            -- 2. FIX: Forzamos la actualización visual en el personaje en tiempo real
             pcall(function()
                 local Players = game:GetService("Players")
                 local char = Players.LocalPlayer and Players.LocalPlayer.Character
                 if not char then return end
                 
-                -- Escaneamos los objetos del personaje
                 for _, obj in pairs(char:GetDescendants()) do
                     
-                    -- Si usa un Decal o Texture (imagen plana)
                     if obj:IsA("Decal") or obj:IsA("Texture") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.Texture == frameId then
@@ -156,7 +152,6 @@ task.spawn(function()
                             end
                         end
                         
-                    -- Si es un MeshPart (modelo 3D)
                     elseif obj:IsA("MeshPart") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.TextureID == frameId then
@@ -165,7 +160,6 @@ task.spawn(function()
                             end
                         end
                         
-                    -- Si usa un SpecialMesh (accesorios clásicos, como banderas en la espalda)
                     elseif obj:IsA("SpecialMesh") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.TextureId == frameId then
@@ -174,7 +168,6 @@ task.spawn(function()
                             end
                         end
                         
-                    -- Si es una remera clásica (Shirt)
                     elseif obj:IsA("Shirt") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.ShirtTemplate == frameId then
@@ -183,7 +176,6 @@ task.spawn(function()
                             end
                         end
                         
-                    -- Si es un gráfico de remera frontal (T-Shirt / ShirtGraphic)
                     elseif obj:IsA("ShirtGraphic") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.Graphic == frameId then
@@ -192,7 +184,6 @@ task.spawn(function()
                             end
                         end
                         
-                    -- Opcional: Si son pantalones (Pants), por si también quieres animarlos
                     elseif obj:IsA("Pants") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.PantsTemplate == frameId then
@@ -200,8 +191,16 @@ task.spawn(function()
                                 break
                             end
                         end
+                        
+                    -- ← ESTE ES EL QUE FALTABA
+                    elseif obj:IsA("ImageLabel") then
+                        for _, frameId in ipairs(animFrames) do
+                            if obj.Image == frameId then
+                                obj.Image = customAssetId
+                                break
+                            end
+                        end
                     end
-                    
                 end
             end)
         end
