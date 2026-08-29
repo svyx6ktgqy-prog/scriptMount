@@ -144,10 +144,10 @@ task.spawn(function()
                 local char = Players.LocalPlayer and Players.LocalPlayer.Character
                 if not char then return end
                 
-                -- Escaneamos los objetos del personaje buscando la bandera
+                -- Escaneamos los objetos del personaje
                 for _, obj in pairs(char:GetDescendants()) do
                     
-                    -- Si tu bandera usa un Decal o Texture (imagen plana)
+                    -- Si usa un Decal o Texture (imagen plana)
                     if obj:IsA("Decal") or obj:IsA("Texture") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.Texture == frameId then
@@ -156,11 +156,47 @@ task.spawn(function()
                             end
                         end
                         
-                    -- Si tu bandera es un MeshPart (modelo 3D)
+                    -- Si es un MeshPart (modelo 3D)
                     elseif obj:IsA("MeshPart") then
                         for _, frameId in ipairs(animFrames) do
                             if obj.TextureID == frameId then
                                 obj.TextureID = customAssetId
+                                break
+                            end
+                        end
+                        
+                    -- Si usa un SpecialMesh (accesorios clásicos, como banderas en la espalda)
+                    elseif obj:IsA("SpecialMesh") then
+                        for _, frameId in ipairs(animFrames) do
+                            if obj.TextureId == frameId then
+                                obj.TextureId = customAssetId
+                                break
+                            end
+                        end
+                        
+                    -- Si es una remera clásica (Shirt)
+                    elseif obj:IsA("Shirt") then
+                        for _, frameId in ipairs(animFrames) do
+                            if obj.ShirtTemplate == frameId then
+                                obj.ShirtTemplate = customAssetId
+                                break
+                            end
+                        end
+                        
+                    -- Si es un gráfico de remera frontal (T-Shirt / ShirtGraphic)
+                    elseif obj:IsA("ShirtGraphic") then
+                        for _, frameId in ipairs(animFrames) do
+                            if obj.Graphic == frameId then
+                                obj.Graphic = customAssetId
+                                break
+                            end
+                        end
+                        
+                    -- Opcional: Si son pantalones (Pants), por si también quieres animarlos
+                    elseif obj:IsA("Pants") then
+                        for _, frameId in ipairs(animFrames) do
+                            if obj.PantsTemplate == frameId then
+                                obj.PantsTemplate = customAssetId
                                 break
                             end
                         end
@@ -171,6 +207,7 @@ task.spawn(function()
         end
     end
 end)
+
 
 -- =========================================================
 -- INYECCIÓN: EFECTOS DE FLAMA 
