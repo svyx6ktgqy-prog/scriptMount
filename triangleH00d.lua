@@ -24,7 +24,7 @@ local texturePresets = {
     ["3-Ladys"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8101.jpeg",
     ["GirlGENTAI"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8104.jpeg",
     ["BobJHOD"] = "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/IMG_8105.jpeg",
-    ["BanderaAnimada"] = { -- EXTRA FLAG ANIMADA
+    ["BanderaAnimada"] = { 
         "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/FlagMov1.JPG",
         "https://raw.githubusercontent.com/svyx6ktgqy-prog/scriptMount/refs/heads/main/flags/FlagMov2.jpg"
     }
@@ -62,18 +62,15 @@ local function getTextureId()
     local getAsset = getcustomasset or getsynasset
     if not getAsset then return "" end
 
-    -- Si el preset cambió, reiniciar la caché de ID
     if lastUrlChecked ~= currentTextureUrl then
         lastUrlChecked = currentTextureUrl
         animFrames = {}
         customAssetId = ""
     end
 
-    -- LÓGICA PARA BANDERA ANIMADA (Array de URLs)
     if type(currentTextureUrl) == "table" then
         isAnimated = true
         
-        -- Descargar y cachear los fotogramas solo la primera vez que se selecciona
         if #animFrames == 0 then
             for i, url in ipairs(currentTextureUrl) do
                 if cachedTextures[url] then
@@ -101,7 +98,6 @@ local function getTextureId()
         return ""
     end
 
-    -- LÓGICA PARA BANDERA ESTÁTICA ORIGINAL
     isAnimated = false
     if customAssetId ~= "" then return customAssetId end
     if cachedTextures[currentTextureUrl] then
@@ -127,24 +123,49 @@ local function getTextureId()
     return ""
 end
 
--- Bucle paralelo para iterar los frames si está activa la animación (0.5s de delay)
+-- =========================================================
+-- FUNCIÓN LIGERA PARA CAMBIAR SOLO LA IMAGEN SIN LAG
+-- =========================================================
+local function actualizarTexturaRapido(nuevoId)
+    local player = game:GetService("Players").LocalPlayer
+    if not player.Character then return end
+    
+    -- Busca en el personaje el objeto que tenga la textura actual de la bandera y la reemplaza
+    for _, obj in pairs(player.Character:GetDescendants()) do
+        if obj:IsA("Decal") or obj:IsA("Texture") then
+            if table.find(animFrames, obj.Texture) then
+                obj.Texture = nuevoId
+            end
+        elseif obj:IsA("MeshPart") then
+            if table.find(animFrames, obj.TextureID) then
+                obj.TextureID = nuevoId
+            end
+        elseif obj:IsA("SpecialMesh") then
+            if table.find(animFrames, obj.TextureId) then
+                obj.TextureId = nuevoId
+            end
+        end
+    end
+end
+
+-- =========================================================
+-- BUCLE DE ANIMACIÓN OPTIMIZADO
+-- =========================================================
 task.spawn(function()
-    while task.wait(0.5) do
-        if isAnimated and #animFrames > 1 then
+    while task.wait(0.5) do -- Puedes cambiar 0.5 por 0.3 o 0.1 si quieres que vaya más rápido
+        if isAnimated and isSystemActive and #animFrames > 1 then
             currentAnimIndex = currentAnimIndex + 1
             if currentAnimIndex > #animFrames then
                 currentAnimIndex = 1
             end
             
-            -- Actualizamos el ID de la textura
+            -- Actualizamos la variable global
             customAssetId = animFrames[currentAnimIndex]
             
-            -- FORZAMOS AL JUEGO A ACTUALIZAR LA BANDERA VISUALMENTE
-            if isSystemActive then 
-                pcall(function()
-                    aplicarOutfitYBandera(true) 
-                end)
-            end
+            -- Aplicamos el cambio de textura directo al modelo
+            pcall(function()
+                actualizarTexturaRapido(customAssetId)
+            end)
         end
     end
 end)
